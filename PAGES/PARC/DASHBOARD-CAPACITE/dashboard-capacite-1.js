@@ -7,7 +7,8 @@
     mois: new Date().getMonth() + 1,
     jours: [],
     parcs: [],
-    demarre: false
+    demarre: false,
+    recalculEnCours: false
   };
 
   const elements = {};
@@ -21,6 +22,7 @@
     elements.boutonAfficherDepartement = document.getElementById("bouton-afficher-departement");
     elements.selectPlage = document.getElementById("select-plage-dashboard");
     elements.selectParc = document.getElementById("select-parc-dashboard");
+    elements.boutonRecalculerHparcsDptmt = document.getElementById("bouton-recalculer-hparcsdptmt");
     elements.boutonMoisPrecedent = document.getElementById("bouton-mois-precedent");
     elements.boutonMoisSuivant = document.getElementById("bouton-mois-suivant");
     elements.titreMois = document.getElementById("titre-mois-dashboard");
@@ -88,6 +90,8 @@
       etat.idparc = elements.selectParc.value || "";
       chargerDashboard();
     });
+
+    elements.boutonRecalculerHparcsDptmt.addEventListener("click", recalculerTouteCapaciteDepartement);
 
     elements.boutonMoisPrecedent.addEventListener("click", () => {
       changerMois(-1);
@@ -160,6 +164,65 @@
     } catch (error) {
       afficherMessage(error.message || "Erreur de chargement.");
       elements.grille.innerHTML = "";
+    }
+  }
+
+  async function recalculerTouteCapaciteDepartement() {
+    if (etat.recalculEnCours) {
+      return;
+    }
+
+    const endpoint = String(window.ADMIN_CONFIG?.API_WRITE_IN_HPARCS || "").replace(/\/+$/, "");
+
+    if (!endpoint) {
+      afficherMessage("Adresse du service write-in-hparcs non configurée.");
+      return;
+    }
+
+    const confirmation = window.confirm(
+      "Recalculer toute la table hparcsdptmt à partir des données hparcs existantes ?"
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
+    etat.recalculEnCours = true;
+    elements.boutonRecalculerHparcsDptmt.disabled = true;
+    elements.boutonRecalculerHparcsDptmt.textContent = "Recalcul en cours...";
+
+    afficherMessage("Recalcul complet de hparcsdptmt en cours...");
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          action: "recalculer_hparcsdptmt",
+          tous: true
+        })
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data || data.success !== true) {
+        throw new Error(data?.error || "Impossible de recalculer hparcsdptmt.");
+      }
+
+      afficherMessage("hparcsdptmt a été recalculée. Rechargement du dashboard...");
+      await chargerDashboard();
+
+    } catch (error) {
+      afficherMessage(error.message || "Erreur pendant le recalcul de hparcsdptmt.");
+    } finally {
+      etat.recalculEnCours = false;
+      elements.boutonRecalculerHparcsDptmt.disabled = false;
+      elements.boutonRecalculerHparcsDptmt.textContent = "Recalculer toute la capacité département";
     }
   }
 
