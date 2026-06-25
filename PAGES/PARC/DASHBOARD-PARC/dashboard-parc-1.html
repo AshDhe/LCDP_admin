@@ -121,12 +121,24 @@
       margin-bottom: var(--space-3);
     }
 
+    .dashboard-parc-scroll-top {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin-bottom: var(--space-1);
+    }
+
+    .dashboard-parc-scroll-top-inner {
+      height: 1px;
+    }
+
     .dashboard-parc-table-wrapper {
       width: 100%;
       overflow-x: auto;
       border: 1px solid var(--color-border);
       border-radius: var(--radius-button);
       background: var(--color-surface);
+      scrollbar-width: thin;
     }
 
     .dashboard-parc-table {
@@ -179,7 +191,7 @@
 
     @media (min-width: 768px) {
       .dashboard-parc-outils {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: 1.2fr 0.75fr 0.75fr auto;
         align-items: end;
       }
 
@@ -219,7 +231,7 @@
               <div class="dashboard-parc-outils">
                 <div class="formulaire-champ">
                   <label for="filtre-dashboard-parc">
-                    Filtrer
+                    Recherche globale
                   </label>
 
                   <input
@@ -228,6 +240,26 @@
                     placeholder="Rechercher par nom, statut, département ou arrondissement"
                     autocomplete="off"
                   >
+                </div>
+
+                <div class="formulaire-champ">
+                  <label for="filtre-dashboard-parc-dptmt">
+                    Département
+                  </label>
+
+                  <select id="filtre-dashboard-parc-dptmt">
+                    <option value="">Tous</option>
+                  </select>
+                </div>
+
+                <div class="formulaire-champ">
+                  <label for="filtre-dashboard-parc-statut">
+                    Statut
+                  </label>
+
+                  <select id="filtre-dashboard-parc-statut">
+                    <option value="">Tous</option>
+                  </select>
                 </div>
 
                 <button
@@ -239,8 +271,22 @@
                 </button>
               </div>
 
-              <div class="dashboard-parc-table-wrapper">
-                <table class="dashboard-parc-table">
+              <div
+                class="dashboard-parc-scroll-top"
+                id="dashboard-parc-scroll-top"
+                aria-hidden="true"
+              >
+                <div
+                  class="dashboard-parc-scroll-top-inner"
+                  id="dashboard-parc-scroll-top-inner"
+                ></div>
+              </div>
+
+              <div
+                class="dashboard-parc-table-wrapper"
+                id="dashboard-parc-table-wrapper"
+              >
+                <table class="dashboard-parc-table" id="dashboard-parc-table">
                   <thead>
                     <tr>
                       <th scope="col">

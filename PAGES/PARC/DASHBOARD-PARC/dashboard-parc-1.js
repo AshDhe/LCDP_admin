@@ -18,9 +18,16 @@ function preparerDashboardParc() {
 function initialiserDashboardParc() {
   const tbody = document.getElementById("dashboard-parc-tbody");
   const filtre = document.getElementById("filtre-dashboard-parc");
+  const filtreDptmt = document.getElementById("filtre-dashboard-parc-dptmt");
+  const filtreStatut = document.getElementById("filtre-dashboard-parc-statut");
   const message = document.getElementById("dashboard-parc-message");
   const boutonExport = document.getElementById("btn-export-csv");
   const boutonsTri = document.querySelectorAll("[data-sort-key]");
+
+  const scrollTop = document.getElementById("dashboard-parc-scroll-top");
+  const scrollTopInner = document.getElementById("dashboard-parc-scroll-top-inner");
+  const tableWrapper = document.getElementById("dashboard-parc-table-wrapper");
+  const table = document.getElementById("dashboard-parc-table");
 
   const endpointDashboardParc = nettoyerBaseUrlDashboardParc(
     window.ADMIN_CONFIG?.API_DASHBOARD_PARC || ""
@@ -31,8 +38,9 @@ function initialiserDashboardParc() {
   let lignes = [];
   let cleTri = "datecreationparc";
   let sensTri = "desc";
+  let synchronisationScrollEnCours = false;
 
-  if (!tbody || !filtre || !message || !boutonExport) {
+  if (!tbody || !filtre || !filtreDptmt || !filtreStatut || !message || !boutonExport) {
     return;
   }
 
@@ -41,7 +49,34 @@ function initialiserDashboardParc() {
     return;
   }
 
-  filtre.addEventListener("input", afficherTableau);
+  initialiserScrollHorizontal();
+
+  filtre.addEventListener("input", () => {
+    if (filtre.value.trim()) {
+      filtreDptmt.value = "";
+      filtreStatut.value = "";
+    }
+
+    afficherTableau();
+  });
+
+  filtreDptmt.addEventListener("change", () => {
+    if (filtreDptmt.value) {
+      filtre.value = "";
+      filtreStatut.value = "";
+    }
+
+    afficherTableau();
+  });
+
+  filtreStatut.addEventListener("change", () => {
+    if (filtreStatut.value) {
+      filtre.value = "";
+      filtreDptmt.value = "";
+    }
+
+    afficherTableau();
+  });
 
   boutonExport.addEventListener("click", () => {
     exporterCsv(lignesFiltreesEtTriees());
@@ -65,6 +100,40 @@ function initialiserDashboardParc() {
   });
 
   chargerDashboard();
+
+  function initialiserScrollHorizontal() {
+    if (!scrollTop || !scrollTopInner || !tableWrapper || !table) {
+      return;
+    }
+
+    synchroniserLargeurScrollHorizontal();
+
+    scrollTop.addEventListener("scroll", () => {
+      if (synchronisationScrollEnCours) return;
+
+      synchronisationScrollEnCours = true;
+      tableWrapper.scrollLeft = scrollTop.scrollLeft;
+      synchronisationScrollEnCours = false;
+    });
+
+    tableWrapper.addEventListener("scroll", () => {
+      if (synchronisationScrollEnCours) return;
+
+      synchronisationScrollEnCours = true;
+      scrollTop.scrollLeft = tableWrapper.scrollLeft;
+      synchronisationScrollEnCours = false;
+    });
+
+    window.addEventListener("resize", synchroniserLargeurScrollHorizontal);
+  }
+
+  function synchroniserLargeurScrollHorizontal() {
+    if (!scrollTopInner || !table) {
+      return;
+    }
+
+    scrollTopInner.style.width = table.scrollWidth + "px";
+  }
 
   async function chargerDashboard() {
     afficherChargement();
@@ -92,11 +161,67 @@ function initialiserDashboardParc() {
       }
 
       lignes = Array.isArray(data.parcs) ? data.parcs : [];
+      remplirFiltresColonnes();
       afficherTableau();
 
     } catch (error) {
       afficherErreur(String(error?.message || error || "Erreur de connexion au worker."));
     }
+  }
+
+  function remplirFiltresColonnes() {
+    remplirSelect(filtreDptmt, valeursUniques(lignes, "dptmt"), "Tous");
+    remplirSelect(filtreStatut, valeursUniques(lignes, "statut", true), "Tous");
+  }
+
+  function remplirSelect(select, valeurs, libelleTous) {
+    select.innerHTML = "";
+
+    const optionTous = document.createElement("option");
+    optionTous.value = "";
+    optionTous.textContent = libelleTous;
+    select.appendChild(optionTous);
+
+    valeurs.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.value;
+      option.textContent = item.label;
+      select.appendChild(option);
+    });
+  }
+
+  function valeursUniques(source, cle, inclureVide = false) {
+    const valeurs = new Set();
+    let contientVide = false;
+
+    source.forEach((ligne) => {
+      const valeur = String(ligne?.[cle] || "").trim();
+
+      if (valeur) {
+        valeurs.add(valeur);
+      } else {
+        contientVide = true;
+      }
+    });
+
+    const resultat = Array.from(valeurs)
+      .sort((a, b) => a.localeCompare(b, "fr", {
+        numeric: true,
+        sensitivity: "base"
+      }))
+      .map((valeur) => ({
+        value: valeur,
+        label: valeur
+      }));
+
+    if (inclureVide && contientVide) {
+      resultat.unshift({
+        value: "__VIDE__",
+        label: "Statut vide"
+      });
+    }
+
+    return resultat;
   }
 
   function afficherChargement() {
@@ -111,6 +236,7 @@ function initialiserDashboardParc() {
     tbody.appendChild(tr);
 
     message.textContent = "";
+    synchroniserLargeurScrollHorizontal();
   }
 
   function afficherErreur(texte) {
@@ -125,6 +251,7 @@ function initialiserDashboardParc() {
     tbody.appendChild(tr);
 
     message.textContent = texte;
+    synchroniserLargeurScrollHorizontal();
   }
 
   function afficherTableau() {
@@ -142,6 +269,7 @@ function initialiserDashboardParc() {
       tbody.appendChild(tr);
 
       message.textContent = "0 parc affiché.";
+      synchroniserLargeurScrollHorizontal();
       return;
     }
 
@@ -159,26 +287,50 @@ function initialiserDashboardParc() {
 
     message.textContent =
       `${lignesAffichees.length} parc(s) affiché(s) sur ${lignes.length}.`;
+
+    requestAnimationFrame(synchroniserLargeurScrollHorizontal);
   }
 
   function lignesFiltreesEtTriees() {
     const recherche = normaliserTexte(filtre.value);
+    const dptmtSelectionne = filtreDptmt.value;
+    const statutSelectionne = filtreStatut.value;
 
     const filtrees = lignes.filter((parc) => {
-      if (!recherche) return true;
+      if (recherche) {
+        const texte = normaliserTexte([
+          formaterDate(parc.datecreationparc),
+          parc.nom,
+          parc.statut,
+          parc.dptmt,
+          parc.arrdmt
+        ].join(" "));
 
-      const texte = normaliserTexte([
-        formaterDate(parc.datecreationparc),
-        parc.nom,
-        parc.statut,
-        parc.dptmt,
-        parc.arrdmt
-      ].join(" "));
+        return texte.includes(recherche);
+      }
 
-      return texte.includes(recherche);
+      if (dptmtSelectionne) {
+        return correspondValeurFiltre(parc.dptmt, dptmtSelectionne);
+      }
+
+      if (statutSelectionne) {
+        return correspondValeurFiltre(parc.statut, statutSelectionne);
+      }
+
+      return true;
     });
 
     return filtrees.sort((a, b) => comparerLignes(a, b, cleTri, sensTri));
+  }
+
+  function correspondValeurFiltre(value, filtreValue) {
+    const valeur = String(value || "").trim();
+
+    if (filtreValue === "__VIDE__") {
+      return !valeur;
+    }
+
+    return valeur === filtreValue;
   }
 
   function comparerLignes(a, b, cle, sens) {
