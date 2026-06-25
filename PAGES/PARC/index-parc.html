@@ -56,6 +56,8 @@
 
       window.ASSETS_BASE = nettoyerBaseUrl("https://lacleduparc.fr");
 
+      window.SITE_BASE = window.ASSETS_BASE;
+
       window.construireUrlAdmin = function construireUrlAdmin(chemin) {
         const valeur = String(chemin || "");
 
@@ -93,6 +95,12 @@
         window.construireUrlAsset("/OBJETS/CSS/bandeau-et-burger.css") +
         '">'
       );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/boite-dialogue.css") +
+        '">'
+      );
     })();
   </script>
 
@@ -100,84 +108,12 @@
     .admin-page-verrouillee .site-main {
       visibility: hidden;
     }
-
-    .dialog-dashboard-capacite {
-      width: min(92vw, 520px);
-      padding: 0;
-      border: 0;
-      border-radius: 26px;
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
-      background: var(--color-surface);
-      color: var(--color-text);
-    }
-
-    .dialog-dashboard-capacite::backdrop {
-      background: rgba(24, 34, 28, 0.55);
-      backdrop-filter: blur(4px);
-    }
-
-    .dialog-dashboard-capacite-contenu {
-      padding: 28px;
-    }
-
-    .dialog-dashboard-capacite-contenu h2 {
-      margin: 0 0 18px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.1;
-    }
-
-    .dialog-dashboard-capacite-contenu label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 700;
-      color: var(--color-text);
-    }
-
-    .dialog-dashboard-capacite-contenu input {
-      width: 100%;
-      min-height: 54px;
-      padding: 0 16px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-button);
-      background: var(--color-surface);
-      color: var(--color-text);
-      font-family: var(--font-main);
-      font-size: 18px;
-    }
-
-    .dialog-dashboard-capacite-message {
-      min-height: 24px;
-      margin: 10px 0 0;
-      color: var(--color-error, #b00020);
-      font-size: 14px;
-    }
-
-    .dialog-dashboard-capacite-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 20px;
-    }
-
-    .dialog-dashboard-capacite-actions .button {
-      width: 100%;
-    }
-
-    @media (min-width: 601px) {
-      .dialog-dashboard-capacite-actions {
-        flex-direction: row;
-        justify-content: flex-end;
-      }
-
-      .dialog-dashboard-capacite-actions .button {
-        width: auto;
-        min-width: 150px;
-      }
-    }
   </style>
 </head>
 
 <body class="admin-page-verrouillee">
+  <div id="boite-dialogue-container"></div>
+
   <div class="site-page">
 
     <div id="bandeau-nav-container"></div>
@@ -200,7 +136,7 @@
                 href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
                 data-admin-href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
               >
-                Dashboard parc
+                Dashboard Parc
               </a>
 
               <a
@@ -220,8 +156,8 @@
               </a>
 
               <button
-                class="button button-orange"
-                style="margin-top: 0;"
+                class="button"
+                type="button"
                 id="bouton-dashboard-capacite"
               >
                 Dashboard capacité
@@ -236,38 +172,6 @@
     </main>
 
   </div>
-
-  <dialog id="dialog-dashboard-capacite" class="dialog-dashboard-capacite" aria-labelledby="titre-dialog-dashboard-capacite">
-    <div class="dialog-dashboard-capacite-contenu">
-      <h2 id="titre-dialog-dashboard-capacite">
-        Département à afficher
-      </h2>
-
-      <label for="champ-dashboard-capacite-dptmt">
-        Numéro de département
-      </label>
-
-      <input
-        id="champ-dashboard-capacite-dptmt"
-        type="text"
-        inputmode="numeric"
-        autocomplete="off"
-        placeholder="Exemple : 41"
-      >
-
-      <p id="message-dashboard-capacite-dptmt" class="dialog-dashboard-capacite-message"></p>
-
-      <div class="dialog-dashboard-capacite-actions">
-        <button class="button button-secondary" type="button" id="bouton-annuler-dashboard-capacite">
-          Annuler
-        </button>
-
-        <button class="button" type="button" id="bouton-valider-dashboard-capacite">
-          OK
-        </button>
-      </div>
-    </div>
-  </dialog>
 
   <script>
     (() => {
@@ -309,83 +213,74 @@
 
   <script>
     (() => {
+      function ecrireScriptAsset(chemin) {
+        const src = window.construireUrlAsset(chemin);
+
+        if (!src) return;
+
+        document.write('<script src="' + src + '"><\/script>');
+      }
+
+      ecrireScriptAsset("/OBJETS/BLOCS/boite-dialogue.js");
+    })();
+  </script>
+
+  <script>
+    (() => {
       const boutonDashboard = document.getElementById("bouton-dashboard-capacite");
-      const dialogDashboard = document.getElementById("dialog-dashboard-capacite");
-      const champDptmt = document.getElementById("champ-dashboard-capacite-dptmt");
-      const messageDptmt = document.getElementById("message-dashboard-capacite-dptmt");
-      const boutonAnnuler = document.getElementById("bouton-annuler-dashboard-capacite");
-      const boutonValider = document.getElementById("bouton-valider-dashboard-capacite");
 
       function nettoyerDptmt(value) {
         return String(value || "").trim();
       }
 
-      function ouvrirDialogDashboard() {
-        if (!dialogDashboard || !champDptmt) return;
-
-        messageDptmt.textContent = "";
+      async function ouvrirDashboardCapacite() {
+        if (typeof window.afficherBoiteDialogue !== "function") {
+          window.alert("La boîte de dialogue n'est pas disponible.");
+          return;
+        }
 
         const dernierDptmt = nettoyerDptmt(
           window.localStorage.getItem("adminDashboardCapaciteDptmt")
         );
 
-        champDptmt.value = dernierDptmt;
+        const resultat = await window.afficherBoiteDialogue({
+          titre: "Département à afficher",
+          texteAnnuler: "Annuler",
+          texteValider: "OK",
+          texteErreur: "Indique un département.",
+          champs: [
+            {
+              id: "champ-dashboard-capacite-dptmt",
+              name: "dptmt",
+              label: "Numéro de département",
+              type: "text",
+              value: dernierDptmt,
+              placeholder: "Exemple : 41",
+              autocomplete: "off",
+              required: true
+            }
+          ]
+        });
 
-        if (typeof dialogDashboard.showModal === "function") {
-          dialogDashboard.showModal();
-        } else {
-          dialogDashboard.setAttribute("open", "open");
+        if (!resultat) {
+          return;
         }
 
-        window.setTimeout(() => {
-          champDptmt.focus();
-          champDptmt.select();
-        }, 30);
-      }
-
-      function fermerDialogDashboard() {
-        if (!dialogDashboard) return;
-
-        if (typeof dialogDashboard.close === "function") {
-          dialogDashboard.close();
-        } else {
-          dialogDashboard.removeAttribute("open");
-        }
-      }
-
-      function validerDptmt() {
-        const dptmt = nettoyerDptmt(champDptmt?.value);
+        const dptmt = nettoyerDptmt(resultat.dptmt);
 
         if (!dptmt) {
-          messageDptmt.textContent = "Indique un département.";
           return;
         }
 
         window.localStorage.setItem("adminDashboardCapaciteDptmt", dptmt);
 
-        const url = window.construireUrlAdmin(
+        window.location.href = window.construireUrlAdmin(
           "/PAGES/PARC/DASHBOARD-CAPACITE/dashboard-capacite-1.html?dptmt=" +
           encodeURIComponent(dptmt)
         );
-
-        window.location.href = url;
       }
 
-      boutonDashboard?.addEventListener("click", ouvrirDialogDashboard);
-      boutonAnnuler?.addEventListener("click", fermerDialogDashboard);
-      boutonValider?.addEventListener("click", validerDptmt);
-
-      champDptmt?.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          validerDptmt();
-        }
-
-        if (event.key === "Escape") {
-          event.preventDefault();
-          fermerDialogDashboard();
-        }
-      });
+      boutonDashboard?.addEventListener("click", ouvrirDashboardCapacite);
     })();
   </script>
 
