@@ -9,5 +9,7 @@ window.ADMIN_CONFIG = {
 
   API_AUTOCOMPLETE_PARC: "https://autocomplete-parc-api.lacleduparc.fr",
   API_IA_SHIFT_HPARCS_1: "https://ia-shift-hparcs-1-api.lacleduparc.fr",
-  API_IA_SHIFT_HPARCS_2: "https://ia-shift-hparcs-2-api.lacleduparc.fr"
+  API_IA_SHIFT_HPARCS_2: "https://ia-shift-hparcs-2-api.lacleduparc.fr",
+
+  API_WRITE_IN_HPARCS: "https://write-in-hparcs-api.lacleduparc.fr"
 };
