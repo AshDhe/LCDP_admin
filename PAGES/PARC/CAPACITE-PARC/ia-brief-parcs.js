@@ -170,8 +170,7 @@ function initialiserIaBriefParcs() {
       }
 
       parcsDisponibles = Array.isArray(result.parcs) ? result.parcs : [];
-      messageSelectionParc.textContent =
-        `${parcsDisponibles.length} parc(s) disponible(s).`;
+      messageSelectionParc.textContent = "";
 
     } catch (error) {
       messageSelectionParc.textContent =
