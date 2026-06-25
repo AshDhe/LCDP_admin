@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Parcs - Espace Admin - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Choisir une action pour la rubrique Parc dans l'espace admin La Clé du Parc.">
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      const siteRootRelative = "../../";
+      const baseDepuisChemin = new URL(siteRootRelative, window.location.href);
+
+      let siteBaseFallback = baseDepuisChemin.pathname.replace(/\/$/, "");
+
+      if (siteBaseFallback === "/") {
+        siteBaseFallback = "";
+      }
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function joindreBaseEtChemin(baseUrl, chemin) {
+        const base = nettoyerBaseUrl(baseUrl);
+        const cheminNettoye = "/" + String(chemin || "").replace(/^\/+/, "");
+
+        if (!base) {
+          return cheminNettoye;
+        }
+
+        return base + cheminNettoye;
+      }
+
+      function cheminExterneOuAncre(chemin) {
+        return (
+          chemin.startsWith("#") ||
+          chemin.startsWith("mailto:") ||
+          chemin.startsWith("tel:") ||
+          chemin.startsWith("http://") ||
+          chemin.startsWith("https://")
+        );
+      }
+
+      window.ADMIN_ROOT_RELATIVE = siteRootRelative;
+
+      window.ADMIN_BASE = nettoyerBaseUrl(
+        window.ADMIN_CONFIG?.ADMIN_BASE_URL ||
+        siteBaseFallback ||
+        ""
+      );
+
+      window.ASSETS_BASE = nettoyerBaseUrl("https://lacleduparc.fr");
+
+      window.construireUrlAdmin = function construireUrlAdmin(chemin) {
+        const valeur = String(chemin || "");
+
+        if (!valeur || cheminExterneOuAncre(valeur)) {
+          return valeur;
+        }
+
+        return joindreBaseEtChemin(window.ADMIN_BASE, valeur);
+      };
+
+      window.construireUrlAsset = function construireUrlAsset(chemin) {
+        return joindreBaseEtChemin(window.ASSETS_BASE, chemin);
+      };
+
+      window.corrigerCheminsAdmin = function corrigerCheminsAdmin(scope) {
+        const racine = scope || document;
+
+        racine.querySelectorAll("[data-admin-href]").forEach((element) => {
+          element.setAttribute("href", window.construireUrlAdmin(element.dataset.adminHref));
+        });
+
+        racine.querySelectorAll("[data-public-src]").forEach((element) => {
+          element.setAttribute("src", window.construireUrlAsset(element.dataset.publicSrc));
+        });
+      };
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/base.css") +
+        '">'
+      );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/bandeau-et-burger.css") +
+        '">'
+      );
+    })();
+  </script>
+
+  <style>
+    .admin-page-verrouillee .site-main {
+      visibility: hidden;
+    }
+  </style>
+</head>
+
+<body class="admin-page-verrouillee">
+  <div class="site-page">
+
+    <div id="bandeau-nav-container"></div>
+
+    <main class="site-main">
+
+      <section class="page-section page-section-large" aria-label="Menu admin parcs">
+        <div class="page-container">
+          <div class="page-content page-content-spaced">
+
+            <h1 class="site-title">
+              Menu Parc
+            </h1>
+
+            <div class="page-actions page-actions-grid page-actions-column" aria-label="Actions admin parcs">
+
+              <a
+                class="button button-orange"
+                style="margin-top: 0;"
+                href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
+                data-site-href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
+                data-space="membre"
+              >
+                Dashboard Parc
+              </a>
+              
+              <a
+                class="button"
+                href="/PAGES/PARC/INSERT-PARC/insert-parc.html"
+                data-admin-href="/PAGES/PARC/INSERT-PARC/insert-parc.html"
+              >
+                Insert parc
+              </a>
+
+              <a
+                class="button"
+                href="/PAGES/PARC/CAPACITE-PARC/capacite-parc.html"
+                data-admin-href="/PAGES/PARC/CAPACITE-PARC/capacite-parc.html"
+              >
+                Capacité parc
+              </a>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      if (typeof window.corrigerCheminsAdmin === "function") {
+        window.corrigerCheminsAdmin(document);
+      }
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const container = document.getElementById("bandeau-nav-container");
+
+      if (!container) return;
+
+      fetch(window.construireUrlAdmin("/bandeau-nav-admin.html"), {
+        method: "GET",
+        cache: "no-store"
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Bandeau admin introuvable.");
+          }
+
+          return response.text();
+        })
+        .then((html) => {
+          container.innerHTML = html;
+
+          if (typeof window.corrigerCheminsAdmin === "function") {
+            window.corrigerCheminsAdmin(container);
+          }
+        })
+        .catch(() => {
+          container.innerHTML = "";
+        });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const endpointLogSessAdmin = String(
+        window.ADMIN_CONFIG?.API_LOG_SESS_AD || ""
+      ).replace(/\/+$/, "");
+
+      const urlConnexionAdmin = window.construireUrlAdmin("/connexion-admin.html");
+
+      if (!endpointLogSessAdmin) {
+        window.location.href = urlConnexionAdmin;
+        return;
+      }
+
+      fetch(endpointLogSessAdmin + "/session", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json"
+        }
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok || !data || data.success !== true) {
+            window.location.href = urlConnexionAdmin;
+            return;
+          }
+
+          document.body.classList.remove("admin-page-verrouillee");
+        })
+        .catch(() => {
+          window.location.href = urlConnexionAdmin;
+        });
+    })();
+  </script>
+</body>
+</html>
