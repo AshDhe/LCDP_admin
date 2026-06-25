@@ -123,7 +123,7 @@ function initialiserIaBriefParcs() {
 
   btnCorrigerBrief.addEventListener("click", () => {
     sectionValidationJson.hidden = true;
-    messageBriefIa.textContent = "Corrige le brief puis relance l’IA.";
+    messageBriefIa.textContent = "Corriger le brief puis relancer l’IA.";
   });
 
   btnValiderJson.addEventListener("click", () => {
@@ -324,7 +324,7 @@ function initialiserIaBriefParcs() {
 
       afficherValidationJson(briefEnregistre);
 
-      messageBriefIa.textContent = "Analyse IA terminée. Merci de vérifier le résultat.";
+      messageBriefIa.textContent = "Analyse IA terminée. Validation du résultat ci-dessous.";
       sectionValidationJson.hidden = false;
 
     } catch (error) {
@@ -333,7 +333,7 @@ function initialiserIaBriefParcs() {
       sectionValidationJson.hidden = false;
     } finally {
       boutonSubmit.disabled = false;
-      boutonSubmit.textContent = "Lancer le brief IA";
+      boutonSubmit.textContent = "JSON IA";
     }
   }
 
