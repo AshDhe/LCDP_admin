@@ -81,7 +81,12 @@ function initialiserConnexionAdmin() {
     bouton.textContent = "Connexion en cours...";
 
     try {
-      const response = await fetch(endpointLogSessAdmin + "/login", {
+      const urlLogin = endpointLogSessAdmin + "/login";
+
+      console.log("LOGIN ADMIN - URL appelée :", urlLogin);
+      console.log("LOGIN ADMIN - Origine :", window.location.origin);
+
+      const response = await fetch(urlLogin, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -93,12 +98,23 @@ function initialiserConnexionAdmin() {
         })
       });
 
-      const data = await response.json().catch(() => null);
+      const texte = await response.text();
+
+      console.log("LOGIN ADMIN - Status :", response.status);
+      console.log("LOGIN ADMIN - Réponse brute :", texte);
+
+      let data = null;
+
+      try {
+        data = texte ? JSON.parse(texte) : null;
+      } catch {
+        data = null;
+      }
 
       if (!response.ok || !data || data.success !== true) {
         afficherInformation(
           "Connexion impossible",
-          data?.message || "Identifiant ou mot de passe incorrect.",
+          data?.detail || data?.message || texte || "Identifiant ou mot de passe incorrect.",
           "erreur"
         );
 
@@ -111,11 +127,11 @@ function initialiserConnexionAdmin() {
       window.location.href = urlAccueilAdmin;
 
     } catch (error) {
-      console.error("Erreur connexion admin :", error);
+      console.error("LOGIN ADMIN - Erreur complète :", error);
 
       afficherInformation(
-        "Erreur",
-        "Une erreur est survenue. Veuillez réessayer.",
+        "Erreur technique",
+        String(error?.message || error || "Erreur inconnue"),
         "erreur"
       );
 
