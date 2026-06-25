@@ -6,5 +6,5 @@ window.ADMIN_CONFIG = {
   API_LOGOUT_AD: "https://logout-ad-api.lacleduparc.fr",
 
   API_DASHBOARD_AD: "https://dashboard-ad-api.lacleduparc.fr",
-  API_ADMIN_PARC: "https://admin-parc-api.lacleduparc.fr",
+  API_ADMIN_PARC: "https://admin-parc-api.lacleduparc.fr"
 };
