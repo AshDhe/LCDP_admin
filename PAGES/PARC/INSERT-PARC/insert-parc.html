@@ -56,6 +56,10 @@
 
       window.ASSETS_BASE = nettoyerBaseUrl("https://lacleduparc.fr");
 
+      window.SITE_CONFIG = window.SITE_CONFIG || {};
+      window.SITE_CONFIG.publicBaseUrl = window.SITE_CONFIG.publicBaseUrl || "https://lacleduparc.fr";
+      window.SITE_BASE = "https://lacleduparc.fr";
+
       window.construireUrlAdmin = function construireUrlAdmin(chemin) {
         const valeur = String(chemin || "");
 
@@ -99,6 +103,12 @@
         window.construireUrlAsset("/OBJETS/CSS/formulaire.css") +
         '">'
       );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/lightbox-information.css") +
+        '">'
+      );
     })();
   </script>
 
@@ -129,6 +139,8 @@
   <div class="site-page">
 
     <div id="bandeau-nav-container"></div>
+
+    <div id="lightbox-information-container"></div>
 
     <main class="site-main">
 
@@ -271,6 +283,7 @@
     })();
   </script>
 
+  <script src="https://lacleduparc.fr/OBJETS/BLOCS/lightbox-information.js"></script>
   <script src="./insert-parc.js"></script>
 </body>
 </html>
