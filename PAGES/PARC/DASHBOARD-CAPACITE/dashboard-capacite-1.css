@@ -1,0 +1,263 @@
+body {
+  padding-top: 0;
+  background: var(--color-surface);
+}
+
+.dashboard-capacite-page {
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-4) var(--page-padding-mobile);
+}
+
+.dashboard-capacite-entete {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-bottom: var(--space-4);
+}
+
+.dashboard-capacite-retour {
+  display: inline-block;
+  margin-bottom: var(--space-3);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.dashboard-capacite-retour:hover {
+  color: var(--color-text);
+}
+
+.dashboard-capacite-entete h1 {
+  margin-bottom: var(--space-2);
+  text-align: center;
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 1.05;
+}
+
+.dashboard-capacite-entete p {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 20px;
+}
+
+.dashboard-capacite-filtres {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto var(--space-4);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface-soft);
+}
+
+.dashboard-capacite-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-capacite-champ label {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.dashboard-capacite-champ input,
+.dashboard-capacite-champ select {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  font-size: 16px;
+}
+
+.dashboard-capacite-champ-inline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.dashboard-capacite-champ-inline .button {
+  width: 100%;
+  min-height: 54px;
+}
+
+.dashboard-capacite-calendrier {
+  max-width: 820px;
+  margin: 0 auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.dashboard-capacite-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.dashboard-capacite-navigation h2 {
+  min-width: 150px;
+  margin: 0;
+  text-align: center;
+  text-transform: capitalize;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.dashboard-capacite-navigation .micro-action {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dashboard-capacite-navigation .micro-action:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-soft);
+}
+
+.dashboard-capacite-message {
+  min-height: 24px;
+  margin: 0 0 var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.dashboard-capacite-jours-semaine {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.dashboard-capacite-jours-semaine span {
+  display: block;
+  text-align: center;
+}
+
+.dashboard-capacite-grille {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.jour-capacite {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.jour-capacite:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-soft);
+}
+
+.jour-capacite-vide {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.jour-capacite-valeur {
+  display: block;
+  text-align: center;
+  font-size: clamp(18px, 5vw, 34px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.jour-capacite-zero {
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.jour-capacite-aujourdhui {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.jour-capacite-numero-affiche {
+  border-color: var(--color-primary);
+}
+
+@media (min-width: 601px) {
+  .dashboard-capacite-page {
+    width: min(100% - 48px, 1120px);
+    padding: var(--space-4) 0;
+  }
+
+  .dashboard-capacite-filtres {
+    grid-template-columns: 1fr 1fr 1.4fr;
+    align-items: end;
+  }
+
+  .dashboard-capacite-champ-inline {
+    grid-template-columns: 1fr auto;
+  }
+
+  .dashboard-capacite-champ-inline .button {
+    width: auto;
+    min-width: 130px;
+  }
+
+  .dashboard-capacite-navigation {
+    gap: var(--space-3);
+    margin: var(--space-2) 0 var(--space-3);
+  }
+
+  .dashboard-capacite-navigation h2 {
+    min-width: 210px;
+    font-size: clamp(26px, 2.8vw, 38px);
+  }
+
+  .dashboard-capacite-navigation .micro-action {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    font-size: 22px;
+  }
+
+  .dashboard-capacite-jours-semaine,
+  .dashboard-capacite-grille {
+    gap: 7px;
+  }
+
+  .dashboard-capacite-jours-semaine {
+    font-size: 15px;
+  }
+
+  .jour-capacite {
+    padding: 10px;
+    border-radius: var(--radius-button);
+  }
+}
