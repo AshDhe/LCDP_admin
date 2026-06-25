@@ -1,1 +1,379 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
 
+  <title>Dashboard parc - Espace Admin - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Consulter le dashboard des parcs dans l'espace admin La Clé du Parc.">
+
+  <script src="../../../config.js"></script>
+
+  <script>
+    (() => {
+      const siteRootRelative = "../../../";
+      const baseDepuisChemin = new URL(siteRootRelative, window.location.href);
+
+      let siteBaseFallback = baseDepuisChemin.pathname.replace(/\/$/, "");
+
+      if (siteBaseFallback === "/") {
+        siteBaseFallback = "";
+      }
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function joindreBaseEtChemin(baseUrl, chemin) {
+        const base = nettoyerBaseUrl(baseUrl);
+        const cheminNettoye = "/" + String(chemin || "").replace(/^\/+/, "");
+
+        if (!base) {
+          return cheminNettoye;
+        }
+
+        return base + cheminNettoye;
+      }
+
+      function cheminExterneOuAncre(chemin) {
+        return (
+          chemin.startsWith("#") ||
+          chemin.startsWith("mailto:") ||
+          chemin.startsWith("tel:") ||
+          chemin.startsWith("http://") ||
+          chemin.startsWith("https://")
+        );
+      }
+
+      window.ADMIN_ROOT_RELATIVE = siteRootRelative;
+
+      window.ADMIN_BASE = nettoyerBaseUrl(
+        window.ADMIN_CONFIG?.ADMIN_BASE_URL ||
+        siteBaseFallback ||
+        ""
+      );
+
+      window.ASSETS_BASE = nettoyerBaseUrl("https://lacleduparc.fr");
+
+      window.construireUrlAdmin = function construireUrlAdmin(chemin) {
+        const valeur = String(chemin || "");
+
+        if (!valeur || cheminExterneOuAncre(valeur)) {
+          return valeur;
+        }
+
+        return joindreBaseEtChemin(window.ADMIN_BASE, valeur);
+      };
+
+      window.construireUrlAsset = function construireUrlAsset(chemin) {
+        return joindreBaseEtChemin(window.ASSETS_BASE, chemin);
+      };
+
+      window.corrigerCheminsAdmin = function corrigerCheminsAdmin(scope) {
+        const racine = scope || document;
+
+        racine.querySelectorAll("[data-admin-href]").forEach((element) => {
+          element.setAttribute("href", window.construireUrlAdmin(element.dataset.adminHref));
+        });
+
+        racine.querySelectorAll("[data-public-src]").forEach((element) => {
+          element.setAttribute("src", window.construireUrlAsset(element.dataset.publicSrc));
+        });
+      };
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/base.css") +
+        '">'
+      );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/bandeau-et-burger.css") +
+        '">'
+      );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/formulaire.css") +
+        '">'
+      );
+    })();
+  </script>
+
+  <style>
+    .admin-page-verrouillee .site-main {
+      visibility: hidden;
+    }
+
+    .dashboard-parc-zone {
+      width: 100%;
+      max-width: 1040px;
+      margin: var(--space-3) auto 0;
+    }
+
+    .dashboard-parc-outils {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .dashboard-parc-table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-button);
+      background: var(--color-surface);
+    }
+
+    .dashboard-parc-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 15px;
+      text-align: left;
+    }
+
+    .dashboard-parc-table th,
+    .dashboard-parc-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: top;
+    }
+
+    .dashboard-parc-table th {
+      background: var(--color-surface-soft);
+      color: var(--color-text);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .dashboard-parc-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .dashboard-parc-table button {
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .dashboard-parc-table button:hover {
+      color: var(--color-logo-green);
+    }
+
+    .dashboard-parc-message {
+      width: 100%;
+      margin: var(--space-2) 0 0;
+      color: var(--color-text-muted);
+      text-align: center;
+    }
+
+    @media (min-width: 768px) {
+      .dashboard-parc-outils {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+
+      .dashboard-parc-outils .formulaire-champ {
+        margin-bottom: 0;
+      }
+
+      .dashboard-parc-outils .button {
+        width: auto;
+        min-width: 180px;
+      }
+    }
+  </style>
+</head>
+
+<body class="admin-page-verrouillee">
+  <div class="site-page">
+
+    <div id="bandeau-nav-container"></div>
+
+    <main class="site-main">
+
+      <section class="page-section page-section-large" aria-label="Dashboard parc">
+        <div class="page-container">
+          <div class="page-content page-content-spaced">
+
+            <h1 class="site-title">
+              Dashboard parc
+            </h1>
+
+            <p class="page-lead">
+              Consultez les parcs enregistrés dans la base.
+            </p>
+
+            <div class="dashboard-parc-zone">
+
+              <div class="dashboard-parc-outils">
+                <div class="formulaire-champ">
+                  <label for="filtre-dashboard-parc">
+                    Filtrer
+                  </label>
+
+                  <input
+                    type="text"
+                    id="filtre-dashboard-parc"
+                    placeholder="Rechercher par nom, statut, département ou arrondissement"
+                    autocomplete="off"
+                  >
+                </div>
+
+                <button
+                  type="button"
+                  id="btn-export-csv"
+                  class="button"
+                >
+                  Export CSV
+                </button>
+              </div>
+
+              <div class="dashboard-parc-table-wrapper">
+                <table class="dashboard-parc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <button type="button" data-sort-key="datecreationparc">
+                          Date création
+                        </button>
+                      </th>
+                      <th scope="col">
+                        <button type="button" data-sort-key="nom">
+                          Nom parc
+                        </button>
+                      </th>
+                      <th scope="col">
+                        <button type="button" data-sort-key="statut">
+                          Statut
+                        </button>
+                      </th>
+                      <th scope="col">
+                        <button type="button" data-sort-key="dptmt">
+                          Département
+                        </button>
+                      </th>
+                      <th scope="col">
+                        <button type="button" data-sort-key="arrdmt">
+                          Arrondissement
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="dashboard-parc-tbody">
+                    <tr>
+                      <td colspan="5">
+                        Chargement...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p
+                id="dashboard-parc-message"
+                class="dashboard-parc-message"
+                aria-live="polite"
+              ></p>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      if (typeof window.corrigerCheminsAdmin === "function") {
+        window.corrigerCheminsAdmin(document);
+      }
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const container = document.getElementById("bandeau-nav-container");
+
+      if (!container) return;
+
+      fetch(window.construireUrlAdmin("/bandeau-nav-admin.html"), {
+        method: "GET",
+        cache: "no-store"
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Bandeau admin introuvable.");
+          }
+
+          return response.text();
+        })
+        .then((html) => {
+          container.innerHTML = html;
+
+          if (typeof window.corrigerCheminsAdmin === "function") {
+            window.corrigerCheminsAdmin(container);
+          }
+        })
+        .catch(() => {
+          container.innerHTML = "";
+        });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const endpointLogSessAdmin = String(
+        window.ADMIN_CONFIG?.API_LOG_SESS_AD || ""
+      ).replace(/\/+$/, "");
+
+      const urlConnexionAdmin = window.construireUrlAdmin("/connexion-admin.html");
+
+      if (!endpointLogSessAdmin) {
+        window.location.href = urlConnexionAdmin;
+        return;
+      }
+
+      fetch(endpointLogSessAdmin + "/session", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json"
+        }
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok || !data || data.success !== true) {
+            window.location.href = urlConnexionAdmin;
+            return;
+          }
+
+          window.sessionAdminVerifiee = true;
+          document.body.classList.remove("admin-page-verrouillee");
+          document.dispatchEvent(new Event("admin-session-validee"));
+        })
+        .catch(() => {
+          window.location.href = urlConnexionAdmin;
+        });
+    })();
+  </script>
+
+  <script src="./dashboard-parc-1.js"></script>
+</body>
+</html>
