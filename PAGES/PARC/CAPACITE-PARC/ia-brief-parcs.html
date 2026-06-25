@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Capacité parc par IA - Espace Admin - La Clé du Parc</title>
+  <title>Capacité d'accueil parc - IA brief - Espace Admin - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Créer ou mettre à jour les horaires et capacités d'accueil d'un parc par brief IA dans l'espace admin La Clé du Parc.">
@@ -228,12 +228,46 @@
       background: rgba(0, 0, 0, 0.35);
     }
 
+        .ia-brief-ligne {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+      align-items: start;
+    }
+
+    .ia-brief-ligne .formulaire-champ {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .ia-brief-ligne .formulaire-champ > label:not(.checkbox-ligne) {
+      display: block;
+      min-height: 34px;
+      margin: 0 0 8px;
+      padding: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 600;
+      color: var(--color-text);
+      text-align: left;
+    }
+
+    .ia-brief-ligne .formulaire-champ input[type="text"] {
+      display: block;
+      width: 100%;
+      height: 58px !important;
+      min-height: 58px !important;
+      max-height: 58px !important;
+      margin: 0;
+      padding: 0 16px !important;
+      box-sizing: border-box;
+    }
+
     @media (min-width: 768px) {
       .ia-brief-ligne {
-        display: grid;
-        grid-template-columns: 1fr 180px;
-        gap: var(--space-2);
-        align-items: end;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        align-items: start;
       }
 
       .ia-brief-actions,
@@ -262,7 +296,7 @@
           <div class="page-content page-content-spaced">
 
             <h1 class="site-title">
-              Capacité parc par IA
+              Capacité d'accueil parc - IA brief
             </h1>
 
             <div class="ia-brief-zone">
