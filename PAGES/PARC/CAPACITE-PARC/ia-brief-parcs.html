@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Capacité parc par IA - Espace Admin - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Créer ou mettre à jour les horaires et capacités d'accueil d'un parc par brief IA dans l'espace admin La Clé du Parc.">
+
+  <script src="../../../config.js"></script>
+
+  <script>
+    (() => {
+      const siteRootRelative = "../../../";
+      const baseDepuisChemin = new URL(siteRootRelative, window.location.href);
+
+      let siteBaseFallback = baseDepuisChemin.pathname.replace(/\/$/, "");
+
+      if (siteBaseFallback === "/") {
+        siteBaseFallback = "";
+      }
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function joindreBaseEtChemin(baseUrl, chemin) {
+        const base = nettoyerBaseUrl(baseUrl);
+        const cheminNettoye = "/" + String(chemin || "").replace(/^\/+/, "");
+
+        if (!base) {
+          return cheminNettoye;
+        }
+
+        return base + cheminNettoye;
+      }
+
+      function cheminExterneOuAncre(chemin) {
+        return (
+          chemin.startsWith("#") ||
+          chemin.startsWith("mailto:") ||
+          chemin.startsWith("tel:") ||
+          chemin.startsWith("http://") ||
+          chemin.startsWith("https://")
+        );
+      }
+
+      window.ADMIN_ROOT_RELATIVE = siteRootRelative;
+
+      window.ADMIN_BASE = nettoyerBaseUrl(
+        window.ADMIN_CONFIG?.ADMIN_BASE_URL ||
+        siteBaseFallback ||
+        ""
+      );
+
+      window.ASSETS_BASE = nettoyerBaseUrl("https://lacleduparc.fr");
+
+      window.construireUrlAdmin = function construireUrlAdmin(chemin) {
+        const valeur = String(chemin || "");
+
+        if (!valeur || cheminExterneOuAncre(valeur)) {
+          return valeur;
+        }
+
+        return joindreBaseEtChemin(window.ADMIN_BASE, valeur);
+      };
+
+      window.construireUrlAsset = function construireUrlAsset(chemin) {
+        return joindreBaseEtChemin(window.ASSETS_BASE, chemin);
+      };
+
+      window.corrigerCheminsAdmin = function corrigerCheminsAdmin(scope) {
+        const racine = scope || document;
+
+        racine.querySelectorAll("[data-admin-href]").forEach((element) => {
+          element.setAttribute("href", window.construireUrlAdmin(element.dataset.adminHref));
+        });
+
+        racine.querySelectorAll("[data-public-src]").forEach((element) => {
+          element.setAttribute("src", window.construireUrlAsset(element.dataset.publicSrc));
+        });
+      };
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/base.css") +
+        '">'
+      );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/bandeau-et-burger.css") +
+        '">'
+      );
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.construireUrlAsset("/OBJETS/CSS/formulaire.css") +
+        '">'
+      );
+    })();
+  </script>
+
+  <style>
+    .admin-page-verrouillee .site-main {
+      visibility: hidden;
+    }
+
+    .ia-brief-zone {
+      width: 100%;
+      max-width: 980px;
+      margin: var(--space-3) auto 0;
+    }
+
+    .ia-brief-card {
+      width: 100%;
+      margin-bottom: var(--space-3);
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      background: var(--color-surface);
+      box-sizing: border-box;
+    }
+
+    .ia-brief-card h2 {
+      margin-top: 0;
+      margin-bottom: var(--space-2);
+      font-size: 22px;
+      line-height: 1.2;
+      color: var(--color-text);
+    }
+
+    .ia-brief-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-2);
+    }
+
+    .ia-brief-suggestions {
+      margin-top: 6px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-button);
+      background: var(--color-surface);
+      overflow: hidden;
+    }
+
+    .ia-brief-suggestion {
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-bottom: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ia-brief-suggestion:last-child {
+      border-bottom: none;
+    }
+
+    .ia-brief-suggestion:hover,
+    .ia-brief-suggestion:focus {
+      background: var(--color-surface-soft);
+    }
+
+    .ia-brief-parc-actif {
+      margin: 0 0 var(--space-2);
+      padding: 12px 14px;
+      border-radius: var(--radius-button);
+      background: var(--color-surface-soft);
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .ia-brief-dictee {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin: var(--space-2) 0;
+    }
+
+    .ia-brief-message {
+      min-height: 22px;
+      margin: var(--space-2) 0 0;
+      color: var(--color-text-muted);
+    }
+
+    .ia-brief-json {
+      max-height: 420px;
+      overflow: auto;
+      padding: var(--space-2);
+      border-radius: var(--radius-button);
+      background: var(--color-surface-soft);
+      white-space: pre-wrap;
+      font-size: 13px;
+    }
+
+    .ia-brief-resume {
+      padding: var(--space-2);
+      border-radius: var(--radius-button);
+      background: var(--color-surface-soft);
+    }
+
+    .ia-brief-resume h3 {
+      margin-top: 0;
+      margin-bottom: var(--space-2);
+      font-size: 18px;
+    }
+
+    .ia-brief-resume p {
+      margin: 0 0 10px;
+    }
+
+    .ia-brief-dialog {
+      width: min(560px, calc(100vw - 32px));
+      padding: var(--space-3);
+      border: none;
+      border-radius: var(--radius-card);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+
+    .ia-brief-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    @media (min-width: 768px) {
+      .ia-brief-ligne {
+        display: grid;
+        grid-template-columns: 1fr 180px;
+        gap: var(--space-2);
+        align-items: end;
+      }
+
+      .ia-brief-actions,
+      .ia-brief-dictee {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .ia-brief-actions .button,
+      .ia-brief-dictee .button {
+        width: auto;
+      }
+    }
+  </style>
+</head>
+
+<body class="admin-page-verrouillee">
+  <div class="site-page">
+
+    <div id="bandeau-nav-container"></div>
+
+    <main class="site-main">
+
+      <section class="page-section page-section-large" aria-label="Capacité parc par IA">
+        <div class="page-container">
+          <div class="page-content page-content-spaced">
+
+            <h1 class="site-title">
+              Capacité parc par IA
+            </h1>
+
+            <div class="ia-brief-zone">
+
+              <section id="section-selection-parc" class="ia-brief-card">
+                <h2>1. Sélection du parc</h2>
+
+                <form id="form-selection-parc">
+                  <div class="ia-brief-ligne">
+                    <div class="formulaire-champ">
+                      <label for="nom-parc">
+                        Nom du parc
+                      </label>
+
+                      <input
+                        type="text"
+                        id="nom-parc"
+                        autocomplete="off"
+                        required
+                      >
+
+                      <div
+                        id="suggestions-parcs"
+                        class="ia-brief-suggestions"
+                        hidden
+                      ></div>
+                    </div>
+
+                    <div class="formulaire-champ">
+                      <label for="dptmt-parc">
+                        Département
+                      </label>
+
+                      <input
+                        type="text"
+                        id="dptmt-parc"
+                        autocomplete="off"
+                        required
+                      >
+                    </div>
+                  </div>
+
+                  <div class="ia-brief-actions">
+                    <button type="submit" class="button">
+                      Valider le parc
+                    </button>
+                  </div>
+                </form>
+
+                <p id="message-selection-parc" class="ia-brief-message" aria-live="polite"></p>
+              </section>
+
+              <section id="section-brief-ia" class="ia-brief-card" hidden>
+                <h2>2. Brief IA du parc</h2>
+
+                <p class="ia-brief-parc-actif" id="parc-selectionne"></p>
+
+                <form id="form-brief-ia">
+                  <div class="formulaire-champ">
+                    <label for="texte-brief">
+                      Brief administrateur
+                    </label>
+
+                    <textarea
+                      id="texte-brief"
+                      rows="14"
+                      required
+                    ></textarea>
+                  </div>
+
+                  <div class="ia-brief-dictee">
+                    <button type="button" id="btn-demarrer-dictee" class="button button-secondary">
+                      Dicter le brief
+                    </button>
+
+                    <button type="button" id="btn-arreter-dictee" class="button button-secondary" disabled>
+                      Arrêter la dictée
+                    </button>
+                  </div>
+
+                  <p id="message-dictee" class="ia-brief-message" aria-live="polite"></p>
+
+                  <div class="ia-brief-actions">
+                    <button type="submit" class="button">
+                      Lancer le brief IA
+                    </button>
+                  </div>
+                </form>
+
+                <p id="message-brief-ia" class="ia-brief-message" aria-live="polite"></p>
+              </section>
+
+              <section id="section-validation-json" class="ia-brief-card" hidden>
+                <h2>3. Validation du brief</h2>
+
+                <div id="resume-json-brief" class="ia-brief-resume"></div>
+
+                <details>
+                  <summary>Afficher le JSON technique</summary>
+                  <pre id="resultat-json-brief" class="ia-brief-json"></pre>
+                </details>
+
+                <div class="ia-brief-actions">
+                  <button type="button" id="btn-corriger-brief" class="button button-secondary">
+                    Corriger le brief
+                  </button>
+
+                  <button type="button" id="btn-valider-json" class="button">
+                    Valider le brief
+                  </button>
+                </div>
+
+                <p id="message-validation-json" class="ia-brief-message" aria-live="polite"></p>
+              </section>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <dialog id="dialog-validation-brief" class="ia-brief-dialog">
+    <h2>Brief enregistré</h2>
+    <p>La mise à jour du planning du parc va maintenant être lancée.</p>
+
+    <div class="ia-brief-actions">
+      <button type="button" id="btn-dialog-lancer-maj" class="button">
+        Lancer la mise à jour
+      </button>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-fin-traitement" class="ia-brief-dialog">
+    <h2>Planning mis à jour</h2>
+    <p>Le planning du parc a été mis à jour.</p>
+
+    <div id="resume-final-horaire" class="ia-brief-resume"></div>
+
+    <div class="ia-brief-actions">
+      <button type="button" id="btn-retour-admin" class="button">
+        Retour menu Parc
+      </button>
+    </div>
+  </dialog>
+
+  <script>
+    (() => {
+      if (typeof window.corrigerCheminsAdmin === "function") {
+        window.corrigerCheminsAdmin(document);
+      }
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const container = document.getElementById("bandeau-nav-container");
+
+      if (!container) return;
+
+      fetch(window.construireUrlAdmin("/bandeau-nav-admin.html"), {
+        method: "GET",
+        cache: "no-store"
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Bandeau admin introuvable.");
+          }
+
+          return response.text();
+        })
+        .then((html) => {
+          container.innerHTML = html;
+
+          if (typeof window.corrigerCheminsAdmin === "function") {
+            window.corrigerCheminsAdmin(container);
+          }
+        })
+        .catch(() => {
+          container.innerHTML = "";
+        });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const endpointLogSessAdmin = String(
+        window.ADMIN_CONFIG?.API_LOG_SESS_AD || ""
+      ).replace(/\/+$/, "");
+
+      const urlConnexionAdmin = window.construireUrlAdmin("/connexion-admin.html");
+
+      if (!endpointLogSessAdmin) {
+        window.location.href = urlConnexionAdmin;
+        return;
+      }
+
+      fetch(endpointLogSessAdmin + "/session", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json"
+        }
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok || !data || data.success !== true) {
+            window.location.href = urlConnexionAdmin;
+            return;
+          }
+
+          window.sessionAdminVerifiee = true;
+          document.body.classList.remove("admin-page-verrouillee");
+          document.dispatchEvent(new Event("admin-session-validee"));
+        })
+        .catch(() => {
+          window.location.href = urlConnexionAdmin;
+        });
+    })();
+  </script>
+
+  <script src="./ia-brief-parcs.js"></script>
+</body>
+</html>
