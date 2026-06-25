@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Connexion admin - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Connexion à l'espace admin La Clé du Parc.">
+
+  <script src="./config.js"></script>
+
+  <script>
+    window.SITE_CONFIG = window.SITE_CONFIG || {};
+    window.SITE_CONFIG.publicBaseUrl = window.SITE_CONFIG.publicBaseUrl || "https://lacleduparc.fr";
+    window.SITE_BASE = "https://lacleduparc.fr";
+  </script>
+
+  <link rel="stylesheet" href="https://lacleduparc.fr/OBJETS/CSS/base.css">
+  <link rel="stylesheet" href="https://lacleduparc.fr/OBJETS/CSS/formulaire.css">
+  <link rel="stylesheet" href="https://lacleduparc.fr/OBJETS/CSS/lightbox-information.css">
+</head>
+
+<body>
+  <div class="site-page">
+
+    <div id="lightbox-information-container"></div>
+
+    <main class="site-main">
+
+      <section class="page-section page-section-large" aria-label="Connexion à l'espace admin">
+        <div class="page-container">
+          <div class="page-content page-content-spaced">
+
+            <h1 class="titre-formulaire">
+              Connexion admin
+            </h1>
+
+            <p class="page-lead">
+              Accédez à l'espace d'administration
+            </p>
+
+            <div class="formulaire-page">
+
+              <form
+                id="formulaire-connexion-admin"
+                class="formulaire-inscription"
+                novalidate
+              >
+
+                <div class="formulaire-champ">
+                  <label for="adminemail">
+                    Identifiant admin
+                  </label>
+
+                  <input
+                    type="email"
+                    id="adminemail"
+                    name="adminemail"
+                    placeholder="Email"
+                    autocomplete="username"
+                    required
+                  >
+                </div>
+
+                <div class="formulaire-champ">
+                  <input
+                    type="password"
+                    id="adminpwd"
+                    name="adminpwd"
+                    placeholder="Mot de passe"
+                    autocomplete="current-password"
+                    required
+                  >
+
+                  <label class="checkbox-ligne" for="afficher-mdp-admin">
+                    <input
+                      type="checkbox"
+                      id="afficher-mdp-admin"
+                    >
+                    <span>Afficher le mot de passe</span>
+                  </label>
+                </div>
+
+                <div class="formulaire-actions">
+                  <button
+                    type="submit"
+                    id="bouton-valider-formulaire"
+                    class="button"
+                  >
+                    Connexion
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script src="https://lacleduparc.fr/OBJETS/BLOCS/lightbox-information.js"></script>
+  <script src="./connexion-admin.js"></script>
+</body>
+</html>
