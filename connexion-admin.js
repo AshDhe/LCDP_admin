@@ -86,17 +86,14 @@ function initialiserConnexionAdmin() {
       console.log("LOGIN ADMIN - URL appelée :", urlLogin);
       console.log("LOGIN ADMIN - Origine :", window.location.origin);
 
-      const response = await fetch(urlLogin, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          adminemail,
-          adminpwd
-        })
-      });
+    const response = await fetch(urlLogin, {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify({
+        adminemail,
+        adminpwd
+      })
+    });
 
       const texte = await response.text();
 
