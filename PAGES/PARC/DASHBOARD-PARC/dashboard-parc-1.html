@@ -123,30 +123,36 @@
 
     .dashboard-parc-outils .formulaire-champ {
       width: 100%;
-      margin-bottom: 0;
+      margin: 0;
+      padding: 0;
     }
 
     .dashboard-parc-outils .formulaire-champ > label:not(.checkbox-ligne) {
       display: block;
       margin: 0 0 6px;
+      padding: 0;
       font-size: 15px;
       line-height: 1.2;
       font-weight: 600;
       color: var(--color-text);
       text-align: left;
+      white-space: nowrap;
     }
 
     .dashboard-parc-outils .formulaire-champ input[type="text"],
     .dashboard-parc-outils .formulaire-champ select {
+      display: block;
       width: 100%;
-      height: 46px;
-      min-height: 46px;
-      padding: 0 14px;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      margin: 0;
+      padding: 0 14px !important;
       border: 1px solid var(--color-border);
       border-radius: var(--radius-button);
       font-family: var(--font-main);
       font-size: 14px;
-      line-height: 1.2;
+      line-height: 1.2 !important;
       color: var(--color-text);
       background: var(--color-surface);
       box-sizing: border-box;
@@ -157,12 +163,17 @@
     }
 
     .dashboard-parc-outils .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      height: 46px;
-      min-height: 46px;
-      padding: 0 18px;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      margin: 0;
+      padding: 0 18px !important;
       font-size: 14px;
-      line-height: 1.2;
+      line-height: 1.2 !important;
       box-sizing: border-box;
     }
 
