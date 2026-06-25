@@ -100,6 +100,80 @@
     .admin-page-verrouillee .site-main {
       visibility: hidden;
     }
+
+    .dialog-dashboard-capacite {
+      width: min(92vw, 520px);
+      padding: 0;
+      border: 0;
+      border-radius: 26px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+
+    .dialog-dashboard-capacite::backdrop {
+      background: rgba(24, 34, 28, 0.55);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog-dashboard-capacite-contenu {
+      padding: 28px;
+    }
+
+    .dialog-dashboard-capacite-contenu h2 {
+      margin: 0 0 18px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+
+    .dialog-dashboard-capacite-contenu label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .dialog-dashboard-capacite-contenu input {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 16px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-button);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-family: var(--font-main);
+      font-size: 18px;
+    }
+
+    .dialog-dashboard-capacite-message {
+      min-height: 24px;
+      margin: 10px 0 0;
+      color: var(--color-error, #b00020);
+      font-size: 14px;
+    }
+
+    .dialog-dashboard-capacite-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .dialog-dashboard-capacite-actions .button {
+      width: 100%;
+    }
+
+    @media (min-width: 601px) {
+      .dialog-dashboard-capacite-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+      }
+
+      .dialog-dashboard-capacite-actions .button {
+        width: auto;
+        min-width: 150px;
+      }
+    }
   </style>
 </head>
 
@@ -124,12 +198,11 @@
                 class="button button-orange"
                 style="margin-top: 0;"
                 href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
-                data-site-href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
-                data-space="membre"
+                data-admin-href="/PAGES/PARC/DASHBOARD-PARC/dashboard-parc-1.html"
               >
                 Dashboard Parc
               </a>
-              
+
               <a
                 class="button"
                 href="/PAGES/PARC/INSERT-PARC/insert-parc.html"
@@ -146,6 +219,14 @@
                 Capacité parc
               </a>
 
+              <button
+                class="button"
+                type="button"
+                id="bouton-dashboard-capacite"
+              >
+                Dashboard capacité
+              </button>
+
             </div>
 
           </div>
@@ -155,6 +236,38 @@
     </main>
 
   </div>
+
+  <dialog id="dialog-dashboard-capacite" class="dialog-dashboard-capacite" aria-labelledby="titre-dialog-dashboard-capacite">
+    <div class="dialog-dashboard-capacite-contenu">
+      <h2 id="titre-dialog-dashboard-capacite">
+        Département à afficher
+      </h2>
+
+      <label for="champ-dashboard-capacite-dptmt">
+        Numéro de département
+      </label>
+
+      <input
+        id="champ-dashboard-capacite-dptmt"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="Exemple : 41"
+      >
+
+      <p id="message-dashboard-capacite-dptmt" class="dialog-dashboard-capacite-message"></p>
+
+      <div class="dialog-dashboard-capacite-actions">
+        <button class="button button-secondary" type="button" id="bouton-annuler-dashboard-capacite">
+          Annuler
+        </button>
+
+        <button class="button" type="button" id="bouton-valider-dashboard-capacite">
+          OK
+        </button>
+      </div>
+    </div>
+  </dialog>
 
   <script>
     (() => {
@@ -191,6 +304,88 @@
         .catch(() => {
           container.innerHTML = "";
         });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const boutonDashboard = document.getElementById("bouton-dashboard-capacite");
+      const dialogDashboard = document.getElementById("dialog-dashboard-capacite");
+      const champDptmt = document.getElementById("champ-dashboard-capacite-dptmt");
+      const messageDptmt = document.getElementById("message-dashboard-capacite-dptmt");
+      const boutonAnnuler = document.getElementById("bouton-annuler-dashboard-capacite");
+      const boutonValider = document.getElementById("bouton-valider-dashboard-capacite");
+
+      function nettoyerDptmt(value) {
+        return String(value || "").trim();
+      }
+
+      function ouvrirDialogDashboard() {
+        if (!dialogDashboard || !champDptmt) return;
+
+        messageDptmt.textContent = "";
+
+        const dernierDptmt = nettoyerDptmt(
+          window.localStorage.getItem("adminDashboardCapaciteDptmt")
+        );
+
+        champDptmt.value = dernierDptmt;
+
+        if (typeof dialogDashboard.showModal === "function") {
+          dialogDashboard.showModal();
+        } else {
+          dialogDashboard.setAttribute("open", "open");
+        }
+
+        window.setTimeout(() => {
+          champDptmt.focus();
+          champDptmt.select();
+        }, 30);
+      }
+
+      function fermerDialogDashboard() {
+        if (!dialogDashboard) return;
+
+        if (typeof dialogDashboard.close === "function") {
+          dialogDashboard.close();
+        } else {
+          dialogDashboard.removeAttribute("open");
+        }
+      }
+
+      function validerDptmt() {
+        const dptmt = nettoyerDptmt(champDptmt?.value);
+
+        if (!dptmt) {
+          messageDptmt.textContent = "Indique un département.";
+          return;
+        }
+
+        window.localStorage.setItem("adminDashboardCapaciteDptmt", dptmt);
+
+        const url = window.construireUrlAdmin(
+          "/PAGES/PARC/DASHBOARD-CAPACITE/dashboard-capacite-1.html?dptmt=" +
+          encodeURIComponent(dptmt)
+        );
+
+        window.location.href = url;
+      }
+
+      boutonDashboard?.addEventListener("click", ouvrirDialogDashboard);
+      boutonAnnuler?.addEventListener("click", fermerDialogDashboard);
+      boutonValider?.addEventListener("click", validerDptmt);
+
+      champDptmt?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          validerDptmt();
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          fermerDialogDashboard();
+        }
+      });
     })();
   </script>
 
