@@ -6,180 +6,42 @@ if (document.readyState === "loading") {
 
 function initialiserConnexionAdmin() {
   const formulaire = document.getElementById("formulaire-connexion-admin");
-  const champEmail = document.getElementById("adminemail");
   const champMdp = document.getElementById("adminpwd");
-  const bouton = document.getElementById("bouton-valider-formulaire");
   const afficherMotDePasse = document.getElementById("afficher-mdp-admin");
 
-  const endpointLogSessAdmin = nettoyerBaseUrl(
-    window.ADMIN_CONFIG?.API_LOG_SESS_AD || ""
-  );
+  const endpointLogSessAdmin = String(
+    window.ADMIN_CONFIG?.API_LOG_SESS_AD || "https://ad-log-sess-api.lacleduparc.fr"
+  ).replace(/\/+$/, "");
 
-  const urlAccueilAdmin = construireUrlAdmin("/index.html");
-
-  let envoiEnCours = false;
-
-  if (!formulaire || !champEmail || !champMdp || !bouton) {
-    afficherInformation(
-      "Erreur technique",
-      "Le formulaire de connexion admin est incomplet. Veuillez réessayer plus tard.",
-      "erreur"
-    );
-    return;
+  if (formulaire) {
+    formulaire.action = endpointLogSessAdmin + "/login-form";
+    formulaire.method = "POST";
   }
 
-  if (!endpointLogSessAdmin) {
-    champEmail.disabled = true;
-    champMdp.disabled = true;
-    bouton.disabled = true;
-
-    afficherInformation(
-      "Configuration manquante",
-      "L’adresse du service de connexion admin n’est pas configurée.",
-      "erreur"
-    );
-    return;
-  }
-
-  if (afficherMotDePasse) {
+  if (afficherMotDePasse && champMdp) {
     afficherMotDePasse.addEventListener("change", () => {
       champMdp.type = afficherMotDePasse.checked ? "text" : "password";
     });
   }
 
-  formulaire.addEventListener("submit", (event) => {
-    event.preventDefault();
-    connecterAdmin();
-  });
+  const params = new URLSearchParams(window.location.search);
+  const erreur = params.get("erreur");
 
-  async function connecterAdmin() {
-    if (envoiEnCours) return;
-
-    const adminemail = champEmail.value.trim().toLowerCase();
-    const adminpwd = champMdp.value;
-
-    if (!adminemail) {
-      afficherInformation(
-        "Identifiant manquant",
-        "Veuillez renseigner votre email admin.",
-        "erreur"
-      );
-      return;
-    }
-
-    if (!adminpwd) {
-      afficherInformation(
-        "Mot de passe manquant",
-        "Veuillez renseigner votre mot de passe.",
-        "erreur"
-      );
-      return;
-    }
-
-    envoiEnCours = true;
-    bouton.disabled = true;
-    bouton.textContent = "Connexion en cours...";
-
-    try {
-      const urlLogin = endpointLogSessAdmin + "/login";
-
-      console.log("LOGIN ADMIN - URL appelée :", urlLogin);
-      console.log("LOGIN ADMIN - Origine :", window.location.origin);
-
-    const response = await fetch(urlLogin, {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
-        adminemail,
-        adminpwd
-      })
-    });
-
-      const texte = await response.text();
-
-      console.log("LOGIN ADMIN - Status :", response.status);
-      console.log("LOGIN ADMIN - Réponse brute :", texte);
-
-      let data = null;
-
-      try {
-        data = texte ? JSON.parse(texte) : null;
-      } catch {
-        data = null;
-      }
-
-      if (!response.ok || !data || data.success !== true) {
-        afficherInformation(
-          "Connexion impossible",
-          data?.detail || data?.message || texte || "Identifiant ou mot de passe incorrect.",
-          "erreur"
-        );
-
-        envoiEnCours = false;
-        bouton.disabled = false;
-        bouton.textContent = "Connexion";
-        return;
-      }
-
-      window.location.href = urlAccueilAdmin;
-
-    } catch (error) {
-      console.error("LOGIN ADMIN - Erreur complète :", error);
-
-      afficherInformation(
-        "Erreur technique",
-        String(error?.message || error || "Erreur inconnue"),
-        "erreur"
-      );
-
-      envoiEnCours = false;
-      bouton.disabled = false;
-      bouton.textContent = "Connexion";
-    }
-  }
-}
-
-function construireUrlAdmin(chemin) {
-  const adminBaseUrl = nettoyerBaseUrl(
-    window.ADMIN_CONFIG?.ADMIN_BASE_URL || ""
-  );
-
-  return construireUrlDepuisBase(adminBaseUrl, chemin);
-}
-
-function construireUrlDepuisBase(baseUrl, chemin) {
-  const valeur = String(chemin || "");
-
-  if (
-    valeur.startsWith("#") ||
-    valeur.startsWith("mailto:") ||
-    valeur.startsWith("tel:") ||
-    valeur.startsWith("http://") ||
-    valeur.startsWith("https://")
-  ) {
-    return valeur;
+  if (erreur === "identifiants") {
+    afficherInformation(
+      "Connexion impossible",
+      "Identifiant ou mot de passe incorrect.",
+      "erreur"
+    );
   }
 
-  if (baseUrl) {
-    return joindreBaseEtChemin(baseUrl, valeur);
+  if (erreur === "technique") {
+    afficherInformation(
+      "Erreur technique",
+      "La connexion admin n’a pas pu être effectuée.",
+      "erreur"
+    );
   }
-
-  return valeur.startsWith("/") ? valeur : "/" + valeur;
-}
-
-function joindreBaseEtChemin(baseUrl, chemin) {
-  const base = nettoyerBaseUrl(baseUrl);
-  const cheminNettoye = "/" + String(chemin || "").replace(/^\/+/, "");
-
-  if (!base) {
-    return cheminNettoye;
-  }
-
-  return base + cheminNettoye;
-}
-
-function nettoyerBaseUrl(value) {
-  return String(value || "").replace(/\/+$/, "");
 }
 
 async function afficherInformation(titre, message, type = "information", redirectUrl = null) {
