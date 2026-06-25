@@ -3,7 +3,7 @@ window.ADMIN_CONFIG = {
 
   API_LOG_SESS_AD: "https://ad-log-sess-api.lacleduparc.fr",
 
-  API_CREA_PARC: "https://crea-parc-api.lacleduparc.fr"
+  API_CREA_PARC: "https://crea-parc-api.lacleduparc.fr",
   API_DASHBOARD_PARC: "https://dashboard-parc-api.lacleduparc.fr"
   
 };
