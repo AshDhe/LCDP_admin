@@ -1,0 +1,222 @@
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initialiserConnexionAdmin);
+} else {
+  initialiserConnexionAdmin();
+}
+
+function initialiserConnexionAdmin() {
+  "use strict";
+
+  const config = window.SITE_CONFIG || {};
+
+  const formulaire = document.getElementById("formulaire-connexion-admin");
+  const champEmail = document.getElementById("adminemail");
+  const champMdp = document.getElementById("adminpwd");
+  const bouton = document.getElementById("bouton-valider-formulaire");
+  const afficherMotDePasse = document.getElementById("afficher-mdp-admin");
+
+  const endpointLogSessAdmin = nettoyerBaseUrl(
+    config.workerLogSessAdminUrl ||
+    config.WORKER_LOG_SESS_ADMIN_URL ||
+    window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
+    ""
+  );
+
+  const urlAccueilAdmin = construireUrlAdmin("/ESPACE-ADMIN/accueil-admin.html");
+
+  let envoiEnCours = false;
+
+  if (!formulaire || !champEmail || !champMdp || !bouton) {
+    afficherInformation(
+      "Erreur technique",
+      "Le formulaire de connexion admin est incomplet. Veuillez réessayer plus tard.",
+      "erreur"
+    );
+    return;
+  }
+
+  if (!endpointLogSessAdmin) {
+    champEmail.disabled = true;
+    champMdp.disabled = true;
+    bouton.disabled = true;
+
+    afficherInformation(
+      "Configuration manquante",
+      "L’adresse du service de connexion admin n’est pas configurée.",
+      "erreur"
+    );
+    return;
+  }
+
+  if (afficherMotDePasse) {
+    afficherMotDePasse.addEventListener("change", () => {
+      champMdp.type = afficherMotDePasse.checked ? "text" : "password";
+    });
+  }
+
+  formulaire.addEventListener("submit", (event) => {
+    event.preventDefault();
+    connecterAdmin();
+  });
+
+  async function connecterAdmin() {
+    if (envoiEnCours) return;
+
+    const adminemail = champEmail.value.trim().toLowerCase();
+    const adminpwd = champMdp.value;
+
+    if (!adminemail) {
+      afficherInformation(
+        "Identifiant manquant",
+        "Veuillez renseigner votre email admin.",
+        "erreur"
+      );
+      return;
+    }
+
+    if (!adminpwd) {
+      afficherInformation(
+        "Mot de passe manquant",
+        "Veuillez renseigner votre mot de passe.",
+        "erreur"
+      );
+      return;
+    }
+
+    envoiEnCours = true;
+    bouton.disabled = true;
+    bouton.textContent = "Connexion en cours...";
+
+    try {
+      const reponse = await fetch(endpointLogSessAdmin + "/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          adminemail,
+          adminpwd
+        })
+      });
+
+      const data = await reponse.json().catch(() => null);
+
+      if (!reponse.ok || !data || data.success !== true) {
+        afficherInformation(
+          "Connexion impossible",
+          data?.message || data?.detail || "Identifiant ou mot de passe incorrect.",
+          "erreur"
+        );
+
+        envoiEnCours = false;
+        bouton.disabled = false;
+        bouton.textContent = "Connexion";
+        return;
+      }
+
+      window.location.href = urlAccueilAdmin;
+
+    } catch (erreur) {
+      console.error("Erreur connexion admin :", erreur);
+
+      afficherInformation(
+        "Erreur technique",
+        String(erreur?.message || erreur || "Une erreur est survenue. Veuillez réessayer."),
+        "erreur"
+      );
+
+      envoiEnCours = false;
+      bouton.disabled = false;
+      bouton.textContent = "Connexion";
+    }
+  }
+}
+
+function construireUrlAdmin(chemin) {
+  const config = window.SITE_CONFIG || {};
+  const valeur = String(chemin || "");
+
+  if (estUrlExterneOuAncre(valeur)) {
+    return valeur;
+  }
+
+  if (typeof config.adminUrl === "function") {
+    return config.adminUrl(valeur);
+  }
+
+  const adminBaseUrl = nettoyerBaseUrl(
+    config.adminBaseUrl ||
+    config.ADMIN_BASE ||
+    config.siteBase ||
+    window.ADMIN_CONFIG?.ADMIN_BASE_URL ||
+    ""
+  );
+
+  return construireUrlDepuisBase(adminBaseUrl, valeur);
+}
+
+function construireUrlDepuisBase(baseUrl, chemin) {
+  const valeur = String(chemin || "");
+
+  if (estUrlExterneOuAncre(valeur)) {
+    return valeur;
+  }
+
+  if (baseUrl) {
+    return joindreBaseEtChemin(baseUrl, valeur);
+  }
+
+  return valeur.startsWith("/") ? valeur : "/" + valeur;
+}
+
+function joindreBaseEtChemin(baseUrl, chemin) {
+  const base = nettoyerBaseUrl(baseUrl);
+  const cheminNettoye = "/" + String(chemin || "").replace(/^\/+/, "");
+
+  if (!base) {
+    return cheminNettoye;
+  }
+
+  return base + cheminNettoye;
+}
+
+function estUrlExterneOuAncre(chemin) {
+  const valeur = String(chemin || "");
+
+  return (
+    valeur.startsWith("#") ||
+    valeur.startsWith("mailto:") ||
+    valeur.startsWith("tel:") ||
+    valeur.startsWith("http://") ||
+    valeur.startsWith("https://") ||
+    valeur.startsWith("data:")
+  );
+}
+
+function nettoyerBaseUrl(value) {
+  return String(value || "").replace(/\/+$/, "");
+}
+
+async function afficherInformation(titre, message, type = "information", redirectUrl = null) {
+  if (typeof window.LCDP_afficherAlerte === "function") {
+    try {
+      const affichageOk = await window.LCDP_afficherAlerte(titre, message, {
+        type,
+        redirectUrl
+      });
+
+      if (affichageOk === true) {
+        return;
+      }
+    } catch (erreur) {
+      console.error("Erreur alerte admin :", erreur);
+    }
+  }
+
+  alert(message);
+
+  if (redirectUrl) {
+    window.location.href = redirectUrl;
+  }
+}
