@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Accueil parc - Espace Admin - La Clé du Parc</title>
+  <title>Capacité parc - Espace Admin - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Choisir une action pour la rubrique Parc dans l'espace admin La Clé du Parc.">
+  <meta name="description" content="Créer ou mettre à jour les horaires et capacités d'accueil d'un parc par brief IA dans l'espace admin La Clé du Parc.">
 
   <script src="../../config.js"></script>
 
@@ -79,7 +79,10 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-footer.css",
-        "/BOX/04-box-dialogue-champ.css"
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css"
       ];
 
       feuillesCssObjet.forEach((chemin) => {
@@ -99,15 +102,21 @@
     <div id="lcdp-bandeau-slot"></div>
 
     <main class="lcdp-site-main" id="lcdp-main-admin-parc" hidden>
-      <section class="lcdp-page-section" aria-label="Menu admin parcs">
+      <section class="lcdp-page-section" aria-label="Capacité parc par IA">
         <div class="lcdp-page-container">
           <div class="lcdp-page-content lcdp-stack-large">
 
-            <h1 class="lcdp-title-page-center">
-              Menu Parc
-            </h1>
+            <h1 class="lcdp-title-page-center">Capacité parc</h1>
 
-            <div id="lcdp-menu-parc-slot"></div>
+            <p class="lcdp-text-strong-left">
+              Créer ou mettre à jour les horaires et capacités d’accueil d’un parc.
+            </p>
+
+            <div id="lcdp-form-selection-parc-slot"></div>
+
+            <div id="lcdp-form-brief-ia-slot" hidden></div>
+
+            <div id="lcdp-form-validation-json-slot" hidden></div>
 
           </div>
         </div>
@@ -115,9 +124,11 @@
     </main>
 
     <div id="lcdp-footer-slot"></div>
-    <div id="lcdp-dialogue-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
 
   </div>
+
+  <script src="./admin-parc-capacite-parc.js"></script>
 
   <script>
     (() => {
@@ -126,13 +137,15 @@
       const config = window.SITE_CONFIG || {};
 
       function estUrlExterneOuAncre(chemin) {
+        const valeur = String(chemin || "");
+
         return (
-          chemin.startsWith("#") ||
-          chemin.startsWith("mailto:") ||
-          chemin.startsWith("tel:") ||
-          chemin.startsWith("http://") ||
-          chemin.startsWith("https://") ||
-          chemin.startsWith("data:")
+          valeur.startsWith("#") ||
+          valeur.startsWith("mailto:") ||
+          valeur.startsWith("tel:") ||
+          valeur.startsWith("http://") ||
+          valeur.startsWith("https://") ||
+          valeur.startsWith("data:")
         );
       }
 
@@ -216,6 +229,24 @@
         return template.content.cloneNode(true);
       }
 
+      function chargerScriptObjetUneFois(chemin) {
+        const src = construireUrlObjet(chemin);
+
+        if (document.querySelector(`script[data-lcdp-script-objet="${chemin}"]`)) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.dataset.lcdpScriptObjet = chemin;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Script OBJET introuvable : " + chemin));
+          document.body.appendChild(script);
+        });
+      }
+
       async function initialiserBandeau() {
         const slot = document.getElementById("lcdp-bandeau-slot");
 
@@ -246,59 +277,6 @@
         appliquerRoutesSite(slot);
       }
 
-      async function initialiserMenuParc() {
-        const slot = document.getElementById("lcdp-menu-parc-slot");
-
-        if (!slot) {
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet("/BOX/02-box-menu-bouton.html");
-        slot.appendChild(fragment);
-
-        const liste = slot.querySelector("[data-lcdp-menu-bouton-list]");
-
-        if (!liste) {
-          throw new Error("Structure du menu bouton incomplète.");
-        }
-
-        const boutons = [
-          {
-            label: "Dashboard Parc",
-            target: "/ESPACE-ADMIN/PARC/admin-parc-dashboard-parc.html",
-            style: "lcdp-button-orange"
-          },
-          {
-            label: "Inscrire parc",
-            target: "/ESPACE-ADMIN/PARC/admin-parc-inscrire-parc.html",
-            style: "lcdp-button-primary"
-          },
-          {
-            label: "Capacité parc",
-            target: "/ESPACE-ADMIN/PARC/admin-parc-capacite-parc.html",
-            style: "lcdp-button-primary"
-          }
-        ];
-
-        boutons.forEach((bouton) => {
-          const element = document.createElement("a");
-          element.className = "lcdp-button " + bouton.style;
-          element.textContent = bouton.label;
-          element.href = construireUrlAdmin(bouton.target);
-          liste.appendChild(element);
-        });
-
-        const boutonDashboardCapacite = document.createElement("button");
-        boutonDashboardCapacite.type = "button";
-        boutonDashboardCapacite.id = "bouton-dashboard-capacite";
-        boutonDashboardCapacite.className = "lcdp-button lcdp-button-primary";
-        boutonDashboardCapacite.textContent = "Dashboard capacité";
-        boutonDashboardCapacite.addEventListener("click", ouvrirDashboardCapacite);
-        liste.appendChild(boutonDashboardCapacite);
-      }
-
       async function initialiserFooter() {
         const slot = document.getElementById("lcdp-footer-slot");
 
@@ -314,101 +292,6 @@
         appliquerRoutesSite(slot);
       }
 
-      function nettoyerDptmt(value) {
-        return String(value || "").trim();
-      }
-
-      async function ouvrirDashboardCapacite() {
-        const slot = document.getElementById("lcdp-dialogue-slot");
-
-        if (!slot) {
-          window.alert("La boîte de dialogue n'est pas disponible.");
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet("/BOX/04-box-dialogue-champ.html");
-        slot.appendChild(fragment);
-
-        const dialogue = slot.querySelector("[data-lcdp-box-dialogue-champ]");
-        const titre = slot.querySelector("[data-lcdp-dialogue-champ-title]");
-        const form = slot.querySelector("[data-lcdp-dialogue-champ-form]");
-        const contenu = slot.querySelector("[data-lcdp-dialogue-champ-content]");
-        const erreur = slot.querySelector("[data-lcdp-dialogue-champ-error]");
-        const boutonFermer = slot.querySelector("[data-lcdp-dialogue-champ-close]");
-        const boutonAnnuler = slot.querySelector("[data-lcdp-dialogue-champ-cancel]");
-
-        if (!dialogue || !titre || !form || !contenu || !erreur || !boutonFermer || !boutonAnnuler) {
-          slot.innerHTML = "";
-          window.alert("La boîte de dialogue est incomplète.");
-          return;
-        }
-
-        titre.textContent = "Département à afficher";
-        erreur.textContent = "Indique un département.";
-
-        const dernierDptmt = nettoyerDptmt(
-          window.localStorage.getItem("adminDashboardCapaciteDptmt")
-        );
-
-        const champ = document.createElement("div");
-        champ.className = "lcdp-box-dialogue-champ__field";
-
-        const label = document.createElement("label");
-        label.className = "lcdp-box-dialogue-champ__label";
-        label.setAttribute("for", "champ-dashboard-capacite-dptmt");
-        label.textContent = "Numéro de département";
-
-        const input = document.createElement("input");
-        input.className = "lcdp-box-dialogue-champ__input";
-        input.type = "text";
-        input.id = "champ-dashboard-capacite-dptmt";
-        input.name = "dptmt";
-        input.value = dernierDptmt;
-        input.placeholder = "Exemple : 41";
-        input.autocomplete = "off";
-        input.required = true;
-
-        champ.appendChild(label);
-        champ.appendChild(input);
-        contenu.appendChild(champ);
-
-        const fermer = () => {
-          slot.innerHTML = "";
-        };
-
-        boutonFermer.addEventListener("click", fermer);
-        boutonAnnuler.addEventListener("click", fermer);
-
-        dialogue.addEventListener("click", (event) => {
-          if (event.target === dialogue) {
-            fermer();
-          }
-        });
-
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
-
-          const dptmt = nettoyerDptmt(input.value);
-
-          if (!dptmt) {
-            erreur.hidden = false;
-            input.focus();
-            return;
-          }
-
-          window.localStorage.setItem("adminDashboardCapaciteDptmt", dptmt);
-
-          window.location.href = construireUrlAdmin(
-            "/ESPACE-ADMIN/PARC/admin-parc-dashboard-capacite.html?dptmt=" +
-            encodeURIComponent(dptmt)
-          );
-        });
-
-        input.focus();
-      }
-
       async function verifierSessionAdmin() {
         const endpointLogSessAdmin = String(
           config.workerLogSessAdminUrl ||
@@ -421,7 +304,7 @@
 
         if (!endpointLogSessAdmin) {
           window.location.href = urlConnexionAdmin;
-          return;
+          return false;
         }
 
         try {
@@ -438,30 +321,49 @@
 
           if (!reponse.ok || !data || data.success !== true) {
             window.location.href = urlConnexionAdmin;
-            return;
+            return false;
           }
 
-          const main = document.getElementById("lcdp-main-admin-parc");
-
-          if (main) {
-            main.hidden = false;
-          }
+          return true;
         } catch (erreur) {
-          console.error("Erreur session admin parc :", erreur);
+          console.error("Erreur session admin capacité parc :", erreur);
           window.location.href = urlConnexionAdmin;
+          return false;
+        }
+      }
+
+      async function demarrerPage() {
+        await initialiserBandeau();
+        await initialiserFooter();
+
+        const sessionOk = await verifierSessionAdmin();
+
+        if (!sessionOk) {
+          return;
+        }
+
+        await chargerScriptObjetUneFois("/BOX/03-box-formulaire.js");
+
+        if (typeof window.LCDP_initialiserAdminParcCapaciteParc === "function") {
+          await window.LCDP_initialiserAdminParcCapaciteParc({
+            construireUrlAdmin,
+            chargerFragmentObjet,
+            appliquerRoutesSite
+          });
+        }
+
+        const main = document.getElementById("lcdp-main-admin-parc");
+
+        if (main) {
+          main.hidden = false;
         }
       }
 
       appliquerRoutesSite(document);
 
-      initialiserBandeau()
-        .then(initialiserMenuParc)
-        .then(initialiserFooter)
-        .then(verifierSessionAdmin)
-        .catch((erreur) => {
-          console.error(erreur);
-          verifierSessionAdmin();
-        });
+      demarrerPage().catch((erreur) => {
+        console.error(erreur);
+      });
     })();
   </script>
 </body>
