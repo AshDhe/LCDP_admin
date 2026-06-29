@@ -5,6 +5,10 @@ if (document.readyState === "loading") {
 }
 
 function initialiserConnexionAdmin() {
+  "use strict";
+
+  const config = window.SITE_CONFIG || {};
+
   const formulaire = document.getElementById("formulaire-connexion-admin");
   const champEmail = document.getElementById("adminemail");
   const champMdp = document.getElementById("adminpwd");
@@ -12,10 +16,13 @@ function initialiserConnexionAdmin() {
   const afficherMotDePasse = document.getElementById("afficher-mdp-admin");
 
   const endpointLogSessAdmin = nettoyerBaseUrl(
-    window.ADMIN_CONFIG?.API_LOG_SESS_AD || ""
+    config.workerLogSessAdminUrl ||
+    config.WORKER_LOG_SESS_ADMIN_URL ||
+    window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
+    ""
   );
 
-  const urlAccueilAdmin = construireUrlAdmin("/index.html");
+  const urlAccueilAdmin = construireUrlAdmin("/ESPACE-ADMIN/accueil-admin.html");
 
   let envoiEnCours = false;
 
@@ -81,7 +88,7 @@ function initialiserConnexionAdmin() {
     bouton.textContent = "Connexion en cours...";
 
     try {
-      const response = await fetch(endpointLogSessAdmin + "/login", {
+      const reponse = await fetch(endpointLogSessAdmin + "/login", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -93,9 +100,9 @@ function initialiserConnexionAdmin() {
         })
       });
 
-      const data = await response.json().catch(() => null);
+      const data = await reponse.json().catch(() => null);
 
-      if (!response.ok || !data || data.success !== true) {
+      if (!reponse.ok || !data || data.success !== true) {
         afficherInformation(
           "Connexion impossible",
           data?.message || data?.detail || "Identifiant ou mot de passe incorrect.",
@@ -110,12 +117,12 @@ function initialiserConnexionAdmin() {
 
       window.location.href = urlAccueilAdmin;
 
-    } catch (error) {
-      console.error("Erreur connexion admin :", error);
+    } catch (erreur) {
+      console.error("Erreur connexion admin :", erreur);
 
       afficherInformation(
         "Erreur technique",
-        String(error?.message || error || "Une erreur est survenue. Veuillez réessayer."),
+        String(erreur?.message || erreur || "Une erreur est survenue. Veuillez réessayer."),
         "erreur"
       );
 
@@ -127,23 +134,32 @@ function initialiserConnexionAdmin() {
 }
 
 function construireUrlAdmin(chemin) {
+  const config = window.SITE_CONFIG || {};
+  const valeur = String(chemin || "");
+
+  if (estUrlExterneOuAncre(valeur)) {
+    return valeur;
+  }
+
+  if (typeof config.adminUrl === "function") {
+    return config.adminUrl(valeur);
+  }
+
   const adminBaseUrl = nettoyerBaseUrl(
-    window.ADMIN_CONFIG?.ADMIN_BASE_URL || ""
+    config.adminBaseUrl ||
+    config.ADMIN_BASE ||
+    config.siteBase ||
+    window.ADMIN_CONFIG?.ADMIN_BASE_URL ||
+    ""
   );
 
-  return construireUrlDepuisBase(adminBaseUrl, chemin);
+  return construireUrlDepuisBase(adminBaseUrl, valeur);
 }
 
 function construireUrlDepuisBase(baseUrl, chemin) {
   const valeur = String(chemin || "");
 
-  if (
-    valeur.startsWith("#") ||
-    valeur.startsWith("mailto:") ||
-    valeur.startsWith("tel:") ||
-    valeur.startsWith("http://") ||
-    valeur.startsWith("https://")
-  ) {
+  if (estUrlExterneOuAncre(valeur)) {
     return valeur;
   }
 
@@ -165,19 +181,36 @@ function joindreBaseEtChemin(baseUrl, chemin) {
   return base + cheminNettoye;
 }
 
+function estUrlExterneOuAncre(chemin) {
+  const valeur = String(chemin || "");
+
+  return (
+    valeur.startsWith("#") ||
+    valeur.startsWith("mailto:") ||
+    valeur.startsWith("tel:") ||
+    valeur.startsWith("http://") ||
+    valeur.startsWith("https://") ||
+    valeur.startsWith("data:")
+  );
+}
+
 function nettoyerBaseUrl(value) {
   return String(value || "").replace(/\/+$/, "");
 }
 
 async function afficherInformation(titre, message, type = "information", redirectUrl = null) {
-  if (typeof window.afficherLightboxInformation === "function") {
-    const affichageOk = await window.afficherLightboxInformation(titre, message, {
-      type,
-      redirectUrl
-    });
+  if (typeof window.LCDP_afficherAlerte === "function") {
+    try {
+      const affichageOk = await window.LCDP_afficherAlerte(titre, message, {
+        type,
+        redirectUrl
+      });
 
-    if (affichageOk === true) {
-      return;
+      if (affichageOk === true) {
+        return;
+      }
+    } catch (erreur) {
+      console.error("Erreur alerte admin :", erreur);
     }
   }
 
