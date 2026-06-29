@@ -233,6 +233,13 @@
           lienAccueil.setAttribute("aria-label", "Accueil admin La Clé du Parc");
         }
 
+        const libelleEspace = slot.querySelector("[data-lcdp-bandeau-nav-label]");
+
+        if (libelleEspace) {
+          libelleEspace.textContent = "Espace Admin";
+          libelleEspace.hidden = false;
+        }
+
         appliquerRoutesSite(slot);
       }
 
