@@ -1,0 +1,52 @@
+.lcdp-page-listadmin .lcdp-page-container {
+  max-width: 1440px;
+}
+
+.lcdp-table-lecture-admin {
+  width: 100%;
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-medium);
+  background: var(--lcdp-color-surface);
+  box-shadow: var(--lcdp-shadow-soft);
+}
+
+.lcdp-table-lecture-admin__scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.lcdp-table-lecture-admin__table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  color: var(--lcdp-color-text);
+}
+
+.lcdp-table-lecture-admin__table th,
+.lcdp-table-lecture-admin__table td {
+  padding: var(--lcdp-space-2) var(--lcdp-space-3);
+  border-bottom: 1px solid var(--lcdp-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.lcdp-table-lecture-admin__table th {
+  font-weight: 700;
+  background: var(--lcdp-color-surface-soft);
+}
+
+.lcdp-table-lecture-admin__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.lcdp-table-lecture-admin__status {
+  margin: 0;
+  color: var(--lcdp-color-text-muted);
+  text-align: center;
+}
+
+.lcdp-table-lecture-admin__status--error {
+  color: var(--lcdp-color-text);
+  font-weight: 700;
+}
