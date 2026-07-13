@@ -3,7 +3,11 @@
   padding-bottom: var(--lcdp-space-5);
 }
 
-.lcdp-admin-menu-layout {
+.lcdp-page-accueil-admin .lcdp-page-container {
+  max-width: 1440px;
+}
+
+.lcdp-admin-accueil-layout {
   width: 100%;
   display: grid;
   grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
@@ -14,7 +18,7 @@
 .lcdp-menu-centre-admin {
   width: 100%;
   min-width: 0;
-  min-height: 520px;
+  min-height: 560px;
   padding: var(--lcdp-space-4);
   border: 1px solid var(--lcdp-color-border);
   border-radius: var(--lcdp-radius-medium);
@@ -32,19 +36,20 @@
 .lcdp-menu-centre-admin__title {
   margin: 0;
   color: var(--lcdp-color-text);
-  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-size: clamp(1.7rem, 2.5vw, 2.4rem);
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.02em;
   text-align: left;
 }
 
-.lcdp-menu-centre-admin__galerie-slot {
+.lcdp-menu-centre-admin__contenu {
   width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 899px) {
-  .lcdp-admin-menu-layout {
+  .lcdp-admin-accueil-layout {
     grid-template-columns: 1fr;
   }
 

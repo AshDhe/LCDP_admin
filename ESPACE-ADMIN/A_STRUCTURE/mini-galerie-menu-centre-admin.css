@@ -10,8 +10,8 @@
 }
 
 .lcdp-mini-galerie-menu-centre-admin__item {
-  aspect-ratio: 1 / 1;
   min-width: 0;
+  aspect-ratio: 1 / 1;
   padding: var(--lcdp-space-3);
   border: 1px solid var(--lcdp-color-border);
   border-radius: var(--lcdp-radius-medium);
@@ -28,15 +28,6 @@
   min-width: 0;
   min-height: 58px;
   margin: 0;
-}
-
-.lcdp-mini-galerie-menu-centre-admin__empty {
-  margin: 0;
-  padding: var(--lcdp-space-4);
-  border: 1px dashed var(--lcdp-color-border-strong);
-  border-radius: var(--lcdp-radius-medium);
-  color: var(--lcdp-color-text-muted);
-  text-align: center;
 }
 
 @media (min-width: 1280px) {
@@ -57,7 +48,7 @@
   }
 
   .lcdp-mini-galerie-menu-centre-admin__item {
-    aspect-ratio: auto;
     min-height: 150px;
+    aspect-ratio: auto;
   }
 }

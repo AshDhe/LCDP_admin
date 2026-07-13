@@ -2,21 +2,12 @@
   position: sticky;
   top: var(--lcdp-space-3);
   width: 100%;
+  min-width: 0;
   padding-right: var(--lcdp-space-4);
   border-right: 1px solid var(--lcdp-color-border);
 }
 
-.lcdp-menu-gauche-admin__title {
-  margin: 0 0 var(--lcdp-space-4);
-  color: var(--lcdp-color-text);
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
-  line-height: 1.08;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  text-align: left;
-}
-
-.lcdp-menu-gauche-admin__menu-slot,
+.lcdp-menu-gauche-admin__slot,
 .lcdp-menu-gauche-admin .lcdp-box-menu-bouton,
 .lcdp-menu-gauche-admin .lcdp-box-menu-bouton__list {
   width: 100%;
@@ -39,7 +30,7 @@
   text-align: left;
 }
 
-.lcdp-menu-gauche-admin .lcdp-button.is-active {
+.lcdp-menu-gauche-admin .lcdp-button[aria-pressed="true"] {
   background: var(--lcdp-color-primary);
   border-color: var(--lcdp-color-primary);
   box-shadow: 0 8px 20px var(--lcdp-color-shadow);
@@ -52,9 +43,5 @@
     padding-bottom: var(--lcdp-space-4);
     border-right: 0;
     border-bottom: 1px solid var(--lcdp-color-border);
-  }
-
-  .lcdp-menu-gauche-admin__title {
-    text-align: center;
   }
 }
