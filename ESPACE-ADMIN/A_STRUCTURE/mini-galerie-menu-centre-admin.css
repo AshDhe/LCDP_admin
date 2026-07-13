@@ -6,7 +6,7 @@
   width: 100%;
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: var(--lcdp-space-2);
+  gap: var(--lcdp-space-1);
 }
 
 .lcdp-mini-galerie-menu-centre-admin__button {
@@ -16,7 +16,20 @@
   min-height: 0;
   aspect-ratio: 1 / 1;
   margin: 0;
-  padding: 0;
+  padding: 8px;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.lcdp-mini-galerie-menu-centre-admin__button[aria-disabled="true"] {
+  opacity: 0.62;
+  cursor: default;
+}
+
+@media (max-width: 1100px) {
+  .lcdp-mini-galerie-menu-centre-admin__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 899px) {

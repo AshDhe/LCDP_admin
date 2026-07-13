@@ -1,9 +1,9 @@
 .lcdp-menu-gauche-admin {
   position: sticky;
-  top: var(--lcdp-space-3);
+  top: var(--lcdp-space-2);
   width: 100%;
   min-width: 0;
-  padding-right: var(--lcdp-space-4);
+  padding-right: var(--lcdp-space-3);
   border-right: 1px solid var(--lcdp-color-border);
 }
 
@@ -16,7 +16,7 @@
 .lcdp-menu-gauche-admin .lcdp-box-menu-bouton__list {
   max-width: none;
   margin: 0;
-  gap: var(--lcdp-space-2);
+  gap: var(--lcdp-space-1);
   justify-items: stretch;
 }
 
@@ -24,23 +24,27 @@
   width: 100%;
   max-width: none;
   min-width: 0;
+  min-height: 40px;
   margin: 0;
-  padding-inline: var(--lcdp-space-3);
+  padding: 8px 12px;
   justify-content: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.15;
   text-align: left;
 }
 
-.lcdp-menu-gauche-admin .lcdp-button[aria-pressed="true"] {
+.lcdp-menu-gauche-admin .lcdp-button[aria-pressed="true"],
+.lcdp-menu-gauche-admin .lcdp-button[aria-current="page"] {
   background: var(--lcdp-color-primary);
   border-color: var(--lcdp-color-primary);
-  box-shadow: 0 8px 20px var(--lcdp-color-shadow);
+  box-shadow: 0 6px 16px var(--lcdp-color-shadow);
 }
 
 @media (max-width: 899px) {
   .lcdp-menu-gauche-admin {
     position: static;
     padding-right: 0;
-    padding-bottom: var(--lcdp-space-4);
+    padding-bottom: var(--lcdp-space-3);
     border-right: 0;
     border-bottom: 1px solid var(--lcdp-color-border);
   }

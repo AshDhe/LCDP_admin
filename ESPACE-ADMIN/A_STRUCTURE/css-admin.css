@@ -1,0 +1,204 @@
+/* CSS ADMIN CENTRALISE - LA CLE DU PARC */
+/* Charge apres cssbase.css et les CSS generiques des objets utilises. */
+
+/* MENU GAUCHE ADMIN */
+
+.lcdp-menu-gauche-admin {
+  position: sticky;
+  top: var(--lcdp-space-2);
+  width: 100%;
+  min-width: 0;
+  padding-right: var(--lcdp-space-3);
+  border-right: 1px solid var(--lcdp-color-border);
+}
+
+.lcdp-menu-gauche-admin__slot,
+.lcdp-menu-gauche-admin .lcdp-box-menu-bouton,
+.lcdp-menu-gauche-admin .lcdp-box-menu-bouton__list {
+  width: 100%;
+}
+
+.lcdp-menu-gauche-admin .lcdp-box-menu-bouton__list {
+  max-width: none;
+  margin: 0;
+  gap: var(--lcdp-space-1);
+  justify-items: stretch;
+}
+
+.lcdp-menu-gauche-admin .lcdp-box-menu-bouton__list > .lcdp-button {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 12px;
+  justify-content: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.lcdp-menu-gauche-admin .lcdp-button[aria-pressed="true"],
+.lcdp-menu-gauche-admin .lcdp-button[aria-current="page"] {
+  background: var(--lcdp-color-primary);
+  border-color: var(--lcdp-color-primary);
+  box-shadow: 0 6px 16px var(--lcdp-color-shadow);
+}
+
+@media (max-width: 899px) {
+  .lcdp-menu-gauche-admin {
+    position: static;
+    padding-right: 0;
+    padding-bottom: var(--lcdp-space-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--lcdp-color-border);
+  }
+}
+
+/* STRUCTURE DES PAGES ADMIN */
+
+.lcdp-page-accueil-admin .lcdp-page-section,
+.lcdp-page-admin-interieure .lcdp-page-section {
+  padding-top: var(--lcdp-space-3);
+  padding-bottom: var(--lcdp-space-4);
+}
+
+.lcdp-page-accueil-admin .lcdp-page-container,
+.lcdp-page-admin-interieure .lcdp-page-container {
+  max-width: 1500px;
+}
+
+.lcdp-admin-accueil-layout,
+.lcdp-admin-page-layout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  gap: var(--lcdp-space-3);
+  align-items: start;
+}
+
+.lcdp-menu-centre-admin,
+.lcdp-admin-page-content {
+  width: 100%;
+  min-width: 0;
+  padding: var(--lcdp-space-3);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-medium);
+  background: var(--lcdp-color-surface);
+  box-shadow: var(--lcdp-shadow-soft);
+}
+
+.lcdp-menu-centre-admin__contenu,
+.lcdp-admin-page-content {
+  min-width: 0;
+}
+
+@media (max-width: 899px) {
+  .lcdp-admin-accueil-layout,
+  .lcdp-admin-page-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* MINI-GALERIE DE L'ACCUEIL ADMIN */
+
+.lcdp-mini-galerie-menu-centre-admin {
+  width: 100%;
+}
+
+.lcdp-mini-galerie-menu-centre-admin__grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--lcdp-space-1);
+}
+
+.lcdp-mini-galerie-menu-centre-admin__button {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  padding: 8px;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.lcdp-mini-galerie-menu-centre-admin__button[aria-disabled="true"] {
+  opacity: 0.62;
+  cursor: default;
+}
+
+@media (max-width: 1100px) {
+  .lcdp-mini-galerie-menu-centre-admin__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .lcdp-mini-galerie-menu-centre-admin__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .lcdp-mini-galerie-menu-centre-admin__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* TABLES DE LECTURE ADMIN */
+
+.lcdp-table-lecture-admin {
+  width: 100%;
+  padding: var(--lcdp-space-2);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-table-lecture-admin__scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.lcdp-table-lecture-admin__table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  color: var(--lcdp-color-text);
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.lcdp-table-lecture-admin__table th,
+.lcdp-table-lecture-admin__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--lcdp-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.lcdp-table-lecture-admin__table th {
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: var(--lcdp-color-surface-soft);
+  white-space: nowrap;
+}
+
+.lcdp-table-lecture-admin__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.lcdp-table-lecture-admin__status {
+  margin: 0;
+  color: var(--lcdp-color-text-muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.lcdp-table-lecture-admin__status--error {
+  color: var(--lcdp-color-text);
+  font-weight: 700;
+}
