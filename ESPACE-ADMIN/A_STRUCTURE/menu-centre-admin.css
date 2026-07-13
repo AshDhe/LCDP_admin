@@ -26,23 +26,6 @@
   box-shadow: var(--lcdp-shadow-soft);
 }
 
-.lcdp-menu-centre-admin__header {
-  width: 100%;
-  margin-bottom: var(--lcdp-space-4);
-  padding-bottom: var(--lcdp-space-3);
-  border-bottom: 1px solid var(--lcdp-color-border);
-}
-
-.lcdp-menu-centre-admin__title {
-  margin: 0;
-  color: var(--lcdp-color-text);
-  font-size: clamp(1.7rem, 2.5vw, 2.4rem);
-  line-height: 1.1;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  text-align: left;
-}
-
 .lcdp-menu-centre-admin__contenu {
   width: 100%;
   min-width: 0;
