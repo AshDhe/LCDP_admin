@@ -6,7 +6,7 @@
   <title>Accueil admin - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Choisir une rubrique dans l'espace admin La Clé du Parc.">
+  <meta name="description" content="Accueil de l’espace admin La Clé du Parc.">
 
   <script src="../config.js"></script>
 
@@ -20,7 +20,7 @@
         return String(value || "").replace(/\/+$/, "");
       }
 
-      function buildUrl(base, path) {
+      function construireUrl(base, path) {
         return nettoyerBaseUrl(base) + "/" + String(path || "").replace(/^\/+/, "");
       }
 
@@ -40,30 +40,28 @@
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
-        buildUrl(publicBase, "/OBJET")
+        construireUrl(publicBase, "/OBJET")
       );
 
       window.SITE_BASE = adminBase;
-
       window.LCDP_ADMIN_BASE = adminBase;
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
-      window.LCDP_buildUrl = buildUrl;
-
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        if (typeof config.publicUrl === "function") {
-          return config.publicUrl(path);
-        }
-
-        return buildUrl(publicBase, path);
-      };
 
       window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
         if (typeof config.adminUrl === "function") {
           return config.adminUrl(path);
         }
 
-        return buildUrl(adminBase, path);
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
       };
 
       window.LCDP_urlObjet = function LCDP_urlObjet(path) {
@@ -71,19 +69,29 @@
           return config.objetUrl(path);
         }
 
-        return buildUrl(objetBase, path);
+        return construireUrl(objetBase, path);
       };
 
-      const feuillesCssObjet = [
+      [
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-footer.css"
-      ];
-
-      feuillesCssObjet.forEach((chemin) => {
+      ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlObjet(chemin) +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/menu-gauche-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/menu-centre-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/mini-galerie-menu-centre-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
           '">'
         );
       });
@@ -91,19 +99,18 @@
   </script>
 </head>
 
-<body>
+<body class="lcdp-page-accueil-admin">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
 
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section class="lcdp-page-section" aria-label="Menu espace admin">
+      <section class="lcdp-page-section" aria-label="Accueil espace admin">
         <div class="lcdp-page-container">
-          <div class="lcdp-page-content lcdp-stack-large">
+          <div class="lcdp-admin-accueil-layout">
 
-            <h1 class="lcdp-title-page-center">Menu admin</h1>
-
-            <div id="lcdp-menu-admin-slot"></div>
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div id="lcdp-menu-centre-admin-slot"></div>
 
           </div>
         </div>
@@ -120,97 +127,124 @@
 
       const config = window.SITE_CONFIG || {};
 
-      function estUrlExterneOuAncre(chemin) {
-        const valeur = String(chemin || "");
+      const categoriesAdmin = [
+        {
+          id: "admin",
+          bouton: "Admin",
+          titre: "Menu admin",
+          rubriques: []
+        },
+        {
+          id: "parcs",
+          bouton: "Parcs",
+          titre: "Menu parcs",
+          rubriques: []
+        },
+        {
+          id: "membres",
+          bouton: "Membres",
+          titre: "Menu membres",
+          rubriques: []
+        }
+      ];
+
+      function estUrlExterneOuAncre(path) {
+        const value = String(path || "");
 
         return (
-          valeur.startsWith("#") ||
-          valeur.startsWith("mailto:") ||
-          valeur.startsWith("tel:") ||
-          valeur.startsWith("http://") ||
-          valeur.startsWith("https://") ||
-          valeur.startsWith("data:")
+          value.startsWith("#") ||
+          value.startsWith("mailto:") ||
+          value.startsWith("tel:") ||
+          value.startsWith("http://") ||
+          value.startsWith("https://") ||
+          value.startsWith("data:")
         );
       }
 
-      function construireUrlAdmin(chemin) {
-        const valeur = String(chemin || "");
+      function urlAdmin(path) {
+        const value = String(path || "");
 
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
+        if (!value || estUrlExterneOuAncre(value)) {
+          return value;
         }
 
-        if (typeof window.LCDP_urlAdmin === "function") {
-          return window.LCDP_urlAdmin(valeur);
-        }
-
-        return valeur;
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(value)
+          : value;
       }
 
-      function construireUrlPublic(chemin) {
-        const valeur = String(chemin || "");
+      function urlPublic(path) {
+        const value = String(path || "");
 
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
+        if (!value || estUrlExterneOuAncre(value)) {
+          return value;
         }
 
-        if (typeof window.LCDP_urlPublic === "function") {
-          return window.LCDP_urlPublic(valeur);
-        }
-
-        return valeur;
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(value)
+          : value;
       }
 
-      function construireUrlObjet(chemin) {
-        const valeur = String(chemin || "");
+      function urlObjet(path) {
+        const value = String(path || "");
 
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
+        if (!value || estUrlExterneOuAncre(value)) {
+          return value;
         }
 
-        if (typeof window.LCDP_urlObjet === "function") {
-          return window.LCDP_urlObjet(valeur);
-        }
-
-        return valeur;
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(value)
+          : value;
       }
 
-      function appliquerRoutesSite(racine = document) {
+      function appliquerRoutes(racine = document) {
         racine.querySelectorAll("[data-site-href]").forEach((element) => {
-          const chemin = element.dataset.siteHref || "";
-          const espace = element.dataset.space || "public";
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
 
-          if (espace === "admin") {
-            element.setAttribute("href", construireUrlAdmin(chemin));
-            return;
-          }
-
-          element.setAttribute("href", construireUrlPublic(chemin));
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : urlPublic(path)
+          );
         });
 
         racine.querySelectorAll("[data-site-src]").forEach((element) => {
-          const chemin = element.dataset.siteSrc || "";
-          const cheminObjet = chemin.replace(/^\/?OBJET\/?/, "/");
-          element.setAttribute("src", construireUrlObjet(cheminObjet));
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
         });
       }
 
-      async function chargerFragmentObjet(chemin) {
-        const reponse = await fetch(construireUrlObjet(chemin), {
+      async function chargerFragment(url, label) {
+        const response = await fetch(url, {
           method: "GET",
           credentials: "omit",
           cache: "no-cache"
         });
 
-        if (!reponse.ok) {
-          throw new Error("Fragment OBJET introuvable : " + chemin);
+        if (!response.ok) {
+          throw new Error(label + " introuvable.");
         }
 
-        const html = await reponse.text();
         const template = document.createElement("template");
-        template.innerHTML = html.trim();
+        template.innerHTML = (await response.text()).trim();
 
         return template.content.cloneNode(true);
+      }
+
+      function chargerFragmentObjet(path) {
+        return chargerFragment(
+          urlObjet(path),
+          "Fragment OBJET " + path
+        );
+      }
+
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
       }
 
       async function initialiserBandeau() {
@@ -222,75 +256,12 @@
 
         slot.innerHTML = "";
 
-        const bandeau = await chargerFragmentObjet("/BOX/02-box-bandeau-nav.html");
-        slot.appendChild(bandeau);
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+        );
 
-        const lienAccueil = slot.querySelector("[data-site-href]");
-
-        if (lienAccueil) {
-          lienAccueil.dataset.siteHref = "/ESPACE-ADMIN/accueil-admin.html";
-          lienAccueil.dataset.space = "admin";
-          lienAccueil.setAttribute("aria-label", "Accueil admin La Clé du Parc");
-        }
-
-        const libelleEspace = slot.querySelector("[data-lcdp-bandeau-nav-label]");
-
-        if (libelleEspace) {
-          libelleEspace.textContent = "Espace Admin";
-          libelleEspace.hidden = false;
-        }
-
-        appliquerRoutesSite(slot);
-      }
-
-      async function initialiserMenuAdmin() {
-        const slot = document.getElementById("lcdp-menu-admin-slot");
-
-        if (!slot) {
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet("/BOX/02-box-menu-bouton.html");
         slot.appendChild(fragment);
-
-        const liste = slot.querySelector("[data-lcdp-menu-bouton-list]");
-
-        if (!liste) {
-          throw new Error("Structure du menu bouton incomplète.");
-        }
-
-        const boutons = [
-          {
-            label: "PARC",
-            target: "/ESPACE-ADMIN/PARC/admin-parc-accueil-parc.html"
-          },
-          {
-            label: "MEMBRE",
-            target: "/ESPACE-ADMIN/MEMBRE/admin-membre-accueil-membre.html"
-          },
-          {
-            label: "ABO",
-            target: "/ESPACE-ADMIN/ABO/admin-abo-accueil-abo.html"
-          },
-          {
-            label: "COACH",
-            target: "/ESPACE-ADMIN/COACH/admin-coach-accueil-coach.html"
-          },
-          {
-            label: "INVITE",
-            target: "/ESPACE-ADMIN/INVITE/admin-invite-accueil-invite.html"
-          }
-        ];
-
-        boutons.forEach((bouton) => {
-          const element = document.createElement("a");
-          element.className = "lcdp-button lcdp-button-primary";
-          element.textContent = bouton.label;
-          element.href = construireUrlAdmin(bouton.target);
-          liste.appendChild(element);
-        });
+        appliquerRoutes(slot);
       }
 
       async function initialiserFooter() {
@@ -302,29 +273,164 @@
 
         slot.innerHTML = "";
 
-        const footer = await chargerFragmentObjet("/BOX/02-box-footer.html");
-        slot.appendChild(footer);
+        const fragment = await chargerFragmentObjet("/BOX/02-box-footer.html");
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
 
-        appliquerRoutesSite(slot);
+      function afficherCategorie(categorieId) {
+        const categorie = categoriesAdmin.find(
+          (item) => item.id === categorieId
+        );
+
+        if (!categorie) {
+          return;
+        }
+
+        document
+          .querySelectorAll("[data-lcdp-menu-gauche-admin-category]")
+          .forEach((button) => {
+            const active =
+              button.dataset.lcdpMenuGaucheAdminCategory === categorie.id;
+
+            button.setAttribute("aria-pressed", String(active));
+          });
+
+        const title = document.querySelector(
+          "[data-lcdp-menu-centre-admin-title]"
+        );
+
+        const grid = document.querySelector(
+          "[data-lcdp-mini-galerie-menu-centre-admin-grid]"
+        );
+
+        const template = document.querySelector(
+          "[data-lcdp-mini-galerie-menu-centre-admin-template]"
+        );
+
+        if (!title || !grid || !template) {
+          throw new Error("Structure du menu centre admin incomplète.");
+        }
+
+        title.textContent = categorie.titre;
+        grid.innerHTML = "";
+
+        categorie.rubriques.forEach((rubrique) => {
+          const item = template.content.firstElementChild.cloneNode(true);
+          const link = item.querySelector(
+            "[data-lcdp-mini-galerie-menu-centre-admin-link]"
+          );
+
+          if (!link) {
+            throw new Error("Bouton de mini galerie admin introuvable.");
+          }
+
+          link.textContent = rubrique.label;
+          link.href = urlAdmin(rubrique.target);
+          grid.appendChild(item);
+        });
+      }
+
+      async function initialiserMenusAdmin() {
+        const leftSlot = document.getElementById(
+          "lcdp-menu-gauche-admin-slot"
+        );
+
+        const centerSlot = document.getElementById(
+          "lcdp-menu-centre-admin-slot"
+        );
+
+        if (!leftSlot || !centerSlot) {
+          return;
+        }
+
+        leftSlot.innerHTML = "";
+        centerSlot.innerHTML = "";
+
+        const [leftMenu, centerMenu] = await Promise.all([
+          chargerFragmentAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/menu-gauche-admin.html"
+          ),
+          chargerFragmentAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/menu-centre-admin.html"
+          )
+        ]);
+
+        leftSlot.appendChild(leftMenu);
+        centerSlot.appendChild(centerMenu);
+
+        const buttonSlot = leftSlot.querySelector(
+          "[data-lcdp-menu-gauche-admin-slot]"
+        );
+
+        const gallerySlot = centerSlot.querySelector(
+          "[data-lcdp-menu-centre-admin-contenu]"
+        );
+
+        if (!buttonSlot || !gallerySlot) {
+          throw new Error("Structure des menus admin incomplète.");
+        }
+
+        const [genericButtonMenu, miniGallery] = await Promise.all([
+          chargerFragmentObjet("/BOX/02-box-menu-bouton.html"),
+          chargerFragmentAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/mini-galerie-menu-centre-admin.html"
+          )
+        ]);
+
+        buttonSlot.appendChild(genericButtonMenu);
+        gallerySlot.appendChild(miniGallery);
+
+        const nav = buttonSlot.querySelector(
+          "[data-lcdp-box-menu-bouton]"
+        );
+
+        const list = buttonSlot.querySelector(
+          "[data-lcdp-menu-bouton-list]"
+        );
+
+        if (!nav || !list) {
+          throw new Error("Objet 02-box-menu-bouton incomplet.");
+        }
+
+        nav.setAttribute("aria-label", "Catégories de l’espace admin");
+
+        categoriesAdmin.forEach((categorie) => {
+          const button = document.createElement("button");
+
+          button.type = "button";
+          button.className = "lcdp-button lcdp-button-primary";
+          button.textContent = categorie.bouton;
+          button.dataset.lcdpMenuGaucheAdminCategory = categorie.id;
+          button.setAttribute("aria-pressed", "false");
+
+          button.addEventListener("click", () => {
+            afficherCategorie(categorie.id);
+          });
+
+          list.appendChild(button);
+        });
+
+        afficherCategorie("admin");
       }
 
       async function verifierSessionAdmin() {
-        const endpointLogSessAdmin = String(
+        const endpoint = String(
           config.workerLogSessAdminUrl ||
           config.WORKER_LOG_SESS_ADMIN_URL ||
           window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
           ""
         ).replace(/\/+$/, "");
 
-        const urlConnexionAdmin = construireUrlAdmin("/ESPACE-ADMIN/connexion-admin.html");
+        const loginUrl = urlAdmin("/ESPACE-ADMIN/connexion-admin.html");
 
-        if (!endpointLogSessAdmin) {
-          window.location.href = urlConnexionAdmin;
+        if (!endpoint) {
+          window.location.href = loginUrl;
           return false;
         }
 
         try {
-          const reponse = await fetch(endpointLogSessAdmin + "/session", {
+          const response = await fetch(endpoint + "/session", {
             method: "GET",
             credentials: "include",
             cache: "no-store",
@@ -333,42 +439,46 @@
             }
           });
 
-          const data = await reponse.json().catch(() => null);
+          const data = await response.json().catch(() => null);
 
-          if (!reponse.ok || !data || data.success !== true) {
-            window.location.href = urlConnexionAdmin;
+          if (!response.ok || !data || data.success !== true) {
+            window.location.href = loginUrl;
             return false;
           }
 
           return true;
-        } catch (erreur) {
-          console.error("Erreur session admin :", erreur);
-          window.location.href = urlConnexionAdmin;
+        } catch (error) {
+          console.error("Erreur session admin :", error);
+          window.location.href = loginUrl;
           return false;
         }
       }
 
       async function initialiserPage() {
-        await initialiserBandeau();
-        await initialiserFooter();
-
         const sessionValide = await verifierSessionAdmin();
 
         if (!sessionValide) {
           return;
         }
 
-        await initialiserMenuAdmin();
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserMenusAdmin()
+        ]);
 
         const main = document.getElementById("lcdp-main-admin");
 
         if (main) {
           main.hidden = false;
         }
+
+        initialiserFooter().catch((error) => {
+          console.error("Erreur footer admin :", error);
+        });
       }
 
-      initialiserPage().catch((erreur) => {
-        console.error(erreur);
+      initialiserPage().catch((error) => {
+        console.error(error);
       });
     })();
   </script>
