@@ -9,6 +9,7 @@
   <meta name="description" content="Accueil de l’espace admin La Clé du Parc.">
 
   <script src="../config.js"></script>
+  <script src="./A_STRUCTURE/guard-admin.js"></script>
 
   <script>
     (() => {
@@ -415,43 +416,16 @@
       }
 
       async function verifierSessionAdmin() {
-        const endpoint = String(
-          config.workerLogSessAdminUrl ||
-          config.WORKER_LOG_SESS_ADMIN_URL ||
-          window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
-          ""
-        ).replace(/\/+$/, "");
+        const guard = window.LCDP_GUARD_ADMIN;
 
-        const loginUrl = urlAdmin("/ESPACE-ADMIN/connexion-admin.html");
-
-        if (!endpoint) {
-          window.location.href = loginUrl;
-          return false;
+        if (
+          !guard ||
+          typeof guard.verifierAccesPageAdmin !== "function"
+        ) {
+          throw new Error("Garde admin centralisé indisponible.");
         }
 
-        try {
-          const response = await fetch(endpoint + "/session", {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-            headers: {
-              "Accept": "application/json"
-            }
-          });
-
-          const data = await response.json().catch(() => null);
-
-          if (!response.ok || !data || data.success !== true) {
-            window.location.href = loginUrl;
-            return false;
-          }
-
-          return true;
-        } catch (error) {
-          console.error("Erreur session admin :", error);
-          window.location.href = loginUrl;
-          return false;
-        }
+        return guard.verifierAccesPageAdmin();
       }
 
       async function initialiserPage() {
