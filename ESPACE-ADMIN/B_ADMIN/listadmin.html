@@ -6,13 +6,9 @@
   <title>ListAdmin - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="Liste des comptes administrateurs La Clé du Parc."
-  >
+  <meta name="description" content="Liste des comptes administrateurs La Clé du Parc.">
 
   <script src="../../config.js"></script>
-  <script src="../A_STRUCTURE/guard-admin.js"></script>
 
   <script>
     (() => {
@@ -77,10 +73,7 @@
         return construireUrl(objetBase, path);
       };
 
-      [
-        "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css"
-      ].forEach((path) => {
+      ["/CSSBASE/cssbase.css", "/BOX/02-box-bandeau-nav.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlObjet(path) +
@@ -88,29 +81,36 @@
         );
       });
 
-      document.write(
-        '<link rel="stylesheet" href="' +
-        window.LCDP_urlAdmin(
-          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css"
-        ) +
-        '">'
-      );
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+      document.write('<script src="' + window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/guard-admin.js") + '"><\\/script>');
+      document.write('<script src="' + window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/menu-gauche-admin.js") + '"><\\/script>');
     })();
   </script>
 </head>
-
-<body class="lcdp-page-listadmin">
+<body class="lcdp-page-admin-interieure lcdp-page-listadmin">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
 
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section
-        class="lcdp-page-section"
-        aria-label="Liste des administrateurs"
-      >
+      <section class="lcdp-page-section" aria-label="Liste des administrateurs">
         <div class="lcdp-page-container">
-          <div id="lcdp-table-lecture-admin-slot"></div>
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <div id="lcdp-table-lecture-admin-slot"></div>
+            </div>
+
+          </div>
         </div>
       </section>
     </main>
@@ -124,27 +124,21 @@
       const config = window.SITE_CONFIG || {};
 
       function urlAdmin(path) {
-        if (typeof window.LCDP_urlAdmin === "function") {
-          return window.LCDP_urlAdmin(path);
-        }
-
-        return path;
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
       }
 
       function urlPublic(path) {
-        if (typeof window.LCDP_urlPublic === "function") {
-          return window.LCDP_urlPublic(path);
-        }
-
-        return path;
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(path)
+          : path;
       }
 
       function urlObjet(path) {
-        if (typeof window.LCDP_urlObjet === "function") {
-          return window.LCDP_urlObjet(path);
-        }
-
-        return path;
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
       }
 
       function appliquerRoutes(racine = document) {
@@ -166,7 +160,7 @@
         });
       }
 
-      async function chargerFragment(url, label) {
+      async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
           credentials: "omit",
@@ -174,7 +168,7 @@
         });
 
         if (!response.ok) {
-          throw new Error(label + " introuvable.");
+          throw new Error(libelle + " introuvable.");
         }
 
         const template = document.createElement("template");
@@ -187,6 +181,13 @@
         return chargerFragment(
           urlAdmin(path),
           "Fragment ADMIN " + path
+        );
+      }
+
+      function chargerFragmentObjet(path) {
+        return chargerFragment(
+          urlObjet(path),
+          "Fragment OBJET " + path
         );
       }
 
@@ -214,15 +215,6 @@
         });
       }
 
-      function endpointAdminData() {
-        return String(
-          config.workerAdminDataUrl ||
-          config.WORKER_ADMIN_DATA_URL ||
-          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
-          ""
-        ).replace(/\/+$/, "");
-      }
-
       async function initialiserBandeau() {
         const slot = document.getElementById("lcdp-bandeau-slot");
 
@@ -238,6 +230,31 @@
 
         slot.appendChild(fragment);
         appliquerRoutes(slot);
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (
+          !moduleMenu ||
+          typeof moduleMenu.initialiser !== "function"
+        ) {
+          throw new Error("Menu gauche admin centralisé indisponible.");
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "admin"
+        });
       }
 
       async function initialiserTable() {
@@ -294,6 +311,7 @@
 
         await Promise.all([
           initialiserBandeau(),
+          initialiserMenuGauche(),
           initialiserTable()
         ]);
 
