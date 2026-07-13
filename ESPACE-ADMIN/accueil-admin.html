@@ -131,15 +131,24 @@
       const categoriesAdmin = [
         {
           id: "admin",
-          bouton: "Admin"
+          bouton: "Admin",
+          libelleBouton: "Admin",
+          dossier: "ADMIN",
+          prefixePage: "admin"
         },
         {
           id: "parcs",
-          bouton: "Parcs"
+          bouton: "Parcs",
+          libelleBouton: "Parc",
+          dossier: "PARC",
+          prefixePage: "parc"
         },
         {
           id: "membres",
-          bouton: "Membres"
+          bouton: "Membres",
+          libelleBouton: "Membres",
+          dossier: "MEMBRE",
+          prefixePage: "membre"
         }
       ];
 
@@ -292,14 +301,20 @@
         grid.innerHTML = "";
 
         for (let index = 0; index < NOMBRE_BOUTONS_PAR_MENU; index += 1) {
-          const button = template.content.firstElementChild.cloneNode(true);
+          const numero = index + 1;
+          const lien = template.content.firstElementChild.cloneNode(true);
+          const libelle = categorie.libelleBouton + " " + numero;
+          const nomPage = categorie.prefixePage + "-" + numero + ".html";
+          const cheminPage =
+            "/ESPACE-ADMIN/" + categorie.dossier + "/" + nomPage;
 
-          button.setAttribute(
-            "aria-label",
-            categorie.bouton + " - emplacement " + (index + 1)
-          );
+          lien.textContent = libelle;
+          lien.href = urlAdmin(cheminPage);
+          lien.dataset.lcdpAdminCategorie = categorie.id;
+          lien.dataset.lcdpAdminPosition = String(numero);
+          lien.setAttribute("aria-label", "Ouvrir " + libelle);
 
-          grid.appendChild(button);
+          grid.appendChild(lien);
         }
       }
 
