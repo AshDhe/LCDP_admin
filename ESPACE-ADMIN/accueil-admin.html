@@ -163,8 +163,24 @@
         );
       }
 
+      function normaliserCheminPageAdmin(path) {
+        return String(path || "")
+          .replace(
+            /^\/ESPACE-ADMIN\/ADMIN\//,
+            "/ESPACE-ADMIN/B_ADMIN/"
+          )
+          .replace(
+            /^\/ESPACE-ADMIN\/PARCS\//,
+            "/ESPACE-ADMIN/B_PARCS/"
+          )
+          .replace(
+            /^\/ESPACE-ADMIN\/MEMBRES\//,
+            "/ESPACE-ADMIN/B_MEMBRES/"
+          );
+      }
+
       function urlAdmin(path) {
-        const value = String(path || "");
+        const value = normaliserCheminPageAdmin(path);
 
         if (!value || estUrlExterneOuAncre(value)) {
           return value;
