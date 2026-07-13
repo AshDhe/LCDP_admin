@@ -9,7 +9,6 @@
   <meta name="description" content="Accueil de l’espace admin La Clé du Parc.">
 
   <script src="../config.js"></script>
-  <script src="./A_STRUCTURE/guard-admin.js"></script>
 
   <script>
     (() => {
@@ -74,10 +73,7 @@
         return construireUrl(objetBase, path);
       };
 
-      [
-        "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css"
-      ].forEach((path) => {
+      ["/CSSBASE/cssbase.css", "/BOX/02-box-bandeau-nav.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlObjet(path) +
@@ -85,21 +81,19 @@
         );
       });
 
-      [
-        "/ESPACE-ADMIN/A_STRUCTURE/menu-gauche-admin.css",
-        "/ESPACE-ADMIN/A_STRUCTURE/menu-centre-admin.css",
-        "/ESPACE-ADMIN/A_STRUCTURE/mini-galerie-menu-centre-admin.css"
-      ].forEach((path) => {
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlAdmin(path) +
           '">'
         );
       });
+
+      document.write('<script src="' + window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/guard-admin.js") + '"><\\/script>');
+      document.write('<script src="' + window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/menu-gauche-admin.js") + '"><\\/script>');
     })();
   </script>
 </head>
-
 <body class="lcdp-page-accueil-admin">
   <div class="lcdp-site-page">
 
@@ -127,101 +121,51 @@
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 24;
 
-      const categoriesAdmin = [
-        {
-          id: "admin",
-          bouton: "Admin",
-          cat: "Admin",
-          fallback: "Admin"
-        },
-        {
-          id: "parcs",
-          bouton: "Parcs",
-          cat: "Parcs",
-          fallback: "Parc"
-        },
-        {
-          id: "membres",
-          bouton: "Membres",
-          cat: "Membres",
-          fallback: "Membres"
-        }
-      ];
+      const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+      const categoriesAdmin =
+        moduleMenu &&
+        typeof moduleMenu.getCategories === "function"
+          ? moduleMenu.getCategories()
+          : [
+              {
+                id: "admin",
+                label: "Admin",
+                cat: "Admin",
+                fallback: "Admin"
+              },
+              {
+                id: "parcs",
+                label: "Parcs",
+                cat: "Parcs",
+                fallback: "Parc"
+              },
+              {
+                id: "membres",
+                label: "Membres",
+                cat: "Membres",
+                fallback: "Membres"
+              }
+            ];
 
       let boutonsConfigures = [];
 
-      function estUrlExterneOuAncre(path) {
-        const value = String(path || "");
-
-        return (
-          value.startsWith("#") ||
-          value.startsWith("mailto:") ||
-          value.startsWith("tel:") ||
-          value.startsWith("http://") ||
-          value.startsWith("https://") ||
-          value.startsWith("data:")
-        );
-      }
-
-      function normaliserCheminPageAdmin(path) {
-        return String(path || "")
-          .replace(
-            /^\/ESPACE-ADMIN\/ADMIN\//,
-            "/ESPACE-ADMIN/B_ADMIN/"
-          )
-          .replace(
-            /^\/ESPACE-ADMIN\/PARCS\//,
-            "/ESPACE-ADMIN/B_PARCS/"
-          )
-          .replace(
-            /^\/ESPACE-ADMIN\/MEMBRES\//,
-            "/ESPACE-ADMIN/B_MEMBRES/"
-          );
-      }
-
       function urlAdmin(path) {
-        const value = normaliserCheminPageAdmin(path);
-
-        if (!value || estUrlExterneOuAncre(value)) {
-          return value;
-        }
-
         return typeof window.LCDP_urlAdmin === "function"
-          ? window.LCDP_urlAdmin(value)
-          : value;
+          ? window.LCDP_urlAdmin(path)
+          : path;
       }
 
       function urlPublic(path) {
-        const value = String(path || "");
-
-        if (!value || estUrlExterneOuAncre(value)) {
-          return value;
-        }
-
         return typeof window.LCDP_urlPublic === "function"
-          ? window.LCDP_urlPublic(value)
-          : value;
+          ? window.LCDP_urlPublic(path)
+          : path;
       }
 
       function urlObjet(path) {
-        const value = String(path || "");
-
-        if (!value || estUrlExterneOuAncre(value)) {
-          return value;
-        }
-
         return typeof window.LCDP_urlObjet === "function"
-          ? window.LCDP_urlObjet(value)
-          : value;
-      }
-
-      function endpointAdminData() {
-        return String(
-          config.workerAdminDataUrl ||
-          config.WORKER_ADMIN_DATA_URL ||
-          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
-          ""
-        ).replace(/\/+$/, "");
+          ? window.LCDP_urlObjet(path)
+          : path;
       }
 
       function appliquerRoutes(racine = document) {
@@ -243,7 +187,7 @@
         });
       }
 
-      async function chargerFragment(url, label) {
+      async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
           credentials: "omit",
@@ -251,13 +195,20 @@
         });
 
         if (!response.ok) {
-          throw new Error(label + " introuvable.");
+          throw new Error(libelle + " introuvable.");
         }
 
         const template = document.createElement("template");
         template.innerHTML = (await response.text()).trim();
 
         return template.content.cloneNode(true);
+      }
+
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
       }
 
       function chargerFragmentObjet(path) {
@@ -267,11 +218,53 @@
         );
       }
 
-      function chargerFragmentAdmin(path) {
-        return chargerFragment(
-          urlAdmin(path),
-          "Fragment ADMIN " + path
+      function chargerScriptAdminUneFois(path) {
+        const src = urlAdmin(path);
+
+        if (
+          document.querySelector(
+            `script[data-lcdp-script-admin="${path}"]`
+          )
+        ) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.dataset.lcdpScriptAdmin = path;
+          script.onload = resolve;
+          script.onerror = () => reject(
+            new Error("Script ADMIN introuvable : " + path)
+          );
+          document.body.appendChild(script);
+        });
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) {
+          return;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
         );
+
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
       }
 
       async function chargerBoutonsAdmin() {
@@ -301,23 +294,6 @@
         }
 
         return Array.isArray(data.buttons) ? data.buttons : [];
-      }
-
-      async function initialiserBandeau() {
-        const slot = document.getElementById("lcdp-bandeau-slot");
-
-        if (!slot) {
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentAdmin(
-          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
-        );
-
-        slot.appendChild(fragment);
-        appliquerRoutes(slot);
       }
 
       function afficherCategorie(categorieId) {
@@ -387,6 +363,22 @@
 
           grid.appendChild(lien);
         }
+
+        const url = new URL(window.location.href);
+        url.searchParams.set("categorie", categorie.id);
+        window.history.replaceState(null, "", url);
+      }
+
+      function categorieInitiale() {
+        const demandee = new URLSearchParams(
+          window.location.search
+        ).get("categorie");
+
+        return categoriesAdmin.some(
+          (categorie) => categorie.id === demandee
+        )
+          ? demandee
+          : "admin";
       }
 
       async function initialiserMenusAdmin() {
@@ -458,7 +450,7 @@
 
           button.type = "button";
           button.className = "lcdp-button lcdp-button-primary";
-          button.textContent = categorie.bouton;
+          button.textContent = categorie.label;
           button.dataset.lcdpMenuGaucheAdminCategory = categorie.id;
           button.setAttribute("aria-pressed", "false");
 
@@ -469,7 +461,7 @@
           list.appendChild(button);
         });
 
-        afficherCategorie("admin");
+        afficherCategorie(categorieInitiale());
       }
 
       async function verifierSessionAdmin() {

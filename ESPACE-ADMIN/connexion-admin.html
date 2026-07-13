@@ -6,7 +6,7 @@
   <title>Connexion admin - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Connexion à l'espace admin La Clé du Parc.">
+  <meta name="description" content="Connexion à l’espace admin La Clé du Parc.">
 
   <script src="../config.js"></script>
 
@@ -20,8 +20,9 @@
         return String(value || "").replace(/\/+$/, "");
       }
 
-      function buildUrl(base, path) {
-        return nettoyerBaseUrl(base) + "/" + String(path || "").replace(/^\/+/, "");
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
       }
 
       const adminBase = nettoyerBaseUrl(
@@ -40,30 +41,28 @@
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
-        buildUrl(publicBase, "/OBJET")
+        construireUrl(publicBase, "/OBJET")
       );
 
       window.SITE_BASE = adminBase;
-
       window.LCDP_ADMIN_BASE = adminBase;
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
-      window.LCDP_buildUrl = buildUrl;
-
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        if (typeof config.publicUrl === "function") {
-          return config.publicUrl(path);
-        }
-
-        return buildUrl(publicBase, path);
-      };
 
       window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
         if (typeof config.adminUrl === "function") {
           return config.adminUrl(path);
         }
 
-        return buildUrl(adminBase, path);
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
       };
 
       window.LCDP_urlObjet = function LCDP_urlObjet(path) {
@@ -71,39 +70,54 @@
           return config.objetUrl(path);
         }
 
-        return buildUrl(objetBase, path);
+        return construireUrl(objetBase, path);
       };
 
-      const feuillesCssObjet = [
-        "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-footer.css",
-        "/BOX/03-box-formulaire.css",
-        "/BOX/03-box-champ-formulaire.css",
-        "/BOX/02-box-alerte.css"
-      ];
-
-      feuillesCssObjet.forEach((chemin) => {
+      ["/CSSBASE/cssbase.css", "/BOX/02-box-bandeau-nav.css", "/BOX/03-box-formulaire.css", "/BOX/03-box-champ-formulaire.css", "/BOX/02-box-alerte.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlObjet(chemin) +
+          window.LCDP_urlObjet(path) +
           '">'
         );
       });
+
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+      [].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+
     })();
   </script>
 </head>
-
-<body>
+<body class="lcdp-page-connexion-admin">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
 
     <main class="lcdp-site-main">
-      <div id="lcdp-formulaire-connexion-admin-slot"></div>
+      <section class="lcdp-page-section" aria-label="Connexion admin">
+        <div class="lcdp-page-container">
+          <div class="lcdp-page-content">
+
+            <div id="lcdp-formulaire-connexion-admin-slot"></div>
+
+          </div>
+        </div>
+      </section>
     </main>
 
-    <div id="lcdp-footer-slot"></div>
     <div id="lcdp-lightbox-slot"></div>
 
   </div>
@@ -112,121 +126,82 @@
     (() => {
       "use strict";
 
-      function estUrlExterneOuAncre(chemin) {
-        const valeur = String(chemin || "");
-
-        return (
-          valeur.startsWith("#") ||
-          valeur.startsWith("mailto:") ||
-          valeur.startsWith("tel:") ||
-          valeur.startsWith("http://") ||
-          valeur.startsWith("https://") ||
-          valeur.startsWith("data:")
-        );
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
       }
 
-      function construireUrlAdmin(chemin) {
-        const valeur = String(chemin || "");
-
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
-        }
-
-        if (typeof window.LCDP_urlAdmin === "function") {
-          return window.LCDP_urlAdmin(valeur);
-        }
-
-        return valeur;
+      function urlPublic(path) {
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(path)
+          : path;
       }
 
-      function construireUrlPublic(chemin) {
-        const valeur = String(chemin || "");
-
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
-        }
-
-        if (typeof window.LCDP_urlPublic === "function") {
-          return window.LCDP_urlPublic(valeur);
-        }
-
-        return valeur;
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
       }
 
-      function construireUrlObjet(chemin) {
-        const valeur = String(chemin || "");
-
-        if (!valeur || estUrlExterneOuAncre(valeur)) {
-          return valeur;
-        }
-
-        if (typeof window.LCDP_urlObjet === "function") {
-          return window.LCDP_urlObjet(valeur);
-        }
-
-        return valeur;
-      }
-
-      function appliquerRoutesSite(racine = document) {
+      function appliquerRoutes(racine = document) {
         racine.querySelectorAll("[data-site-href]").forEach((element) => {
-          const chemin = element.dataset.siteHref || "";
-          const espace = element.dataset.space || "public";
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
 
-          if (espace === "admin") {
-            element.setAttribute("href", construireUrlAdmin(chemin));
-            return;
-          }
-
-          element.setAttribute("href", construireUrlPublic(chemin));
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : urlPublic(path)
+          );
         });
 
         racine.querySelectorAll("[data-site-src]").forEach((element) => {
-          const chemin = element.dataset.siteSrc || "";
-          const cheminObjet = chemin.replace(/^\/?OBJET\/?/, "/");
-          element.setAttribute("src", construireUrlObjet(cheminObjet));
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
         });
       }
 
-      async function chargerFragmentObjet(chemin) {
-        const reponse = await fetch(construireUrlObjet(chemin), {
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
           method: "GET",
           credentials: "omit",
           cache: "no-cache"
         });
 
-        if (!reponse.ok) {
-          throw new Error("Fragment OBJET introuvable : " + chemin);
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
         }
 
-        const html = await reponse.text();
         const template = document.createElement("template");
-        template.innerHTML = html.trim();
+        template.innerHTML = (await response.text()).trim();
 
         return template.content.cloneNode(true);
       }
 
-      async function chargerFragmentAdmin(chemin) {
-        const reponse = await fetch(construireUrlAdmin(chemin), {
-          method: "GET",
-          credentials: "omit",
-          cache: "no-cache"
-        });
-
-        if (!reponse.ok) {
-          throw new Error("Fragment ADMIN introuvable : " + chemin);
-        }
-
-        const html = await reponse.text();
-        const template = document.createElement("template");
-        template.innerHTML = html.trim();
-
-        return template.content.cloneNode(true);
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
       }
 
-      function chargerScriptObjetUneFois(chemin) {
-        const src = construireUrlObjet(chemin);
+      function chargerFragmentObjet(path) {
+        return chargerFragment(
+          urlObjet(path),
+          "Fragment OBJET " + path
+        );
+      }
 
-        if (document.querySelector(`script[data-lcdp-script-objet="${chemin}"]`)) {
+      function chargerScriptAdminUneFois(path) {
+        const src = urlAdmin(path);
+
+        if (
+          document.querySelector(
+            `script[data-lcdp-script-admin="${path}"]`
+          )
+        ) {
           return Promise.resolve();
         }
 
@@ -234,27 +209,11 @@
           const script = document.createElement("script");
           script.src = src;
           script.defer = true;
-          script.dataset.lcdpScriptObjet = chemin;
+          script.dataset.lcdpScriptAdmin = path;
           script.onload = resolve;
-          script.onerror = () => reject(new Error("Script OBJET introuvable : " + chemin));
-          document.body.appendChild(script);
-        });
-      }
-
-      function chargerScriptAdminUneFois(chemin) {
-        const src = construireUrlAdmin(chemin);
-
-        if (document.querySelector(`script[data-lcdp-script-admin="${chemin}"]`)) {
-          return Promise.resolve();
-        }
-
-        return new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = src;
-          script.defer = true;
-          script.dataset.lcdpScriptAdmin = chemin;
-          script.onload = resolve;
-          script.onerror = () => reject(new Error("Script admin introuvable : " + chemin));
+          script.onerror = () => reject(
+            new Error("Script ADMIN introuvable : " + path)
+          );
           document.body.appendChild(script);
         });
       }
@@ -268,82 +227,100 @@
 
         slot.innerHTML = "";
 
-        const bandeau = await chargerFragmentAdmin(
+        const fragment = await chargerFragmentAdmin(
           "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
         );
 
-        slot.appendChild(bandeau);
-        appliquerRoutesSite(slot);
-      }
-
-      async function initialiserFooter() {
-        const slot = document.getElementById("lcdp-footer-slot");
-
-        if (!slot) {
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const footer = await chargerFragmentObjet("/BOX/02-box-footer.html");
-        slot.appendChild(footer);
-
-        appliquerRoutesSite(slot);
-      }
-
-      window.LCDP_afficherAlerte = async function LCDP_afficherAlerte(titre, message, options = {}) {
-        const slot = document.getElementById("lcdp-lightbox-slot");
-
-        if (!slot) {
-          return false;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet("/BOX/02-box-alerte.html");
         slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+      function chargerScriptObjetUneFois(path) {
+        const src = urlObjet(path);
 
-        const alerte = slot.querySelector("[data-lcdp-box-alerte]");
-        const texte = slot.querySelector("[data-lcdp-alerte-message]");
-        const boutonFermer = slot.querySelector("[data-lcdp-alerte-close]");
-        const boutonOk = slot.querySelector("[data-lcdp-alerte-ok]");
-
-        if (!alerte || !texte || !boutonFermer || !boutonOk) {
-          slot.innerHTML = "";
-          return false;
+        if (
+          document.querySelector(
+            `script[data-lcdp-script-objet="${path}"]`
+          )
+        ) {
+          return Promise.resolve();
         }
 
-        texte.textContent = message || titre || "Information";
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.dataset.lcdpScriptObjet = path;
+          script.onload = resolve;
+          script.onerror = () => reject(
+            new Error("Script OBJET introuvable : " + path)
+          );
+          document.body.appendChild(script);
+        });
+      }
 
-        const fermer = () => {
+      window.LCDP_afficherAlerte =
+        async function LCDP_afficherAlerte(
+          titre,
+          message,
+          options = {}
+        ) {
+          const slot = document.getElementById("lcdp-lightbox-slot");
+
+          if (!slot) {
+            return false;
+          }
+
           slot.innerHTML = "";
 
-          if (options.redirectUrl) {
-            window.location.href = options.redirectUrl;
+          const fragment = await chargerFragmentObjet(
+            "/BOX/02-box-alerte.html"
+          );
+
+          slot.appendChild(fragment);
+
+          const alerte = slot.querySelector("[data-lcdp-box-alerte]");
+          const texte = slot.querySelector("[data-lcdp-alerte-message]");
+          const boutonFermer = slot.querySelector(
+            "[data-lcdp-alerte-close]"
+          );
+          const boutonOk = slot.querySelector("[data-lcdp-alerte-ok]");
+
+          if (!alerte || !texte || !boutonFermer || !boutonOk) {
+            slot.innerHTML = "";
+            return false;
           }
-        };
 
-        boutonFermer.addEventListener("click", fermer);
-        boutonOk.addEventListener("click", fermer);
+          texte.textContent = message || titre || "Information";
 
-        alerte.addEventListener("click", (event) => {
-          if (event.target === alerte) {
-            fermer();
-          }
-        });
+          const fermer = () => {
+            slot.innerHTML = "";
 
-        document.addEventListener(
-          "keydown",
-          (event) => {
-            if (event.key === "Escape") {
+            if (options.redirectUrl) {
+              window.location.href = options.redirectUrl;
+            }
+          };
+
+          boutonFermer.addEventListener("click", fermer);
+          boutonOk.addEventListener("click", fermer);
+
+          alerte.addEventListener("click", (event) => {
+            if (event.target === alerte) {
               fermer();
             }
-          },
-          { once: true }
-        );
+          });
 
-        return true;
-      };
+          document.addEventListener(
+            "keydown",
+            (event) => {
+              if (event.key === "Escape") {
+                fermer();
+              }
+            },
+            { once: true }
+          );
+
+          return true;
+        };
 
       async function initialiserFormulaireConnexion() {
         await chargerScriptObjetUneFois("/BOX/03-box-formulaire.js");
@@ -352,56 +329,60 @@
           throw new Error("Créateur de formulaire V3 indisponible.");
         }
 
-        await window.LCDP_creerFormulaire("lcdp-formulaire-connexion-admin-slot", {
-          id: "formulaire-connexion-admin",
-          ariaLabel: "Connexion admin",
-          titre: "Connexion admin",
-          sousTitre: "Accédez à l'espace d'administration",
-          champs: [
-            {
-              label: "Identifiant admin",
-              type: "email",
-              id: "adminemail",
-              name: "adminemail",
-              placeholder: "Email",
-              autocomplete: "username",
-              required: true
-            },
-            {
-              label: "Mot de passe",
-              type: "password",
-              id: "adminpwd",
-              name: "adminpwd",
-              placeholder: "Mot de passe",
-              autocomplete: "current-password",
-              required: true
-            },
-            {
-              label: "Affichage",
-              type: "checkbox",
-              id: "afficher-mdp-admin",
-              name: "afficher-mdp-admin",
-              checkboxLabel: "Afficher le mot de passe"
+        await window.LCDP_creerFormulaire(
+          "lcdp-formulaire-connexion-admin-slot",
+          {
+            id: "formulaire-connexion-admin",
+            ariaLabel: "Connexion admin",
+            titre: "Connexion admin",
+            sousTitre: "Accédez à l’espace d’administration",
+            champs: [
+              {
+                label: "Identifiant admin",
+                type: "email",
+                id: "adminemail",
+                name: "adminemail",
+                placeholder: "Email",
+                autocomplete: "username",
+                required: true
+              },
+              {
+                label: "Mot de passe",
+                type: "password",
+                id: "adminpwd",
+                name: "adminpwd",
+                placeholder: "Mot de passe",
+                autocomplete: "current-password",
+                required: true
+              },
+              {
+                label: "Affichage",
+                type: "checkbox",
+                id: "afficher-mdp-admin",
+                name: "afficher-mdp-admin",
+                checkboxLabel: "Afficher le mot de passe"
+              }
+            ],
+            bouton: {
+              id: "bouton-valider-formulaire",
+              type: "submit",
+              label: "Connexion",
+              style: "lcdp-button-primary"
             }
-          ],
-          bouton: {
-            id: "bouton-valider-formulaire",
-            type: "submit",
-            label: "Connexion",
-            style: "lcdp-button-primary"
           }
-        });
+        );
       }
 
       async function initialiserPage() {
         await initialiserBandeau();
-        await initialiserFooter();
         await initialiserFormulaireConnexion();
-        await chargerScriptAdminUneFois("/ESPACE-ADMIN/connexion-admin.js");
+        await chargerScriptAdminUneFois(
+          "/ESPACE-ADMIN/connexion-admin.js"
+        );
       }
 
-      initialiserPage().catch((erreur) => {
-        console.error(erreur);
+      initialiserPage().catch((error) => {
+        console.error(error);
       });
     })();
   </script>
