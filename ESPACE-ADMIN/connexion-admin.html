@@ -205,6 +205,24 @@
         return template.content.cloneNode(true);
       }
 
+      async function chargerFragmentAdmin(chemin) {
+        const reponse = await fetch(construireUrlAdmin(chemin), {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-cache"
+        });
+
+        if (!reponse.ok) {
+          throw new Error("Fragment ADMIN introuvable : " + chemin);
+        }
+
+        const html = await reponse.text();
+        const template = document.createElement("template");
+        template.innerHTML = html.trim();
+
+        return template.content.cloneNode(true);
+      }
+
       function chargerScriptObjetUneFois(chemin) {
         const src = construireUrlObjet(chemin);
 
@@ -250,24 +268,11 @@
 
         slot.innerHTML = "";
 
-        const bandeau = await chargerFragmentObjet("/BOX/02-box-bandeau-nav.html");
+        const bandeau = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+        );
+
         slot.appendChild(bandeau);
-
-        const lienAccueil = slot.querySelector("[data-site-href]");
-
-        if (lienAccueil) {
-          lienAccueil.dataset.siteHref = "/ESPACE-ADMIN/accueil-admin.html";
-          lienAccueil.dataset.space = "admin";
-          lienAccueil.setAttribute("aria-label", "Accueil admin La Clé du Parc");
-        }
-
-        const libelleEspace = slot.querySelector("[data-lcdp-bandeau-nav-label]");
-
-        if (libelleEspace) {
-          libelleEspace.textContent = "Espace Admin";
-          libelleEspace.hidden = false;
-        }
-
         appliquerRoutesSite(slot);
       }
 

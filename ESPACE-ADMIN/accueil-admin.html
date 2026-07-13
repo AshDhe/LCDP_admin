@@ -75,8 +75,7 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-footer.css"
+        "/BOX/02-box-bandeau-nav.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -118,7 +117,6 @@
       </section>
     </main>
 
-    <div id="lcdp-footer-slot"></div>
 
   </div>
 
@@ -128,24 +126,20 @@
 
       const config = window.SITE_CONFIG || {};
 
+      const NOMBRE_BOUTONS_PAR_MENU = 24;
+
       const categoriesAdmin = [
         {
           id: "admin",
-          bouton: "Admin",
-          titre: "Menu admin",
-          rubriques: []
+          bouton: "Admin"
         },
         {
           id: "parcs",
-          bouton: "Parcs",
-          titre: "Menu parcs",
-          rubriques: []
+          bouton: "Parcs"
         },
         {
           id: "membres",
-          bouton: "Membres",
-          titre: "Menu membres",
-          rubriques: []
+          bouton: "Membres"
         }
       ];
 
@@ -265,20 +259,6 @@
         appliquerRoutes(slot);
       }
 
-      async function initialiserFooter() {
-        const slot = document.getElementById("lcdp-footer-slot");
-
-        if (!slot) {
-          return;
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet("/BOX/02-box-footer.html");
-        slot.appendChild(fragment);
-        appliquerRoutes(slot);
-      }
-
       function afficherCategorie(categorieId) {
         const categorie = categoriesAdmin.find(
           (item) => item.id === categorieId
@@ -297,10 +277,6 @@
             button.setAttribute("aria-pressed", String(active));
           });
 
-        const title = document.querySelector(
-          "[data-lcdp-menu-centre-admin-title]"
-        );
-
         const grid = document.querySelector(
           "[data-lcdp-mini-galerie-menu-centre-admin-grid]"
         );
@@ -309,27 +285,22 @@
           "[data-lcdp-mini-galerie-menu-centre-admin-template]"
         );
 
-        if (!title || !grid || !template) {
-          throw new Error("Structure du menu centre admin incomplète.");
+        if (!grid || !template) {
+          throw new Error("Structure de la mini galerie admin incomplète.");
         }
 
-        title.textContent = categorie.titre;
         grid.innerHTML = "";
 
-        categorie.rubriques.forEach((rubrique) => {
-          const item = template.content.firstElementChild.cloneNode(true);
-          const link = item.querySelector(
-            "[data-lcdp-mini-galerie-menu-centre-admin-link]"
+        for (let index = 0; index < NOMBRE_BOUTONS_PAR_MENU; index += 1) {
+          const button = template.content.firstElementChild.cloneNode(true);
+
+          button.setAttribute(
+            "aria-label",
+            categorie.bouton + " - emplacement " + (index + 1)
           );
 
-          if (!link) {
-            throw new Error("Bouton de mini galerie admin introuvable.");
-          }
-
-          link.textContent = rubrique.label;
-          link.href = urlAdmin(rubrique.target);
-          grid.appendChild(item);
-        });
+          grid.appendChild(button);
+        }
       }
 
       async function initialiserMenusAdmin() {
@@ -446,9 +417,6 @@
           main.hidden = false;
         }
 
-        initialiserFooter().catch((error) => {
-          console.error("Erreur footer admin :", error);
-        });
       }
 
       initialiserPage().catch((error) => {
