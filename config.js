@@ -33,6 +33,7 @@
 
   const WORKERS = {
     logSessAdmin: "https://ad-log-sess-api.lacleduparc.fr",
+    adminData: "https://admin-data-api.lacleduparc.fr",
 
     creaParc: "https://crea-parc-api.lacleduparc.fr",
     dashboardParc: "https://dashboard-parc-api.lacleduparc.fr",
@@ -65,6 +66,7 @@
     siteBase: active.adminBase,
 
     workerLogSessAdminUrl: WORKERS.logSessAdmin,
+    workerAdminDataUrl: WORKERS.adminData,
 
     workerCreaParcUrl: WORKERS.creaParc,
     workerDashboardParcUrl: WORKERS.dashboardParc,
@@ -84,6 +86,7 @@
     OBJET_BASE: objetBase,
 
     WORKER_LOG_SESS_ADMIN_URL: WORKERS.logSessAdmin,
+    WORKER_ADMIN_DATA_URL: WORKERS.adminData,
 
     WORKER_CREA_PARC_URL: WORKERS.creaParc,
     WORKER_DASHBOARD_PARC_URL: WORKERS.dashboardParc,
@@ -128,6 +131,7 @@
     ADMIN_BASE_URL: active.adminBase,
 
     API_LOG_SESS_AD: WORKERS.logSessAdmin,
+    API_ADMIN_DATA: WORKERS.adminData,
 
     API_CREA_PARC: WORKERS.creaParc,
     API_DASHBOARD_PARC: WORKERS.dashboardParc,
