@@ -136,7 +136,13 @@
         loading.hidden = true;
         errorBox.hidden = true;
         empty.hidden = rows.length > 0;
-        scroll.hidden = rows.length === 0;
+
+        /*
+         * Les filtres restent visibles même sans résultat.
+         * Lorsque plusieurs filtres sont renseignés, ils sont transmis
+         * ensemble au worker et combinés avec l'opérateur logique ET.
+         */
+        scroll.hidden = columns.length === 0;
 
         return true;
       } catch (error) {
