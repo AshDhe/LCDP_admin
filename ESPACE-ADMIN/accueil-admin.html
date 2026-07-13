@@ -22,7 +22,8 @@
       }
 
       function construireUrl(base, path) {
-        return nettoyerBaseUrl(base) + "/" + String(path || "").replace(/^\/+/, "");
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
       }
 
       const adminBase = nettoyerBaseUrl(
@@ -117,7 +118,6 @@
       </section>
     </main>
 
-
   </div>
 
   <script>
@@ -125,32 +125,30 @@
       "use strict";
 
       const config = window.SITE_CONFIG || {};
-
       const NOMBRE_BOUTONS_PAR_MENU = 24;
 
       const categoriesAdmin = [
         {
           id: "admin",
           bouton: "Admin",
-          libelleBouton: "Admin",
-          dossier: "ADMIN",
-          prefixePage: "admin"
+          cat: "Admin",
+          fallback: "Admin"
         },
         {
           id: "parcs",
           bouton: "Parcs",
-          libelleBouton: "Parc",
-          dossier: "PARC",
-          prefixePage: "parc"
+          cat: "Parcs",
+          fallback: "Parc"
         },
         {
           id: "membres",
           bouton: "Membres",
-          libelleBouton: "Membres",
-          dossier: "MEMBRE",
-          prefixePage: "membre"
+          cat: "Membres",
+          fallback: "Membres"
         }
       ];
+
+      let boutonsConfigures = [];
 
       function estUrlExterneOuAncre(path) {
         const value = String(path || "");
@@ -199,6 +197,15 @@
         return typeof window.LCDP_urlObjet === "function"
           ? window.LCDP_urlObjet(value)
           : value;
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
       }
 
       function appliquerRoutes(racine = document) {
@@ -251,6 +258,35 @@
         );
       }
 
+      async function chargerBoutonsAdmin() {
+        const endpoint = endpointAdminData();
+
+        if (!endpoint) {
+          throw new Error("Endpoint admin data non configuré.");
+        }
+
+        const response = await fetch(endpoint + "/menu", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json"
+          }
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger le menu admin."
+          );
+        }
+
+        return Array.isArray(data.buttons) ? data.buttons : [];
+      }
+
       async function initialiserBandeau() {
         const slot = document.getElementById("lcdp-bandeau-slot");
 
@@ -300,19 +336,38 @@
 
         grid.innerHTML = "";
 
-        for (let index = 0; index < NOMBRE_BOUTONS_PAR_MENU; index += 1) {
-          const numero = index + 1;
+        for (
+          let position = 1;
+          position <= NOMBRE_BOUTONS_PAR_MENU;
+          position += 1
+        ) {
           const lien = template.content.firstElementChild.cloneNode(true);
-          const libelle = categorie.libelleBouton + " " + numero;
-          const nomPage = categorie.prefixePage + "-" + numero + ".html";
-          const cheminPage =
-            "/ESPACE-ADMIN/" + categorie.dossier + "/" + nomPage;
 
-          lien.textContent = libelle;
-          lien.href = urlAdmin(cheminPage);
-          lien.dataset.lcdpAdminCategorie = categorie.id;
-          lien.dataset.lcdpAdminPosition = String(numero);
-          lien.setAttribute("aria-label", "Ouvrir " + libelle);
+          const configuration = boutonsConfigures.find((bouton) => {
+            return (
+              bouton.cat === categorie.cat &&
+              Number(bouton.position) === position
+            );
+          });
+
+          if (configuration) {
+            lien.textContent = configuration.label;
+            lien.href = urlAdmin(configuration.href);
+            lien.dataset.permissionCode =
+              configuration.permission_code || "";
+            lien.setAttribute(
+              "aria-label",
+              "Ouvrir " + configuration.label
+            );
+          } else {
+            lien.textContent = categorie.fallback + " " + position;
+            lien.href = "#";
+            lien.setAttribute("aria-disabled", "true");
+
+            lien.addEventListener("click", (event) => {
+              event.preventDefault();
+            });
+          }
 
           grid.appendChild(lien);
         }
@@ -421,6 +476,8 @@
           return;
         }
 
+        boutonsConfigures = await chargerBoutonsAdmin();
+
         await Promise.all([
           initialiserBandeau(),
           initialiserMenusAdmin()
@@ -431,7 +488,6 @@
         if (main) {
           main.hidden = false;
         }
-
       }
 
       initialiserPage().catch((error) => {
