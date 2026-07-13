@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const DELAI_FILTRAGE_MS = 350;
+
   async function initialiser(options = {}) {
     const slotId = String(options.slotId || "");
     const endpoint = nettoyerBaseUrl(options.endpoint);
@@ -32,6 +34,10 @@
       "[data-lcdp-table-lecture-admin-head]"
     );
 
+    const filtersRow = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-filters]"
+    );
+
     const body = slot.querySelector(
       "[data-lcdp-table-lecture-admin-body]"
     );
@@ -44,63 +50,111 @@
       "[data-lcdp-table-lecture-admin-error]"
     );
 
-    if (!loading || !scroll || !head || !body || !empty || !errorBox) {
+    if (
+      !loading ||
+      !scroll ||
+      !head ||
+      !filtersRow ||
+      !body ||
+      !empty ||
+      !errorBox
+    ) {
       throw new Error("Structure de table admin incomplète.");
     }
 
-    try {
-      const response = await fetch(
-        endpoint + "/read?resource=" + encodeURIComponent(resource),
-        {
+    const etat = {
+      columns: [],
+      filters: {},
+      filtreTimer: null,
+      structureRendue: false
+    };
+
+    async function chargerDonnees() {
+      try {
+        loading.hidden = false;
+        errorBox.hidden = true;
+
+        const requestUrl = new URL(endpoint + "/read");
+
+        requestUrl.searchParams.set("resource", resource);
+
+        Object.entries(etat.filters).forEach(([key, value]) => {
+          const texte = String(value || "").trim();
+
+          if (texte) {
+            requestUrl.searchParams.set("filter_" + key, texte);
+          }
+        });
+
+        const response = await fetch(requestUrl.toString(), {
           method: "GET",
           credentials: "include",
           cache: "no-store",
           headers: {
             Accept: "application/json"
           }
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (response.status === 401 || response.status === 403) {
+          redirigerConnexion();
+          return false;
         }
-      );
 
-      const data = await response.json().catch(() => null);
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger les données."
+          );
+        }
 
-      if (response.status === 401 || response.status === 403) {
-        redirigerConnexion();
+        const columns = Array.isArray(data.columns)
+          ? data.columns
+          : [];
+
+        const rows = Array.isArray(data.rows)
+          ? data.rows
+          : [];
+
+        etat.columns = columns;
+
+        if (!etat.structureRendue) {
+          rendreEntete(head, columns);
+          rendreFiltres(
+            filtersRow,
+            columns,
+            etat,
+            chargerDonnees
+          );
+          etat.structureRendue = true;
+        }
+
+        rendreLignes(body, columns, rows);
+
+        loading.hidden = true;
+        errorBox.hidden = true;
+        empty.hidden = rows.length > 0;
+        scroll.hidden = rows.length === 0;
+
+        return true;
+      } catch (error) {
+        console.error("Erreur table lecture admin :", error);
+
+        loading.hidden = true;
+        scroll.hidden = true;
+        empty.hidden = true;
+        errorBox.textContent = String(
+          error?.message || error || "Erreur de chargement."
+        );
+        errorBox.hidden = false;
+
         return false;
       }
-
-      if (!response.ok || !data || data.success !== true) {
-        throw new Error(
-          data?.message ||
-          data?.detail ||
-          "Impossible de charger les données."
-        );
-      }
-
-      const columns = Array.isArray(data.columns) ? data.columns : [];
-      const rows = Array.isArray(data.rows) ? data.rows : [];
-
-      rendreEntete(head, columns);
-      rendreLignes(body, columns, rows);
-
-      loading.hidden = true;
-      errorBox.hidden = true;
-      empty.hidden = rows.length > 0;
-      scroll.hidden = rows.length === 0;
-
-      return true;
-    } catch (error) {
-      console.error("Erreur table lecture admin :", error);
-
-      loading.hidden = true;
-      scroll.hidden = true;
-      empty.hidden = true;
-      errorBox.textContent = String(
-        error?.message || error || "Erreur de chargement."
-      );
-      errorBox.hidden = false;
-
-      return false;
     }
+
+    return chargerDonnees();
   }
 
   function rendreEntete(head, columns) {
@@ -109,8 +163,57 @@
     columns.forEach((column) => {
       const cellule = document.createElement("th");
       cellule.scope = "col";
-      cellule.textContent = String(column.label || column.key || "");
+      cellule.textContent = String(
+        column.label || column.key || ""
+      );
       head.appendChild(cellule);
+    });
+  }
+
+  function rendreFiltres(
+    filtersRow,
+    columns,
+    etat,
+    chargerDonnees
+  ) {
+    filtersRow.innerHTML = "";
+
+    columns.forEach((column) => {
+      const cellule = document.createElement("th");
+      const filterable = column.filterable === true;
+
+      cellule.scope = "col";
+
+      if (!filterable) {
+        cellule.setAttribute("aria-hidden", "true");
+        filtersRow.appendChild(cellule);
+        return;
+      }
+
+      const input = document.createElement("input");
+      const label = String(column.label || column.key || "");
+
+      input.className =
+        "lcdp-table-lecture-admin__filter-input";
+      input.type = estColonneDate(column) ? "date" : "search";
+      input.placeholder = estColonneDate(column)
+        ? "AAAA-MM-JJ"
+        : "Filtrer";
+      input.setAttribute("aria-label", "Filtrer " + label);
+      input.autocomplete = "off";
+
+      input.addEventListener("input", () => {
+        etat.filters[column.key] = input.value;
+
+        window.clearTimeout(etat.filtreTimer);
+
+        etat.filtreTimer = window.setTimeout(() => {
+          chargerDonnees();
+        }, DELAI_FILTRAGE_MS);
+      });
+
+      cellule.appendChild(input);
+      filtersRow.appendChild(cellule);
     });
   }
 
@@ -124,16 +227,48 @@
         const cellule = document.createElement("td");
         const valeur = row?.[column.key];
 
-        cellule.textContent =
-          valeur === null || valeur === undefined || valeur === ""
-            ? "—"
-            : String(valeur);
-
+        cellule.textContent = formaterValeur(column, valeur);
         ligne.appendChild(cellule);
       });
 
       body.appendChild(ligne);
     });
+  }
+
+  function formaterValeur(column, valeur) {
+    if (
+      valeur === null ||
+      valeur === undefined ||
+      valeur === ""
+    ) {
+      return "—";
+    }
+
+    if (estColonneDate(column)) {
+      const date = new Date(valeur);
+
+      if (!Number.isNaN(date.getTime())) {
+        return new Intl.DateTimeFormat("fr-CA", {
+          timeZone: "Europe/Paris",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(date);
+      }
+    }
+
+    return String(valeur);
+  }
+
+  function estColonneDate(column) {
+    const key = String(column?.key || "").toLowerCase();
+
+    return (
+      key === "date" ||
+      key.startsWith("date") ||
+      key.endsWith("_date") ||
+      key.endsWith("date")
+    );
   }
 
   function redirigerConnexion() {

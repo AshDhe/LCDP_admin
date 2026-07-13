@@ -202,3 +202,30 @@
   color: var(--lcdp-color-text);
   font-weight: 700;
 }
+
+.lcdp-table-lecture-admin__filters th {
+  padding: 6px 8px;
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-table-lecture-admin__filter-input {
+  width: 100%;
+  min-width: 92px;
+  height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: 8px;
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.lcdp-table-lecture-admin__filter-input::placeholder {
+  color: var(--lcdp-color-text-muted);
+}
+
+.lcdp-table-lecture-admin__filter-input:focus {
+  border-color: var(--lcdp-color-primary);
+}
+
