@@ -1,4 +1,5 @@
-.lcdp-page-listadmin .lcdp-page-container {
+.lcdp-page-listadmin .lcdp-page-container,
+.lcdp-page-statutparc .lcdp-page-container {
   max-width: 1440px;
 }
 
