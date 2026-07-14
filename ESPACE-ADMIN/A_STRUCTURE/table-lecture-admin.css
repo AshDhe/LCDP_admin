@@ -50,3 +50,58 @@
   color: var(--lcdp-color-text);
   font-weight: 700;
 }
+
+
+.lcdp-table-lecture-admin__sorts th {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-table-lecture-admin__sort-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lcdp-table-lecture-admin__sort-button {
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lcdp-table-lecture-admin__sort-button:hover {
+  border-color: var(--lcdp-color-primary);
+}
+
+.lcdp-table-lecture-admin__sort-button[aria-pressed="true"] {
+  border-color: var(--lcdp-color-primary);
+  background: var(--lcdp-color-primary);
+  color: #ffffff;
+}
+
+.lcdp-table-lecture-admin__filter-input {
+  width: 100%;
+  min-width: 120px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+}
+
+.lcdp-table-lecture-admin__filter-input:focus {
+  outline: none;
+  border-color: var(--lcdp-color-primary);
+  box-shadow: 0 0 0 3px rgba(85, 115, 63, 0.16);
+}

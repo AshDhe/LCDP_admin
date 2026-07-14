@@ -34,6 +34,10 @@
       "[data-lcdp-table-lecture-admin-head]"
     );
 
+    const sortsRow = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-sorts]"
+    );
+
     const filtersRow = slot.querySelector(
       "[data-lcdp-table-lecture-admin-filters]"
     );
@@ -54,6 +58,7 @@
       !loading ||
       !scroll ||
       !head ||
+      !sortsRow ||
       !filtersRow ||
       !body ||
       !empty ||
@@ -65,6 +70,8 @@
     const etat = {
       columns: [],
       filters: {},
+      sortKey: "",
+      sortDirection: "asc",
       filtreTimer: null,
       structureRendue: false
     };
@@ -77,6 +84,14 @@
         const requestUrl = new URL(endpoint + "/read");
 
         requestUrl.searchParams.set("resource", resource);
+
+        if (etat.sortKey) {
+          requestUrl.searchParams.set("sort", etat.sortKey);
+          requestUrl.searchParams.set(
+            "direction",
+            etat.sortDirection === "desc" ? "desc" : "asc"
+          );
+        }
 
         Object.entries(etat.filters).forEach(([key, value]) => {
           const texte = String(value || "").trim();
@@ -122,6 +137,12 @@
 
         if (!etat.structureRendue) {
           rendreEntete(head, columns);
+          rendreTris(
+            sortsRow,
+            columns,
+            etat,
+            chargerDonnees
+          );
           rendreFiltres(
             filtersRow,
             columns,
@@ -130,6 +151,8 @@
           );
           etat.structureRendue = true;
         }
+
+        actualiserEtatTris(sortsRow, etat);
 
         rendreLignes(body, columns, rows);
 
@@ -174,6 +197,81 @@
       );
       head.appendChild(cellule);
     });
+  }
+
+
+  function rendreTris(
+    sortsRow,
+    columns,
+    etat,
+    chargerDonnees
+  ) {
+    sortsRow.innerHTML = "";
+
+    columns.forEach((column) => {
+      const cellule = document.createElement("th");
+      const sortable = column.sortable === true;
+      const label = String(column.label || column.key || "");
+
+      cellule.scope = "col";
+
+      if (!sortable) {
+        cellule.setAttribute("aria-hidden", "true");
+        sortsRow.appendChild(cellule);
+        return;
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "lcdp-table-lecture-admin__sort-actions";
+
+      [
+        {
+          direction: "asc",
+          texte: "↑",
+          libelle: "Classer " + label + " par ordre ascendant"
+        },
+        {
+          direction: "desc",
+          texte: "↓",
+          libelle: "Classer " + label + " par ordre descendant"
+        }
+      ].forEach((action) => {
+        const bouton = document.createElement("button");
+
+        bouton.type = "button";
+        bouton.className = "lcdp-table-lecture-admin__sort-button";
+        bouton.textContent = action.texte;
+        bouton.dataset.lcdpTableSortKey = String(column.key || "");
+        bouton.dataset.lcdpTableSortDirection = action.direction;
+        bouton.setAttribute("aria-label", action.libelle);
+        bouton.setAttribute("aria-pressed", "false");
+        bouton.title = action.libelle;
+
+        bouton.addEventListener("click", () => {
+          etat.sortKey = String(column.key || "");
+          etat.sortDirection = action.direction;
+          actualiserEtatTris(sortsRow, etat);
+          chargerDonnees();
+        });
+
+        actions.appendChild(bouton);
+      });
+
+      cellule.appendChild(actions);
+      sortsRow.appendChild(cellule);
+    });
+  }
+
+  function actualiserEtatTris(sortsRow, etat) {
+    sortsRow
+      .querySelectorAll("[data-lcdp-table-sort-key]")
+      .forEach((bouton) => {
+        const actif =
+          bouton.dataset.lcdpTableSortKey === etat.sortKey &&
+          bouton.dataset.lcdpTableSortDirection === etat.sortDirection;
+
+        bouton.setAttribute("aria-pressed", String(actif));
+      });
   }
 
   function rendreFiltres(
