@@ -128,6 +128,7 @@
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 24;
       const SLOT_LOCALISATION_PARC = 18;
+      const SLOT_QUALIFICATION_PARC = 19;
 
       const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
 
@@ -158,6 +159,7 @@
 
       let boutonsConfigures = [];
       let localisationEnCours = false;
+      let qualificationEnCours = false;
 
       function urlAdmin(path) {
         return typeof window.LCDP_urlAdmin === "function"
@@ -333,6 +335,23 @@
         });
       }
 
+      function estSlotQualificationParc(categorie, position) {
+        return categorie.id === "parcs" && Number(position) === SLOT_QUALIFICATION_PARC;
+      }
+
+      function configurerBoutonQualification(lien) {
+        lien.textContent = "Qualification";
+        lien.href = "#qualification";
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.qualification";
+        lien.setAttribute("aria-label", "Préqualifier les parcs en recherche");
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+          demanderEtLancerQualificationParcs();
+        });
+      }
+
       function afficherCategorie(categorieId) {
         const categorie = categoriesAdmin.find(
           (item) => item.id === categorieId
@@ -381,6 +400,8 @@
 
           if (estSlotLocalisationParc(categorie, position)) {
             configurerBoutonLocalisation(lien);
+          } else if (estSlotQualificationParc(categorie, position)) {
+            configurerBoutonQualification(lien);
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
@@ -440,8 +461,12 @@
 
         if (options.okVisible === false) {
           boutonOk.hidden = true;
+          boutonOk.disabled = true;
+          boutonOk.setAttribute("aria-disabled", "true");
         } else {
           boutonOk.hidden = false;
+          boutonOk.disabled = false;
+          boutonOk.setAttribute("aria-disabled", "false");
         }
 
         function fermer() {
@@ -456,6 +481,8 @@
           },
           afficherOk() {
             boutonOk.hidden = false;
+            boutonOk.disabled = false;
+            boutonOk.setAttribute("aria-disabled", "false");
             boutonOk.focus();
           },
           fermer
@@ -492,11 +519,15 @@
 
         const nombre = Number.parseInt(brut, 10);
 
-        if (!Number.isFinite(nombre) || nombre < 1) {
+        if (
+          !Number.isFinite(nombre) ||
+          nombre < 1 ||
+          nombre > 50
+        ) {
           return null;
         }
 
-        return Math.min(nombre, 50);
+        return nombre;
       }
 
       function creerChampDialogue({
@@ -564,7 +595,7 @@
         }
 
         const limiteSaisie = window.prompt(
-          "Nombre maximum de parcs à traiter :",
+          "Nombre maximum de parcs à traiter (1 à 50) :",
           "10"
         );
 
@@ -646,7 +677,7 @@
 
         const aide = document.createElement("p");
         aide.textContent =
-          "Indiquer le département à vérifier et le nombre maximum de parcs à traiter.";
+          "Indiquer le département à vérifier et le nombre maximum de parcs à traiter. Valeur autorisée : 1 à 50. Défaut : 10.";
 
         const champDptmt = creerChampDialogue({
           label: "Département",
@@ -728,7 +759,7 @@
             if (!limite) {
               afficherErreurDialogueChamp(
                 erreur,
-                "Nombre maximum invalide."
+                "Nombre maximum invalide. Valeur attendue : 1 à 50."
               );
               champLimite.input.focus();
               return;
@@ -744,6 +775,315 @@
             champDptmt.input.focus();
           }, 0);
         });
+      }
+
+      function demanderParametresQualificationFallback() {
+        const dptmtSaisi = window.prompt(
+          "Département à qualifier :",
+          ""
+        );
+
+        const dptmt = normaliserDepartementLocalisation(
+          dptmtSaisi
+        );
+
+        if (!dptmt) {
+          return null;
+        }
+
+        const limiteSaisie = window.prompt(
+          "Nombre maximum de parcs à qualifier (1 à 50) :",
+          "10"
+        );
+
+        const limite = normaliserLimiteLocalisationFront(
+          limiteSaisie || "10"
+        );
+
+        if (!limite) {
+          return null;
+        }
+
+        return {
+          dptmt,
+          limit: limite
+        };
+      }
+
+      async function ouvrirDialogueParametresQualification() {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          return demanderParametresQualificationFallback();
+        }
+
+        slot.innerHTML = "";
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragmentObjet(
+            "/BOX/04-box-dialogue-champ.html"
+          );
+        } catch (error) {
+          console.error(error);
+          return demanderParametresQualificationFallback();
+        }
+
+        slot.appendChild(fragment);
+
+        const boite = slot.querySelector(
+          "[data-lcdp-box-dialogue-champ]"
+        );
+        const titre = slot.querySelector(
+          "[data-lcdp-dialogue-champ-title]"
+        );
+        const form = slot.querySelector(
+          "[data-lcdp-dialogue-champ-form]"
+        );
+        const contenu = slot.querySelector(
+          "[data-lcdp-dialogue-champ-content]"
+        );
+        const erreur = slot.querySelector(
+          "[data-lcdp-dialogue-champ-error]"
+        );
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-dialogue-champ-close]"
+        );
+        const boutonAnnuler = slot.querySelector(
+          "[data-lcdp-dialogue-champ-cancel]"
+        );
+        const boutonSubmit = slot.querySelector(
+          "[data-lcdp-dialogue-champ-submit]"
+        );
+
+        if (
+          !boite ||
+          !titre ||
+          !form ||
+          !contenu ||
+          !boutonAnnuler ||
+          !boutonSubmit
+        ) {
+          slot.innerHTML = "";
+          return demanderParametresQualificationFallback();
+        }
+
+        titre.textContent = "Qualification des parcs";
+        boutonSubmit.textContent = "Lancer";
+
+        const aide = document.createElement("p");
+        aide.textContent =
+          "Indiquer le département à qualifier et le nombre maximum de parcs en statut recherche à traiter. Valeur autorisée : 1 à 50. Défaut : 10.";
+
+        const champDptmt = creerChampDialogue({
+          label: "Département",
+          name: "dptmt",
+          placeholder: "ex : 45",
+          inputMode: "numeric"
+        });
+
+        const champLimite = creerChampDialogue({
+          label: "Nombre maximum de parcs",
+          name: "limit",
+          type: "number",
+          value: "10",
+          inputMode: "numeric"
+        });
+
+        champLimite.input.min = "1";
+        champLimite.input.max = "50";
+
+        contenu.appendChild(aide);
+        contenu.appendChild(champDptmt.champ);
+        contenu.appendChild(champLimite.champ);
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function terminer(valeur) {
+            if (resolu) {
+              return;
+            }
+
+            resolu = true;
+            document.removeEventListener("keydown", gererEchappement);
+            slot.innerHTML = "";
+            resolve(valeur);
+          }
+
+          function gererEchappement(event) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(null);
+            }
+          }
+
+          document.addEventListener("keydown", gererEchappement);
+
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", () => {
+              terminer(null);
+            });
+          }
+
+          boutonAnnuler.addEventListener("click", () => {
+            terminer(null);
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            afficherErreurDialogueChamp(erreur, "");
+
+            const dptmt = normaliserDepartementLocalisation(
+              champDptmt.input.value
+            );
+
+            if (!dptmt) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Département invalide."
+              );
+              champDptmt.input.focus();
+              return;
+            }
+
+            const limite = normaliserLimiteLocalisationFront(
+              champLimite.input.value || "10"
+            );
+
+            if (!limite) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Nombre maximum invalide. Valeur attendue : 1 à 50."
+              );
+              champLimite.input.focus();
+              return;
+            }
+
+            terminer({
+              dptmt,
+              limit: limite
+            });
+          });
+
+          window.setTimeout(() => {
+            champDptmt.input.focus();
+          }, 0);
+        });
+      }
+
+      async function demanderEtLancerQualificationParcs() {
+        if (qualificationEnCours) {
+          return;
+        }
+
+        const options = await ouvrirDialogueParametresQualification();
+
+        if (!options) {
+          return;
+        }
+
+        await lancerQualificationParcs(options);
+      }
+
+      async function lancerQualificationParcs(options) {
+        if (qualificationEnCours) {
+          return;
+        }
+
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          const alerteConfig = await ouvrirAlerteLocalisation(
+            "Endpoint du worker admin parc non configuré."
+          );
+
+          if (alerteConfig) {
+            alerteConfig.afficherOk();
+          }
+
+          return;
+        }
+
+        qualificationEnCours = true;
+
+        const alerte = await ouvrirAlerteLocalisation(
+          "Qualification en cours pour le département " +
+          options.dptmt +
+          " (maximum " +
+          options.limit +
+          " parcs en statut recherche). Ne fermez pas cette page.",
+          {
+            okVisible: false
+          }
+        );
+
+        try {
+          const response = await fetch(endpoint + "/qualification", {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({
+              dptmt: options.dptmt,
+              limit: options.limit
+            })
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!data) {
+            throw new Error(
+              "Réponse qualification inexploitable."
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "Qualification impossible."
+            );
+          }
+
+          const message =
+            (data.message || "Qualification terminée.") +
+            "\nDépartement : " +
+            (data.dptmt || options.dptmt) +
+            "\nLimite : " +
+            String(data.limite || options.limit) +
+            "\nParcs traités : " +
+            String(data.traites || 0) +
+            "\nParcs qualifiés : " +
+            String(data.qualifies || 0) +
+            "\nPassés prépa : " +
+            String(data.passesPrepa || 0) +
+            "\nPassés non conformes : " +
+            String(data.passesNonConforme || 0) +
+            "\nErreurs : " +
+            String(data.erreurs || 0);
+
+          if (alerte) {
+            alerte.setMessage(message);
+            alerte.afficherOk();
+          }
+
+        } catch (error) {
+          if (alerte) {
+            alerte.setMessage(
+              "Qualification interrompue : " +
+              String(error?.message || error || "")
+            );
+            alerte.afficherOk();
+          }
+        } finally {
+          qualificationEnCours = false;
+        }
       }
 
       async function demanderEtLancerLocalisationParcs() {
@@ -786,7 +1126,7 @@
           options.dptmt +
           " (maximum " +
           options.limit +
-          " parcs).",
+          " parcs). Ne fermez pas cette page.",
           {
             okVisible: false
           }
