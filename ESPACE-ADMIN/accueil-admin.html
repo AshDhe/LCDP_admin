@@ -281,6 +281,7 @@
           config.workerParcAdminUrl ||
           config.WORKER_PARC_ADMIN_URL ||
           window.ADMIN_CONFIG?.API_PARC_ADMIN ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN_URL ||
           ""
         ).replace(/\/+$/, "");
       }
@@ -327,7 +328,7 @@
 
         lien.addEventListener("click", (event) => {
           event.preventDefault();
-          lancerLocalisationParcs();
+          demanderEtLancerLocalisationParcs();
         });
       }
 
@@ -460,7 +461,265 @@
         };
       }
 
-      async function lancerLocalisationParcs() {
+      function normaliserDepartementLocalisation(value) {
+        const brut = String(value || "")
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "");
+
+        if (/^\d{1,2}$/.test(brut)) {
+          return brut.padStart(2, "0");
+        }
+
+        if (/^\d{3}$/.test(brut)) {
+          return brut;
+        }
+
+        if (brut === "2A" || brut === "2B") {
+          return brut;
+        }
+
+        return "";
+      }
+
+      function normaliserLimiteLocalisationFront(value) {
+        const brut = String(value || "").trim();
+
+        if (!/^\d+$/.test(brut)) {
+          return null;
+        }
+
+        const nombre = Number.parseInt(brut, 10);
+
+        if (!Number.isFinite(nombre) || nombre < 1) {
+          return null;
+        }
+
+        return Math.min(nombre, 50);
+      }
+
+      function creerChampDialogue({
+        label,
+        name,
+        type = "text",
+        value = "",
+        placeholder = "",
+        required = true,
+        inputMode = ""
+      }) {
+        const ligne = document.createElement("label");
+        ligne.className = "lcdp-dialogue-localisation__champ";
+
+        const texte = document.createElement("span");
+        texte.textContent = label;
+
+        const input = document.createElement("input");
+        input.name = name;
+        input.type = type;
+        input.value = value;
+        input.placeholder = placeholder;
+
+        if (required) {
+          input.required = true;
+        }
+
+        if (inputMode) {
+          input.inputMode = inputMode;
+        }
+
+        ligne.appendChild(texte);
+        ligne.appendChild(input);
+
+        return {
+          ligne,
+          input
+        };
+      }
+
+      function ouvrirDialogueParametresLocalisation() {
+        if (typeof HTMLDialogElement === "undefined") {
+          const dptmtSaisi = window.prompt(
+            "Département à vérifier :",
+            ""
+          );
+
+          const dptmt = normaliserDepartementLocalisation(
+            dptmtSaisi
+          );
+
+          if (!dptmt) {
+            return Promise.resolve(null);
+          }
+
+          const limiteSaisie = window.prompt(
+            "Nombre maximum de parcs à traiter :",
+            "10"
+          );
+
+          const limite = normaliserLimiteLocalisationFront(
+            limiteSaisie || "10"
+          );
+
+          if (!limite) {
+            return Promise.resolve(null);
+          }
+
+          return Promise.resolve({
+            dptmt,
+            limit: limite
+          });
+        }
+
+        return new Promise((resolve) => {
+          const ancienne = document.getElementById(
+            "lcdp-dialogue-localisation-parc"
+          );
+
+          if (ancienne) {
+            ancienne.remove();
+          }
+
+          const dialogue = document.createElement("dialog");
+          dialogue.id = "lcdp-dialogue-localisation-parc";
+          dialogue.className = "lcdp-dialogue-localisation";
+
+          const form = document.createElement("form");
+          form.method = "dialog";
+
+          const titre = document.createElement("h2");
+          titre.textContent = "Localisation des parcs";
+
+          const aide = document.createElement("p");
+          aide.textContent =
+            "Indiquer le département à vérifier et le nombre maximum de parcs à traiter.";
+
+          const champDptmt = creerChampDialogue({
+            label: "Département",
+            name: "dptmt",
+            placeholder: "ex : 18",
+            inputMode: "numeric"
+          });
+
+          const champLimite = creerChampDialogue({
+            label: "Nombre maximum de parcs",
+            name: "limit",
+            type: "number",
+            value: "10",
+            inputMode: "numeric"
+          });
+
+          champLimite.input.min = "1";
+          champLimite.input.max = "50";
+
+          const erreur = document.createElement("p");
+          erreur.setAttribute("role", "alert");
+          erreur.dataset.lcdpLocalisationErreur = "";
+
+          const actions = document.createElement("menu");
+
+          const annuler = document.createElement("button");
+          annuler.type = "button";
+          annuler.className = "lcdp-button lcdp-button-secondary";
+          annuler.textContent = "Annuler";
+
+          const lancer = document.createElement("button");
+          lancer.type = "submit";
+          lancer.className = "lcdp-button lcdp-button-primary";
+          lancer.textContent = "Lancer";
+
+          actions.appendChild(annuler);
+          actions.appendChild(lancer);
+
+          form.appendChild(titre);
+          form.appendChild(aide);
+          form.appendChild(champDptmt.ligne);
+          form.appendChild(champLimite.ligne);
+          form.appendChild(erreur);
+          form.appendChild(actions);
+
+          dialogue.appendChild(form);
+          document.body.appendChild(dialogue);
+
+          let resolu = false;
+
+          function terminer(valeur) {
+            if (resolu) {
+              return;
+            }
+
+            resolu = true;
+
+            if (dialogue.open) {
+              dialogue.close();
+            }
+
+            dialogue.remove();
+            resolve(valeur);
+          }
+
+          annuler.addEventListener("click", () => {
+            terminer(null);
+          });
+
+          dialogue.addEventListener("cancel", (event) => {
+            event.preventDefault();
+            terminer(null);
+          });
+
+          dialogue.addEventListener("close", () => {
+            terminer(null);
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const dptmt = normaliserDepartementLocalisation(
+              champDptmt.input.value
+            );
+
+            if (!dptmt) {
+              erreur.textContent = "Département invalide.";
+              champDptmt.input.focus();
+              return;
+            }
+
+            const limite = normaliserLimiteLocalisationFront(
+              champLimite.input.value || "10"
+            );
+
+            if (!limite) {
+              erreur.textContent =
+                "Nombre maximum invalide.";
+              champLimite.input.focus();
+              return;
+            }
+
+            terminer({
+              dptmt,
+              limit: limite
+            });
+          });
+
+          dialogue.showModal();
+          champDptmt.input.focus();
+        });
+      }
+
+      async function demanderEtLancerLocalisationParcs() {
+        if (localisationEnCours) {
+          return;
+        }
+
+        const options = await ouvrirDialogueParametresLocalisation();
+
+        if (!options) {
+          return;
+        }
+
+        await lancerLocalisationParcs(options);
+      }
+
+      async function lancerLocalisationParcs(options) {
         if (localisationEnCours) {
           return;
         }
@@ -482,7 +741,11 @@
         localisationEnCours = true;
 
         const alerte = await ouvrirAlerteLocalisation(
-          "Mise à jour en cours.",
+          "Mise à jour en cours pour le département " +
+          options.dptmt +
+          " (maximum " +
+          options.limit +
+          " parcs).",
           {
             okVisible: false
           }
@@ -497,12 +760,21 @@
               "Content-Type": "application/json",
               "Accept": "application/json"
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({
+              dptmt: options.dptmt,
+              limit: options.limit
+            })
           });
 
           const data = await response.json().catch(() => null);
 
-          if (!response.ok || !data || data.success !== true) {
+          if (!data) {
+            throw new Error(
+              "Réponse localisation inexploitable."
+            );
+          }
+
+          if (!response.ok) {
             throw new Error(
               data?.message ||
               data?.detail ||
@@ -510,8 +782,21 @@
             );
           }
 
+          const message =
+            (data.message || "Mise à jour terminée.") +
+            "\nDépartement : " +
+            (data.dptmt || options.dptmt) +
+            "\nLimite : " +
+            String(data.limite || options.limit) +
+            "\nParcs traités : " +
+            String(data.traites || 0) +
+            "\nParcs modifiés : " +
+            String(data.modifies || 0) +
+            "\nErreurs : " +
+            String(data.erreurs || 0);
+
           if (alerte) {
-            alerte.setMessage("Mise à jour terminée.");
+            alerte.setMessage(message);
             alerte.afficherOk();
           }
 
