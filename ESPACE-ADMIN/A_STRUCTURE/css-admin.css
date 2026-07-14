@@ -243,3 +243,84 @@
   border-color: var(--lcdp-color-primary);
 }
 
+/* WORKFLOW ADMIN PARCS - NOUVEAUPARC */
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire-page {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire-page__inner {
+  max-width: 860px;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire {
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire__title {
+  font-size: 1.3rem;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire__fields {
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-nouveauparc-ligne {
+  width: 100%;
+  padding-bottom: var(--lcdp-space-3);
+  border-bottom: 1px solid var(--lcdp-color-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 180px);
+  gap: var(--lcdp-space-3);
+  align-items: end;
+}
+
+.lcdp-nouveauparc-ligne:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-champ-formulaire__label,
+.lcdp-page-nouveauparc .lcdp-box-champ-formulaire__heading {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-champ-formulaire__label-zone {
+  margin-bottom: var(--lcdp-space-1);
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire__actions {
+  gap: var(--lcdp-space-2);
+  flex-wrap: wrap;
+}
+
+.lcdp-page-nouveauparc .lcdp-box-formulaire__actions .lcdp-button {
+  margin: 0;
+}
+
+.lcdp-nouveauparc-status {
+  width: 100%;
+  margin-top: var(--lcdp-space-2);
+  padding: 10px 12px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface-soft);
+  color: var(--lcdp-color-text);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.lcdp-nouveauparc-status--error {
+  border-color: var(--lcdp-color-orange);
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .lcdp-nouveauparc-ligne {
+    grid-template-columns: 1fr;
+  }
+}
