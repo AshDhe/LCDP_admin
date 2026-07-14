@@ -129,6 +129,7 @@
       const NOMBRE_BOUTONS_PAR_MENU = 24;
       const SLOT_LOCALISATION_PARC = 18;
       const SLOT_QUALIFICATION_PARC = 19;
+      const SLOT_CARD1_PARC = 20;
 
       const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
 
@@ -160,6 +161,7 @@
       let boutonsConfigures = [];
       let localisationEnCours = false;
       let qualificationEnCours = false;
+      let cardOneEnCours = false;
 
       function urlAdmin(path) {
         return typeof window.LCDP_urlAdmin === "function"
@@ -352,6 +354,23 @@
         });
       }
 
+      function estSlotCardOneParc(categorie, position) {
+        return categorie.id === "parcs" && Number(position) === SLOT_CARD1_PARC;
+      }
+
+      function configurerBoutonCardOne(lien) {
+        lien.textContent = "Card1";
+        lien.href = "#card1";
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.card1";
+        lien.setAttribute("aria-label", "Récolter un brouillon Card1 pour les parcs prépa sans card1.webp");
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+          demanderEtLancerCardOneParcs();
+        });
+      }
+
       function afficherCategorie(categorieId) {
         const categorie = categoriesAdmin.find(
           (item) => item.id === categorieId
@@ -402,6 +421,8 @@
             configurerBoutonLocalisation(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
             configurerBoutonQualification(lien);
+          } else if (estSlotCardOneParc(categorie, position)) {
+            configurerBoutonCardOne(lien);
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
@@ -1023,6 +1044,313 @@
             champDptmt.input.focus();
           }, 0);
         });
+      }
+
+      function demanderParametresCardOneFallback() {
+        const dptmtSaisi = window.prompt(
+          "Département Card1 :",
+          ""
+        );
+
+        const dptmt = normaliserDepartementLocalisation(
+          dptmtSaisi
+        );
+
+        if (!dptmt) {
+          return null;
+        }
+
+        const limiteSaisie = window.prompt(
+          "Nombre maximum de parcs à traiter (1 à 50) :",
+          "10"
+        );
+
+        const limite = normaliserLimiteLocalisationFront(
+          limiteSaisie || "10"
+        );
+
+        if (!limite) {
+          return null;
+        }
+
+        return {
+          dptmt,
+          limit: limite
+        };
+      }
+
+      async function ouvrirDialogueParametresCardOne() {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          return demanderParametresCardOneFallback();
+        }
+
+        slot.innerHTML = "";
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragmentObjet(
+            "/BOX/04-box-dialogue-champ.html"
+          );
+        } catch (error) {
+          console.error(error);
+          return demanderParametresCardOneFallback();
+        }
+
+        slot.appendChild(fragment);
+
+        const boite = slot.querySelector(
+          "[data-lcdp-box-dialogue-champ]"
+        );
+        const titre = slot.querySelector(
+          "[data-lcdp-dialogue-champ-title]"
+        );
+        const form = slot.querySelector(
+          "[data-lcdp-dialogue-champ-form]"
+        );
+        const contenu = slot.querySelector(
+          "[data-lcdp-dialogue-champ-content]"
+        );
+        const erreur = slot.querySelector(
+          "[data-lcdp-dialogue-champ-error]"
+        );
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-dialogue-champ-close]"
+        );
+        const boutonAnnuler = slot.querySelector(
+          "[data-lcdp-dialogue-champ-cancel]"
+        );
+        const boutonSubmit = slot.querySelector(
+          "[data-lcdp-dialogue-champ-submit]"
+        );
+
+        if (
+          !boite ||
+          !titre ||
+          !form ||
+          !contenu ||
+          !boutonAnnuler ||
+          !boutonSubmit
+        ) {
+          slot.innerHTML = "";
+          return demanderParametresCardOneFallback();
+        }
+
+        titre.textContent = "Card1 des parcs";
+        boutonSubmit.textContent = "Lancer";
+
+        const aide = document.createElement("p");
+        aide.textContent =
+          "Indiquer le département à traiter et le nombre maximum de parcs prépa sans card1.webp. Valeur autorisée : 1 à 50. Défaut : 10.";
+
+        const champDptmt = creerChampDialogue({
+          label: "Département",
+          name: "dptmt",
+          placeholder: "ex : 41",
+          inputMode: "numeric"
+        });
+
+        const champLimite = creerChampDialogue({
+          label: "Nombre maximum de parcs",
+          name: "limit",
+          type: "number",
+          value: "10",
+          inputMode: "numeric"
+        });
+
+        champLimite.input.min = "1";
+        champLimite.input.max = "50";
+
+        contenu.appendChild(aide);
+        contenu.appendChild(champDptmt.champ);
+        contenu.appendChild(champLimite.champ);
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function terminer(valeur) {
+            if (resolu) {
+              return;
+            }
+
+            resolu = true;
+            document.removeEventListener("keydown", gererEchappement);
+            slot.innerHTML = "";
+            resolve(valeur);
+          }
+
+          function gererEchappement(event) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(null);
+            }
+          }
+
+          document.addEventListener("keydown", gererEchappement);
+
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", () => {
+              terminer(null);
+            });
+          }
+
+          boutonAnnuler.addEventListener("click", () => {
+            terminer(null);
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            afficherErreurDialogueChamp(erreur, "");
+
+            const dptmt = normaliserDepartementLocalisation(
+              champDptmt.input.value
+            );
+
+            if (!dptmt) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Département invalide."
+              );
+              champDptmt.input.focus();
+              return;
+            }
+
+            const limite = normaliserLimiteLocalisationFront(
+              champLimite.input.value || "10"
+            );
+
+            if (!limite) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Nombre maximum invalide. Valeur attendue : 1 à 50."
+              );
+              champLimite.input.focus();
+              return;
+            }
+
+            terminer({
+              dptmt,
+              limit: limite
+            });
+          });
+
+          window.setTimeout(() => {
+            champDptmt.input.focus();
+          }, 0);
+        });
+      }
+
+      async function demanderEtLancerCardOneParcs() {
+        if (cardOneEnCours) {
+          return;
+        }
+
+        const options = await ouvrirDialogueParametresCardOne();
+
+        if (!options) {
+          return;
+        }
+
+        await lancerCardOneParcs(options);
+      }
+
+      async function lancerCardOneParcs(options) {
+        if (cardOneEnCours) {
+          return;
+        }
+
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          const alerteConfig = await ouvrirAlerteLocalisation(
+            "Endpoint du worker admin parc non configuré."
+          );
+
+          if (alerteConfig) {
+            alerteConfig.afficherOk();
+          }
+
+          return;
+        }
+
+        cardOneEnCours = true;
+
+        const alerte = await ouvrirAlerteLocalisation(
+          "Récolte Card1 en cours pour le département " +
+          options.dptmt +
+          " (maximum " +
+          options.limit +
+          " parcs prépa sans card1.webp). Ne fermez pas cette page.",
+          {
+            okVisible: false
+          }
+        );
+
+        try {
+          const response = await fetch(endpoint + "/card1", {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({
+              dptmt: options.dptmt,
+              limit: options.limit
+            })
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!data) {
+            throw new Error(
+              "Réponse Card1 inexploitable."
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "Récolte Card1 impossible."
+            );
+          }
+
+          const message =
+            (data.message || "Récolte Card1 terminée.") +
+            "\nDépartement : " +
+            (data.dptmt || options.dptmt) +
+            "\nLimite : " +
+            String(data.limite || options.limit) +
+            "\nParcs traités : " +
+            String(data.traites || 0) +
+            "\nBrouillons créés : " +
+            String(data.stagings || 0) +
+            "\nDéjà pourvus ou ignorés : " +
+            String(data.ignores || 0) +
+            "\nErreurs : " +
+            String(data.erreurs || 0);
+
+          if (alerte) {
+            alerte.setMessage(message);
+            alerte.afficherOk();
+          }
+
+        } catch (error) {
+          if (alerte) {
+            alerte.setMessage(
+              "Récolte Card1 interrompue : " +
+              String(error?.message || error || "")
+            );
+            alerte.afficherOk();
+          }
+        } finally {
+          cardOneEnCours = false;
+        }
       }
 
       async function demanderEtLancerQualificationParcs() {
