@@ -73,7 +73,11 @@
         return construireUrl(objetBase, path);
       };
 
-      ["/CSSBASE/cssbase.css", "/BOX/02-box-bandeau-nav.css"].forEach((path) => {
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css"
+      ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlObjet(path) +
@@ -99,6 +103,7 @@
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
 
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
       <section class="lcdp-page-section" aria-label="Accueil espace admin">
@@ -121,6 +126,7 @@
 
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 24;
+      const SLOT_LOCALISATION_PARC = 18;
 
       const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
 
@@ -150,6 +156,7 @@
             ];
 
       let boutonsConfigures = [];
+      let localisationEnCours = false;
 
       function urlAdmin(path) {
         return typeof window.LCDP_urlAdmin === "function"
@@ -259,11 +266,21 @@
         slot.appendChild(fragment);
         appliquerRoutes(slot);
       }
+
       function endpointAdminData() {
         return String(
           config.workerAdminDataUrl ||
           config.WORKER_ADMIN_DATA_URL ||
           window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      function endpointParcAdmin() {
+        return String(
+          config.workerParcAdminUrl ||
+          config.WORKER_PARC_ADMIN_URL ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN ||
           ""
         ).replace(/\/+$/, "");
       }
@@ -295,6 +312,23 @@
         }
 
         return Array.isArray(data.buttons) ? data.buttons : [];
+      }
+
+      function estSlotLocalisationParc(categorie, position) {
+        return categorie.id === "parcs" && Number(position) === SLOT_LOCALISATION_PARC;
+      }
+
+      function configurerBoutonLocalisation(lien) {
+        lien.textContent = "Localisation";
+        lien.href = "#";
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.localisation";
+        lien.setAttribute("aria-label", "Mettre à jour la localisation des parcs");
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+          lancerLocalisationParcs();
+        });
       }
 
       function afficherCategorie(categorieId) {
@@ -343,7 +377,9 @@
             );
           });
 
-          if (configuration) {
+          if (estSlotLocalisationParc(categorie, position)) {
+            configurerBoutonLocalisation(lien);
+          } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
             lien.dataset.permissionCode =
@@ -368,6 +404,128 @@
         const url = new URL(window.location.href);
         url.searchParams.set("categorie", categorie.id);
         window.history.replaceState(null, "", url);
+      }
+
+      async function ouvrirAlerteLocalisation(message, options = {}) {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          window.alert(message || "");
+          return null;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragmentObjet("/BOX/02-box-alerte.html");
+        slot.appendChild(fragment);
+
+        const alerte = slot.querySelector("[data-lcdp-box-alerte]");
+        const texte = slot.querySelector("[data-lcdp-alerte-message]");
+        const boutonFermer = slot.querySelector("[data-lcdp-alerte-close]");
+        const boutonOk = slot.querySelector("[data-lcdp-alerte-ok]");
+
+        if (!alerte || !texte || !boutonOk) {
+          slot.innerHTML = "";
+          window.alert(message || "");
+          return null;
+        }
+
+        texte.textContent = message || "";
+
+        if (boutonFermer) {
+          boutonFermer.hidden = true;
+        }
+
+        if (options.okVisible === false) {
+          boutonOk.hidden = true;
+        } else {
+          boutonOk.hidden = false;
+        }
+
+        function fermer() {
+          slot.innerHTML = "";
+        }
+
+        boutonOk.addEventListener("click", fermer);
+
+        return {
+          setMessage(nouveauMessage) {
+            texte.textContent = nouveauMessage || "";
+          },
+          afficherOk() {
+            boutonOk.hidden = false;
+            boutonOk.focus();
+          },
+          fermer
+        };
+      }
+
+      async function lancerLocalisationParcs() {
+        if (localisationEnCours) {
+          return;
+        }
+
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          const alerteConfig = await ouvrirAlerteLocalisation(
+            "Endpoint du worker admin parc non configuré."
+          );
+
+          if (alerteConfig) {
+            alerteConfig.afficherOk();
+          }
+
+          return;
+        }
+
+        localisationEnCours = true;
+
+        const alerte = await ouvrirAlerteLocalisation(
+          "Mise à jour en cours.",
+          {
+            okVisible: false
+          }
+        );
+
+        try {
+          const response = await fetch(endpoint + "/localisation", {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({})
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok || !data || data.success !== true) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "Mise à jour impossible."
+            );
+          }
+
+          if (alerte) {
+            alerte.setMessage("Mise à jour terminée.");
+            alerte.afficherOk();
+          }
+
+        } catch (error) {
+          if (alerte) {
+            alerte.setMessage(
+              "Mise à jour interrompue : " +
+              String(error?.message || error || "")
+            );
+            alerte.afficherOk();
+          }
+        } finally {
+          localisationEnCours = false;
+        }
       }
 
       function categorieInitiale() {
