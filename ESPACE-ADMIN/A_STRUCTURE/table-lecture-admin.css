@@ -114,3 +114,14 @@
 .lcdp-table-lecture-admin__status[data-lcdp-table-lecture-admin-loading] {
   display: none !important;
 }
+
+
+/* Sécurité finale : aucun indicateur de chargement visible. */
+.lcdp-table-lecture-admin__status[data-lcdp-table-lecture-admin-loading] {
+  display: none !important;
+  position: static !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
