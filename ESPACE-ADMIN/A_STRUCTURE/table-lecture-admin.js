@@ -55,7 +55,6 @@
     );
 
     if (
-      !loading ||
       !scroll ||
       !head ||
       !sortsRow ||
@@ -76,9 +75,13 @@
       structureRendue: false
     };
 
+    if (loading) {
+      loading.hidden = true;
+      loading.setAttribute("aria-hidden", "true");
+    }
+
     async function chargerDonnees() {
       try {
-        loading.hidden = false;
         errorBox.hidden = true;
 
         const requestUrl = new URL(endpoint + "/read");
@@ -156,7 +159,6 @@
 
         rendreLignes(body, columns, rows);
 
-        loading.hidden = true;
         errorBox.hidden = true;
         empty.hidden = rows.length > 0;
 
@@ -171,7 +173,6 @@
       } catch (error) {
         console.error("Erreur table lecture admin :", error);
 
-        loading.hidden = true;
         scroll.hidden = true;
         empty.hidden = true;
         errorBox.textContent = String(
