@@ -161,7 +161,7 @@
       let boutonsConfigures = [];
       let localisationEnCours = false;
       let qualificationEnCours = false;
-      let cardOneEnCours = false;
+      let card1EnCours = false;
 
       function urlAdmin(path) {
         return typeof window.LCDP_urlAdmin === "function"
@@ -354,11 +354,11 @@
         });
       }
 
-      function estSlotCardOneParc(categorie, position) {
+      function estSlotCard1Parc(categorie, position) {
         return categorie.id === "parcs" && Number(position) === SLOT_CARD1_PARC;
       }
 
-      function configurerBoutonCardOne(lien) {
+      function configurerBoutonCard1(lien) {
         lien.textContent = "Card1";
         lien.href = "#card1";
         lien.removeAttribute("aria-disabled");
@@ -367,7 +367,7 @@
 
         lien.addEventListener("click", (event) => {
           event.preventDefault();
-          demanderEtLancerCardOneParcs();
+          demanderEtLancerCard1Parcs();
         });
       }
 
@@ -421,8 +421,8 @@
             configurerBoutonLocalisation(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
             configurerBoutonQualification(lien);
-          } else if (estSlotCardOneParc(categorie, position)) {
-            configurerBoutonCardOne(lien);
+          } else if (estSlotCard1Parc(categorie, position)) {
+            configurerBoutonCard1(lien);
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
@@ -1046,7 +1046,7 @@
         });
       }
 
-      function demanderParametresCardOneFallback() {
+      function demanderParametresCard1Fallback() {
         const dptmtSaisi = window.prompt(
           "Département Card1 :",
           ""
@@ -1079,11 +1079,11 @@
         };
       }
 
-      async function ouvrirDialogueParametresCardOne() {
+      async function ouvrirDialogueParametresCard1() {
         const slot = document.getElementById("lcdp-lightbox-slot");
 
         if (!slot) {
-          return demanderParametresCardOneFallback();
+          return demanderParametresCard1Fallback();
         }
 
         slot.innerHTML = "";
@@ -1096,7 +1096,7 @@
           );
         } catch (error) {
           console.error(error);
-          return demanderParametresCardOneFallback();
+          return demanderParametresCard1Fallback();
         }
 
         slot.appendChild(fragment);
@@ -1135,7 +1135,7 @@
           !boutonSubmit
         ) {
           slot.innerHTML = "";
-          return demanderParametresCardOneFallback();
+          return demanderParametresCard1Fallback();
         }
 
         titre.textContent = "Card1 des parcs";
@@ -1243,22 +1243,22 @@
         });
       }
 
-      async function demanderEtLancerCardOneParcs() {
-        if (cardOneEnCours) {
+      async function demanderEtLancerCard1Parcs() {
+        if (card1EnCours) {
           return;
         }
 
-        const options = await ouvrirDialogueParametresCardOne();
+        const options = await ouvrirDialogueParametresCard1();
 
         if (!options) {
           return;
         }
 
-        await lancerCardOneParcs(options);
+        await lancerCard1Parcs(options);
       }
 
-      async function lancerCardOneParcs(options) {
-        if (cardOneEnCours) {
+      async function lancerCard1Parcs(options) {
+        if (card1EnCours) {
           return;
         }
 
@@ -1276,7 +1276,7 @@
           return;
         }
 
-        cardOneEnCours = true;
+        card1EnCours = true;
 
         const alerte = await ouvrirAlerteLocalisation(
           "Récolte Card1 en cours pour le département " +
@@ -1349,7 +1349,7 @@
             alerte.afficherOk();
           }
         } finally {
-          cardOneEnCours = false;
+          card1EnCours = false;
         }
       }
 
