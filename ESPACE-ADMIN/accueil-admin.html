@@ -446,6 +446,7 @@
         const texte = slot.querySelector("[data-lcdp-alerte-message]");
         const boutonFermer = slot.querySelector("[data-lcdp-alerte-close]");
         const boutonOk = slot.querySelector("[data-lcdp-alerte-ok]");
+        const verrouilleeAuDepart = options.okVisible === false;
 
         if (!alerte || !texte || !boutonOk) {
           slot.innerHTML = "";
@@ -453,39 +454,89 @@
           return null;
         }
 
+        let fermetureAutorisee = !verrouilleeAuDepart;
+
         texte.textContent = message || "";
 
-        if (boutonFermer) {
-          boutonFermer.hidden = true;
+        function masquerElement(element) {
+          if (!element) {
+            return;
+          }
+
+          element.hidden = true;
+          element.disabled = true;
+          element.setAttribute("aria-hidden", "true");
+          element.setAttribute("aria-disabled", "true");
+          element.tabIndex = -1;
+          element.style.display = "none";
+          element.style.pointerEvents = "none";
         }
 
-        if (options.okVisible === false) {
-          boutonOk.hidden = true;
-          boutonOk.disabled = true;
-          boutonOk.setAttribute("aria-disabled", "true");
-        } else {
+        function afficherBoutonOk() {
           boutonOk.hidden = false;
           boutonOk.disabled = false;
+          boutonOk.removeAttribute("aria-hidden");
           boutonOk.setAttribute("aria-disabled", "false");
+          boutonOk.removeAttribute("tabindex");
+          boutonOk.style.display = "";
+          boutonOk.style.pointerEvents = "";
         }
 
-        function fermer() {
+        /*
+         * Workflow orange en cours :
+         * - aucune croix visible ;
+         * - aucun OK visible ou cliquable ;
+         * - aucune fermeture possible tant que le worker n'a pas répondu.
+         */
+        masquerElement(boutonFermer);
+
+        if (verrouilleeAuDepart) {
+          masquerElement(boutonOk);
+        } else {
+          afficherBoutonOk();
+        }
+
+        function fermer(force = false) {
+          if (!force && !fermetureAutorisee) {
+            return;
+          }
+
           slot.innerHTML = "";
         }
 
-        boutonOk.addEventListener("click", fermer);
+        if (boutonFermer) {
+          boutonFermer.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (fermetureAutorisee) {
+              fermer();
+            }
+          });
+        }
+
+        boutonOk.addEventListener("click", (event) => {
+          if (!fermetureAutorisee || boutonOk.disabled) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+
+          fermer();
+        });
 
         return {
           setMessage(nouveauMessage) {
             texte.textContent = nouveauMessage || "";
           },
           afficherOk() {
-            boutonOk.hidden = false;
-            boutonOk.disabled = false;
-            boutonOk.setAttribute("aria-disabled", "false");
+            fermetureAutorisee = true;
+            afficherBoutonOk();
             boutonOk.focus();
           },
-          fermer
+          fermer() {
+            fermer(true);
+          }
         };
       }
 
