@@ -1,5 +1,7 @@
 .lcdp-table-lecture-admin {
+  position: relative;
   width: 100%;
+  min-height: 72px;
   padding: var(--lcdp-space-2);
   border: 1px solid var(--lcdp-color-border);
   border-radius: var(--lcdp-radius-small);
@@ -44,6 +46,20 @@
   color: var(--lcdp-color-text-muted);
   font-size: 0.86rem;
   text-align: center;
+}
+
+.lcdp-table-lecture-admin__status[data-lcdp-table-lecture-admin-loading] {
+  position: absolute;
+  top: var(--lcdp-space-2);
+  right: var(--lcdp-space-2);
+  z-index: 3;
+  max-width: min(260px, calc(100% - 2 * var(--lcdp-space-2)));
+  padding: 8px 12px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(31, 42, 36, 0.12);
+  pointer-events: none;
 }
 
 .lcdp-table-lecture-admin__status--error {
