@@ -76,7 +76,8 @@
       [
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-alerte.css"
+        "/BOX/02-box-alerte.css",
+        "/BOX/04-box-dialogue-champ.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -507,17 +508,20 @@
         required = true,
         inputMode = ""
       }) {
-        const ligne = document.createElement("label");
-        ligne.className = "lcdp-dialogue-localisation__champ";
+        const champ = document.createElement("div");
+        champ.className = "lcdp-box-dialogue-champ__field";
 
-        const texte = document.createElement("span");
-        texte.textContent = label;
+        const libelle = document.createElement("label");
+        libelle.className = "lcdp-box-dialogue-champ__label";
+        libelle.textContent = label;
 
         const input = document.createElement("input");
+        input.className = "lcdp-box-dialogue-champ__input";
         input.name = name;
         input.type = type;
         input.value = value;
         input.placeholder = placeholder;
+        input.autocomplete = "off";
 
         if (required) {
           input.required = true;
@@ -527,119 +531,146 @@
           input.inputMode = inputMode;
         }
 
-        ligne.appendChild(texte);
-        ligne.appendChild(input);
+        libelle.appendChild(input);
+        champ.appendChild(libelle);
 
         return {
-          ligne,
+          champ,
           input
         };
       }
 
-      function ouvrirDialogueParametresLocalisation() {
-        if (typeof HTMLDialogElement === "undefined") {
-          const dptmtSaisi = window.prompt(
-            "Département à vérifier :",
-            ""
-          );
-
-          const dptmt = normaliserDepartementLocalisation(
-            dptmtSaisi
-          );
-
-          if (!dptmt) {
-            return Promise.resolve(null);
-          }
-
-          const limiteSaisie = window.prompt(
-            "Nombre maximum de parcs à traiter :",
-            "10"
-          );
-
-          const limite = normaliserLimiteLocalisationFront(
-            limiteSaisie || "10"
-          );
-
-          if (!limite) {
-            return Promise.resolve(null);
-          }
-
-          return Promise.resolve({
-            dptmt,
-            limit: limite
-          });
+      function afficherErreurDialogueChamp(element, message) {
+        if (!element) {
+          return;
         }
 
-        return new Promise((resolve) => {
-          const ancienne = document.getElementById(
-            "lcdp-dialogue-localisation-parc"
+        element.textContent = message || "";
+        element.hidden = !message;
+      }
+
+      function demanderParametresLocalisationFallback() {
+        const dptmtSaisi = window.prompt(
+          "Département à vérifier :",
+          ""
+        );
+
+        const dptmt = normaliserDepartementLocalisation(
+          dptmtSaisi
+        );
+
+        if (!dptmt) {
+          return null;
+        }
+
+        const limiteSaisie = window.prompt(
+          "Nombre maximum de parcs à traiter :",
+          "10"
+        );
+
+        const limite = normaliserLimiteLocalisationFront(
+          limiteSaisie || "10"
+        );
+
+        if (!limite) {
+          return null;
+        }
+
+        return {
+          dptmt,
+          limit: limite
+        };
+      }
+
+      async function ouvrirDialogueParametresLocalisation() {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          return demanderParametresLocalisationFallback();
+        }
+
+        slot.innerHTML = "";
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragmentObjet(
+            "/BOX/04-box-dialogue-champ.html"
           );
+        } catch (error) {
+          console.error(error);
+          return demanderParametresLocalisationFallback();
+        }
 
-          if (ancienne) {
-            ancienne.remove();
-          }
+        slot.appendChild(fragment);
 
-          const dialogue = document.createElement("dialog");
-          dialogue.id = "lcdp-dialogue-localisation-parc";
-          dialogue.className = "lcdp-dialogue-localisation";
+        const boite = slot.querySelector(
+          "[data-lcdp-box-dialogue-champ]"
+        );
+        const titre = slot.querySelector(
+          "[data-lcdp-dialogue-champ-title]"
+        );
+        const form = slot.querySelector(
+          "[data-lcdp-dialogue-champ-form]"
+        );
+        const contenu = slot.querySelector(
+          "[data-lcdp-dialogue-champ-content]"
+        );
+        const erreur = slot.querySelector(
+          "[data-lcdp-dialogue-champ-error]"
+        );
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-dialogue-champ-close]"
+        );
+        const boutonAnnuler = slot.querySelector(
+          "[data-lcdp-dialogue-champ-cancel]"
+        );
+        const boutonSubmit = slot.querySelector(
+          "[data-lcdp-dialogue-champ-submit]"
+        );
 
-          const form = document.createElement("form");
-          form.method = "dialog";
+        if (
+          !boite ||
+          !titre ||
+          !form ||
+          !contenu ||
+          !boutonAnnuler ||
+          !boutonSubmit
+        ) {
+          slot.innerHTML = "";
+          return demanderParametresLocalisationFallback();
+        }
 
-          const titre = document.createElement("h2");
-          titre.textContent = "Localisation des parcs";
+        titre.textContent = "Localisation des parcs";
+        boutonSubmit.textContent = "Lancer";
 
-          const aide = document.createElement("p");
-          aide.textContent =
-            "Indiquer le département à vérifier et le nombre maximum de parcs à traiter.";
+        const aide = document.createElement("p");
+        aide.textContent =
+          "Indiquer le département à vérifier et le nombre maximum de parcs à traiter.";
 
-          const champDptmt = creerChampDialogue({
-            label: "Département",
-            name: "dptmt",
-            placeholder: "ex : 18",
-            inputMode: "numeric"
-          });
+        const champDptmt = creerChampDialogue({
+          label: "Département",
+          name: "dptmt",
+          placeholder: "ex : 18",
+          inputMode: "numeric"
+        });
 
-          const champLimite = creerChampDialogue({
-            label: "Nombre maximum de parcs",
-            name: "limit",
-            type: "number",
-            value: "10",
-            inputMode: "numeric"
-          });
+        const champLimite = creerChampDialogue({
+          label: "Nombre maximum de parcs",
+          name: "limit",
+          type: "number",
+          value: "10",
+          inputMode: "numeric"
+        });
 
-          champLimite.input.min = "1";
-          champLimite.input.max = "50";
+        champLimite.input.min = "1";
+        champLimite.input.max = "50";
 
-          const erreur = document.createElement("p");
-          erreur.setAttribute("role", "alert");
-          erreur.dataset.lcdpLocalisationErreur = "";
+        contenu.appendChild(aide);
+        contenu.appendChild(champDptmt.champ);
+        contenu.appendChild(champLimite.champ);
 
-          const actions = document.createElement("menu");
-
-          const annuler = document.createElement("button");
-          annuler.type = "button";
-          annuler.className = "lcdp-button lcdp-button-secondary";
-          annuler.textContent = "Annuler";
-
-          const lancer = document.createElement("button");
-          lancer.type = "submit";
-          lancer.className = "lcdp-button lcdp-button-primary";
-          lancer.textContent = "Lancer";
-
-          actions.appendChild(annuler);
-          actions.appendChild(lancer);
-
-          form.appendChild(titre);
-          form.appendChild(aide);
-          form.appendChild(champDptmt.ligne);
-          form.appendChild(champLimite.ligne);
-          form.appendChild(erreur);
-          form.appendChild(actions);
-
-          dialogue.appendChild(form);
-          document.body.appendChild(dialogue);
-
+        return new Promise((resolve) => {
           let resolu = false;
 
           function terminer(valeur) {
@@ -648,37 +679,44 @@
             }
 
             resolu = true;
-
-            if (dialogue.open) {
-              dialogue.close();
-            }
-
-            dialogue.remove();
+            document.removeEventListener("keydown", gererEchappement);
+            slot.innerHTML = "";
             resolve(valeur);
           }
 
-          annuler.addEventListener("click", () => {
-            terminer(null);
-          });
+          function gererEchappement(event) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(null);
+            }
+          }
 
-          dialogue.addEventListener("cancel", (event) => {
-            event.preventDefault();
-            terminer(null);
-          });
+          document.addEventListener("keydown", gererEchappement);
 
-          dialogue.addEventListener("close", () => {
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", () => {
+              terminer(null);
+            });
+          }
+
+          boutonAnnuler.addEventListener("click", () => {
             terminer(null);
           });
 
           form.addEventListener("submit", (event) => {
             event.preventDefault();
 
+            afficherErreurDialogueChamp(erreur, "");
+
             const dptmt = normaliserDepartementLocalisation(
               champDptmt.input.value
             );
 
             if (!dptmt) {
-              erreur.textContent = "Département invalide.";
+              afficherErreurDialogueChamp(
+                erreur,
+                "Département invalide."
+              );
               champDptmt.input.focus();
               return;
             }
@@ -688,8 +726,10 @@
             );
 
             if (!limite) {
-              erreur.textContent =
-                "Nombre maximum invalide.";
+              afficherErreurDialogueChamp(
+                erreur,
+                "Nombre maximum invalide."
+              );
               champLimite.input.focus();
               return;
             }
@@ -700,8 +740,9 @@
             });
           });
 
-          dialogue.showModal();
-          champDptmt.input.focus();
+          window.setTimeout(() => {
+            champDptmt.input.focus();
+          }, 0);
         });
       }
 
