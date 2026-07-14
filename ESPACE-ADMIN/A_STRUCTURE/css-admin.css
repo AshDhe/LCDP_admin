@@ -130,6 +130,20 @@
   cursor: default;
 }
 
+.lcdp-mini-galerie-menu-centre-admin__grid
+  > .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24) {
+  background: var(--lcdp-color-orange);
+  border-color: var(--lcdp-color-orange);
+  color: var(--lcdp-color-text);
+}
+
+.lcdp-mini-galerie-menu-centre-admin__grid
+  > .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24):hover {
+  background: var(--lcdp-color-orange-hover);
+  border-color: var(--lcdp-color-orange-hover);
+  color: var(--lcdp-color-text);
+}
+
 @media (max-width: 1100px) {
   .lcdp-mini-galerie-menu-centre-admin__grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
