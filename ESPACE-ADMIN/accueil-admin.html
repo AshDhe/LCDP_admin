@@ -136,6 +136,7 @@
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 24;
       const SLOT_CARTE_PARC = 3;
+      const SLOT_CARD_PARC = 4;
       const SLOT_LOCALISATION_PARC = 18;
       const SLOT_QUALIFICATION_PARC = 19;
       const SLOT_CARD1_PARC = 20;
@@ -345,6 +346,36 @@
         lien.setAttribute("aria-label", "Ouvrir CarteParc");
       }
 
+      function estSlotCardParc(categorie, position) {
+        return categorie.id === "parcs" && Number(position) === SLOT_CARD_PARC;
+      }
+
+      function configurerBoutonCardParc(lien) {
+        lien.textContent = "CardParc";
+        lien.href = "#cardparc";
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.cardparc";
+        lien.setAttribute(
+          "aria-label",
+          "Afficher les Card Parc d’un département"
+        );
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          ouvrirCardParcDepuisAccueil().catch(async (error) => {
+            const alerte = await ouvrirAlerteLocalisation(
+              "CardParc indisponible : " +
+              String(error?.message || error || "")
+            );
+
+            if (alerte) {
+              alerte.afficherOk();
+            }
+          });
+        });
+      }
+
       function estSlotLocalisationParc(categorie, position) {
         return categorie.id === "parcs" && Number(position) === SLOT_LOCALISATION_PARC;
       }
@@ -464,6 +495,8 @@
 
           if (estSlotCarteParc(categorie, position)) {
             configurerBoutonCarteParc(lien);
+          } else if (estSlotCardParc(categorie, position)) {
+            configurerBoutonCardParc(lien);
           } else if (estSlotLocalisationParc(categorie, position)) {
             configurerBoutonLocalisation(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
@@ -699,6 +732,163 @@
 
         element.textContent = message || "";
         element.hidden = !message;
+      }
+
+      function demanderDepartementCardParcFallback() {
+        const dptmtSaisi = window.prompt(
+          "Département à afficher :",
+          ""
+        );
+
+        return normaliserDepartementLocalisation(dptmtSaisi);
+      }
+
+      async function ouvrirDialogueDepartementCardParc() {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          return demanderDepartementCardParcFallback();
+        }
+
+        slot.innerHTML = "";
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragmentObjet(
+            "/BOX/04-box-dialogue-champ.html"
+          );
+        } catch (error) {
+          console.error(error);
+          return demanderDepartementCardParcFallback();
+        }
+
+        slot.appendChild(fragment);
+
+        const boite = slot.querySelector(
+          "[data-lcdp-box-dialogue-champ]"
+        );
+        const titre = slot.querySelector(
+          "[data-lcdp-dialogue-champ-title]"
+        );
+        const form = slot.querySelector(
+          "[data-lcdp-dialogue-champ-form]"
+        );
+        const contenu = slot.querySelector(
+          "[data-lcdp-dialogue-champ-content]"
+        );
+        const erreur = slot.querySelector(
+          "[data-lcdp-dialogue-champ-error]"
+        );
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-dialogue-champ-close]"
+        );
+        const boutonAnnuler = slot.querySelector(
+          "[data-lcdp-dialogue-champ-cancel]"
+        );
+        const boutonSubmit = slot.querySelector(
+          "[data-lcdp-dialogue-champ-submit]"
+        );
+
+        if (
+          !boite ||
+          !titre ||
+          !form ||
+          !contenu ||
+          !boutonAnnuler ||
+          !boutonSubmit
+        ) {
+          slot.innerHTML = "";
+          return demanderDepartementCardParcFallback();
+        }
+
+        titre.textContent = "CardParc";
+        boutonSubmit.textContent = "Afficher";
+
+        const champDptmt = creerChampDialogue({
+          label: "Département",
+          name: "dptmt",
+          inputMode: "text"
+        });
+
+        contenu.appendChild(champDptmt.champ);
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function terminer(valeur) {
+            if (resolu) {
+              return;
+            }
+
+            resolu = true;
+            document.removeEventListener(
+              "keydown",
+              gererEchappement
+            );
+            slot.innerHTML = "";
+            resolve(valeur);
+          }
+
+          function gererEchappement(event) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(null);
+            }
+          }
+
+          document.addEventListener(
+            "keydown",
+            gererEchappement
+          );
+
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", () => {
+              terminer(null);
+            });
+          }
+
+          boutonAnnuler.addEventListener("click", () => {
+            terminer(null);
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            afficherErreurDialogueChamp(erreur, "");
+
+            const dptmt = normaliserDepartementLocalisation(
+              champDptmt.input.value
+            );
+
+            if (!dptmt) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Département invalide."
+              );
+              champDptmt.input.focus();
+              return;
+            }
+
+            terminer(dptmt);
+          });
+
+          window.setTimeout(() => {
+            champDptmt.input.focus();
+          }, 0);
+        });
+      }
+
+      async function ouvrirCardParcDepuisAccueil() {
+        const dptmt = await ouvrirDialogueDepartementCardParc();
+
+        if (!dptmt) {
+          return;
+        }
+
+        window.location.href = urlAdmin(
+          "/ESPACE-ADMIN/B_PARCS/CardParc.html?dptmt=" +
+          encodeURIComponent(dptmt)
+        );
       }
 
       function demanderParametresLocalisationFallback() {
