@@ -59,7 +59,8 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
-        "/BOX/04-carte-dynamique.css"
+        "/BOX/04-carte-dynamique.css",
+        "/BOX/04-box-card-parc.css"
       ].forEach((path) => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">');
       });
@@ -93,6 +94,9 @@
       const config = window.SITE_CONFIG || {};
       const CHEMIN_OBJET_CARTE = "/BOX/04-carte-dynamique.html";
       const CHEMIN_GEOJSON_CARTE = "/BOX/04-carte-dynamique.geojson";
+      const CHEMIN_OBJET_CARD_PARC = "/BOX/04-box-card-parc.html";
+      const DOSSIER_IMAGES_PARC = "/IMAG/PARC";
+      const NOM_IMAGE_CARD_PARC = "card1.webp";
       const STATUTS_AUTORISES = new Set([
         "recherche",
         "prepa",
@@ -376,13 +380,14 @@
         if (main) main.hidden = false;
         slot.textContent = "Chargement de CarteParc…";
 
-        const [fragment, geojsonResponse] = await Promise.all([
+        const [fragment, geojsonResponse, fragmentCardParc] = await Promise.all([
           chargerFragment(urlObjet(CHEMIN_OBJET_CARTE), "Objet carte dynamique"),
           fetch(urlObjet(CHEMIN_GEOJSON_CARTE), {
             method: "GET",
             credentials: "omit",
             cache: "no-cache"
-          })
+          }),
+          chargerFragment(urlObjet(CHEMIN_OBJET_CARD_PARC), "Objet Card Parc")
         ]);
 
         if (!geojsonResponse.ok) {
@@ -409,7 +414,13 @@
         const boutonZoomPlus = slot.querySelector("[data-lcdp-carte-zoom-plus]");
         const boutonZoomMoins = slot.querySelector("[data-lcdp-carte-zoom-moins]");
         const coucheDepartements = slot.querySelector("[data-lcdp-carte-departements-layer]");
+        const coucheSelection = slot.querySelector("[data-lcdp-carte-selection-layer]");
+        const coucheLocalites = slot.querySelector("[data-lcdp-carte-localites-layer]");
         const coucheParcs = slot.querySelector("[data-lcdp-carte-parcs-layer]");
+        const cardSlot = slot.querySelector("[data-lcdp-carte-card-slot]");
+        const templateCardParc = fragmentCardParc.querySelector(
+          "[data-lcdp-box-card-parc]"
+        );
 
         if (
           !form ||
@@ -420,7 +431,11 @@
           !boutonZoomPlus ||
           !boutonZoomMoins ||
           !coucheDepartements ||
-          !coucheParcs
+          !coucheSelection ||
+          !coucheLocalites ||
+          !coucheParcs ||
+          !cardSlot ||
+          !templateCardParc
         ) {
           throw new Error("Structure de l’objet carte dynamique incomplète.");
         }
@@ -473,27 +488,46 @@
           return [x, y, largeur, hauteur];
         }
 
-        function actualiserTailleMarqueurs() {
+        function actualiserTailleElementsCarte() {
           const largeurEcran = Math.max(
             1,
             svg.getBoundingClientRect().width
           );
-          const rayon = Math.max(
-            0.08,
-            (viewBoxCourante[2] / largeurEcran) * 6
-          );
+          const uniteEcran = viewBoxCourante[2] / largeurEcran;
+          const rayonParc = Math.max(0.04, uniteEcran * 6);
+          const rayonLocalite = Math.max(0.035, uniteEcran * 4.2);
+          const tailleLibelle = Math.max(0.12, uniteEcran * 11);
+          const decalageLibelle = Math.max(0.08, uniteEcran * 7);
 
           coucheParcs
             .querySelectorAll(".lcdp-carte-dynamique__marker")
             .forEach((marker) => {
-              marker.setAttribute("r", String(rayon));
+              marker.setAttribute("r", String(rayonParc));
+            });
+
+          coucheLocalites
+            .querySelectorAll(".lcdp-carte-dynamique__localite-marker")
+            .forEach((marker) => {
+              marker.setAttribute("r", String(rayonLocalite));
+            });
+
+          coucheLocalites
+            .querySelectorAll(".lcdp-carte-dynamique__localite-label")
+            .forEach((libelle) => {
+              const x = Number(libelle.dataset.pointX);
+
+              libelle.setAttribute("font-size", String(tailleLibelle));
+
+              if (Number.isFinite(x)) {
+                libelle.setAttribute("x", String(x + decalageLibelle));
+              }
             });
         }
 
         function appliquerViewBox(viewBox) {
           viewBoxCourante = normaliserViewBox(viewBox);
           svg.setAttribute("viewBox", viewBoxCourante.join(" "));
-          actualiserTailleMarqueurs();
+          actualiserTailleElementsCarte();
         }
 
         function pointSvgDepuisEcran(clientX, clientY) {
@@ -556,9 +590,29 @@
 
         function actualiserSelectionVisuelle(codes) {
           const selection = new Set(codes);
+
+          coucheSelection.innerHTML = "";
+
           pathsParCode.forEach((path, code) => {
-            path.classList.toggle("is-selected", selection.has(code));
+            const selectionne = selection.has(code);
+
+            path.classList.toggle("is-selected", selectionne);
+
+            if (!selectionne) {
+              return;
+            }
+
+            const surlignage = creerElementSvg("path");
+            surlignage.setAttribute("d", path.getAttribute("d") || "");
+            surlignage.setAttribute(
+              "class",
+              "lcdp-carte-dynamique__departement-selection"
+            );
+            surlignage.setAttribute("fill-rule", "evenodd");
+            surlignage.setAttribute("aria-hidden", "true");
+            coucheSelection.appendChild(surlignage);
           });
+
           appliquerViewBox(
             calculerViewBox(
               codes,
@@ -619,6 +673,142 @@
         svg.addEventListener("pointerup", terminerGlissement);
         svg.addEventListener("pointercancel", terminerGlissement);
 
+        function fermerCardParc() {
+          cardSlot.innerHTML = "";
+          cardSlot.hidden = true;
+        }
+
+        function dossierParcDepuisNom(nom) {
+          return String(nom || "")
+            .trim()
+            .replace(/\s+/g, "_");
+        }
+
+        function construireUrlImageCardParc(parc) {
+          const dptmt = normaliserDepartement(parc?.dptmt);
+          const dossierParc = dossierParcDepuisNom(parc?.nom);
+
+          if (!dptmt || !dossierParc) {
+            return "";
+          }
+
+          return urlObjet(
+            DOSSIER_IMAGES_PARC +
+            "/" + encodeURIComponent(dptmt) +
+            "/" + encodeURIComponent(dossierParc) +
+            "/" + NOM_IMAGE_CARD_PARC
+          );
+        }
+
+        function ouvrirCardParc(parc) {
+          const card = templateCardParc.cloneNode(true);
+          const image = card.querySelector("[data-lcdp-card-parc-image]");
+          const media = card.querySelector(".lcdp-box-card-parc__media");
+          const titre = card.querySelector("[data-lcdp-card-parc-title]");
+          const meta = card.querySelector("[data-lcdp-card-parc-meta]");
+          const description = card.querySelector(
+            "[data-lcdp-card-parc-description]"
+          );
+          const actions = card.querySelector(".lcdp-box-card-parc__actions");
+
+          if (titre) {
+            titre.textContent = String(parc?.nom || "Parc");
+          }
+
+          if (meta) {
+            meta.textContent = parc?.dptmt
+              ? "Département " + String(parc.dptmt)
+              : "";
+          }
+
+          if (description) {
+            description.hidden = true;
+            description.textContent = "";
+          }
+
+          if (actions) {
+            actions.remove();
+          }
+
+          if (image) {
+            const src = construireUrlImageCardParc(parc);
+
+            if (src) {
+              image.src = src;
+              image.alt = "Image du parc " + String(parc?.nom || "");
+              image.addEventListener(
+                "error",
+                () => {
+                  if (media) {
+                    media.hidden = true;
+                  }
+                },
+                { once: true }
+              );
+            } else if (media) {
+              media.hidden = true;
+            }
+          }
+
+          const boutonFermerCard = document.createElement("button");
+          boutonFermerCard.type = "button";
+          boutonFermerCard.className =
+            "lcdp-carte-dynamique__card-close";
+          boutonFermerCard.textContent = "×";
+          boutonFermerCard.setAttribute("aria-label", "Fermer la Card Parc");
+          boutonFermerCard.addEventListener("click", fermerCardParc);
+
+          cardSlot.replaceChildren(boutonFermerCard, card);
+          cardSlot.hidden = false;
+          boutonFermerCard.focus();
+        }
+
+        function dessinerLocalites(localites) {
+          coucheLocalites.innerHTML = "";
+
+          (Array.isArray(localites) ? localites : []).forEach((localite) => {
+            const point = projeterCoordonnee(
+              localite.longitude,
+              localite.latitude
+            );
+
+            if (!point) {
+              return;
+            }
+
+            const groupe = creerElementSvg("g");
+            groupe.setAttribute("aria-hidden", "true");
+
+            const marker = creerElementSvg("circle");
+            marker.setAttribute("cx", String(point.x));
+            marker.setAttribute("cy", String(point.y));
+            marker.setAttribute("r", "0.1");
+            marker.setAttribute(
+              "class",
+              "lcdp-carte-dynamique__localite-marker"
+            );
+
+            const libelle = creerElementSvg("text");
+            libelle.setAttribute("x", String(point.x));
+            libelle.setAttribute("y", String(point.y));
+            libelle.setAttribute("dominant-baseline", "middle");
+            libelle.setAttribute(
+              "class",
+              "lcdp-carte-dynamique__localite-label"
+            );
+            libelle.dataset.pointX = String(point.x);
+            libelle.textContent = String(localite.nom || "")
+              .trim()
+              .toLocaleUpperCase("fr");
+
+            groupe.appendChild(marker);
+            groupe.appendChild(libelle);
+            coucheLocalites.appendChild(groupe);
+          });
+
+          actualiserTailleElementsCarte();
+        }
+
         function dessinerParcs(rows) {
           coucheParcs.innerHTML = "";
 
@@ -634,19 +824,50 @@
             marker.setAttribute("cy", String(point.y));
             marker.setAttribute("r", "0.1");
             marker.setAttribute("class", "lcdp-carte-dynamique__marker");
+            marker.setAttribute("tabindex", "0");
+            marker.setAttribute("role", "button");
             marker.dataset.statut = String(parc.statut || "");
-            marker.setAttribute("aria-label", String(parc.nom || "Parc"));
+            marker.setAttribute(
+              "aria-label",
+              "Ouvrir la Card Parc de " + String(parc.nom || "Parc")
+            );
+
+            marker.addEventListener("pointerdown", (event) => {
+              event.stopPropagation();
+            });
+
+            marker.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              ouvrirCardParc(parc);
+            });
+
+            marker.addEventListener("keydown", (event) => {
+              if (event.key !== "Enter" && event.key !== " ") {
+                return;
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+              ouvrirCardParc(parc);
+            });
 
             coucheParcs.appendChild(marker);
           });
 
-          actualiserTailleMarqueurs();
+          actualiserTailleElementsCarte();
         }
 
         window.addEventListener(
           "resize",
-          actualiserTailleMarqueurs
+          actualiserTailleElementsCarte
         );
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !cardSlot.hidden) {
+            fermerCardParc();
+          }
+        });
 
         let temporisation = null;
         let numeroRequete = 0;
@@ -658,9 +879,11 @@
           const codes = lireDepartements(inputGeo.value, featuresParCode);
           const etat = normaliserEtat(inputEtat.value);
 
+          fermerCardParc();
           actualiserSelectionVisuelle(codes);
 
           if (etat && !STATUTS_AUTORISES.has(etat)) {
+            coucheLocalites.innerHTML = "";
             coucheParcs.innerHTML = "";
             statutTexte.textContent = "Filtre état invalide.";
             return;
@@ -694,6 +917,9 @@
             throw new Error(data?.message || data?.detail || "Lecture des parcs impossible.");
           }
 
+          dessinerLocalites(
+            Array.isArray(data.localites) ? data.localites : []
+          );
           dessinerParcs(Array.isArray(data.rows) ? data.rows : []);
           statutTexte.textContent = "";
         }
@@ -707,13 +933,7 @@
           }, 280);
         }
 
-        inputGeo.addEventListener("input", () => {
-          actualiserSelectionVisuelle(
-            lireDepartements(inputGeo.value, featuresParCode)
-          );
-          programmerActualisation();
-        });
-
+        inputGeo.addEventListener("input", programmerActualisation);
         inputEtat.addEventListener("input", programmerActualisation);
 
         form.addEventListener("submit", (event) => {
