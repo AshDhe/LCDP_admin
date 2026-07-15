@@ -93,7 +93,6 @@
       const config = window.SITE_CONFIG || {};
       const CHEMIN_OBJET_CARTE = "/BOX/04-carte-dynamique.html";
       const CHEMIN_GEOJSON_CARTE = "/BOX/04-carte-dynamique.geojson";
-      const VIEWBOX_FRANCE = [60, 35, 770, 820];
       const STATUTS_AUTORISES = new Set([
         "recherche",
         "prepa",
@@ -213,53 +212,157 @@
           .replace(/[\s_-]+/g, "");
       }
 
-      function calculerViewBox(codes, featuresParCode) {
-        if (codes.length === 0) {
-          return [...VIEWBOX_FRANCE];
+      function projeterCoordonnee(longitude, latitude) {
+        const lon = Number(longitude);
+        const lat = Number(latitude);
+
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+          return null;
         }
 
-        const boxes = codes
-          .map((code) => featuresParCode.get(code)?.properties?.bbox)
-          .filter((bbox) => Array.isArray(bbox) && bbox.length === 4);
+        const latitudeBornee = Math.max(
+          -85.05112878,
+          Math.min(85.05112878, lat)
+        );
+        const latitudeRadians = latitudeBornee * Math.PI / 180;
+        const sinus = Math.sin(latitudeRadians);
 
-        if (boxes.length === 0) {
-          return [...VIEWBOX_FRANCE];
+        return {
+          x: ((lon + 180) / 360) * 1000,
+          y: (
+            0.5 -
+            Math.log((1 + sinus) / (1 - sinus)) /
+              (4 * Math.PI)
+          ) * 1000
+        };
+      }
+
+      function construireTraceGeometrie(geometry) {
+        const type = String(geometry?.type || "");
+        const coordinates = geometry?.coordinates;
+        const parties = [];
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        function ajouterAnneau(anneau) {
+          if (!Array.isArray(anneau) || anneau.length < 3) {
+            return;
+          }
+
+          const points = anneau
+            .map((coord) => projeterCoordonnee(coord?.[0], coord?.[1]))
+            .filter(Boolean);
+
+          if (points.length < 3) {
+            return;
+          }
+
+          points.forEach((point) => {
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+          });
+
+          parties.push(
+            "M " +
+            points
+              .map((point) => {
+                return point.x.toFixed(4) + " " + point.y.toFixed(4);
+              })
+              .join(" L ") +
+            " Z"
+          );
         }
 
-        const minX = Math.min(...boxes.map((bbox) => Number(bbox[0])));
-        const minY = Math.min(...boxes.map((bbox) => Number(bbox[1])));
-        const maxX = Math.max(...boxes.map((bbox) => Number(bbox[2])));
-        const maxY = Math.max(...boxes.map((bbox) => Number(bbox[3])));
-        const largeur = Math.max(36, maxX - minX);
-        const hauteur = Math.max(36, maxY - minY);
-        const marge = Math.max(14, Math.max(largeur, hauteur) * 0.16);
+        if (type === "Polygon" && Array.isArray(coordinates)) {
+          coordinates.forEach(ajouterAnneau);
+        } else if (
+          type === "MultiPolygon" &&
+          Array.isArray(coordinates)
+        ) {
+          coordinates.forEach((polygone) => {
+            if (Array.isArray(polygone)) {
+              polygone.forEach(ajouterAnneau);
+            }
+          });
+        }
+
+        if (
+          parties.length === 0 ||
+          !Number.isFinite(minX) ||
+          !Number.isFinite(minY) ||
+          !Number.isFinite(maxX) ||
+          !Number.isFinite(maxY)
+        ) {
+          return null;
+        }
+
+        return {
+          d: parties.join(" "),
+          bbox: [minX, minY, maxX, maxY]
+        };
+      }
+
+      function fusionnerBbox(boxes) {
+        const valides = boxes.filter((bbox) => {
+          return (
+            Array.isArray(bbox) &&
+            bbox.length === 4 &&
+            bbox.every(Number.isFinite)
+          );
+        });
+
+        if (valides.length === 0) {
+          return null;
+        }
 
         return [
-          minX - marge,
-          minY - marge,
+          Math.min(...valides.map((bbox) => bbox[0])),
+          Math.min(...valides.map((bbox) => bbox[1])),
+          Math.max(...valides.map((bbox) => bbox[2])),
+          Math.max(...valides.map((bbox) => bbox[3]))
+        ];
+      }
+
+      function bboxVersViewBox(bbox, ratioMarge = 0.12) {
+        if (!bbox) {
+          return null;
+        }
+
+        const largeur = Math.max(0.5, bbox[2] - bbox[0]);
+        const hauteur = Math.max(0.5, bbox[3] - bbox[1]);
+        const marge = Math.max(
+          0.35,
+          Math.max(largeur, hauteur) * ratioMarge
+        );
+
+        return [
+          bbox[0] - marge,
+          bbox[1] - marge,
           largeur + marge * 2,
           hauteur + marge * 2
         ];
       }
 
-      function projeterParc(lat, lng, projection) {
-        const latitude = Number(lat);
-        const longitude = Number(lng);
-
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          return null;
+      function calculerViewBox(
+        codes,
+        featuresParCode,
+        viewBoxFrance
+      ) {
+        if (codes.length === 0) {
+          return [...viewBoxFrance];
         }
 
-        return {
-          x: projection.xMin +
-            ((longitude - projection.lonMin) /
-              (projection.lonMax - projection.lonMin)) *
-            (projection.xMax - projection.xMin),
-          y: projection.yMax -
-            ((latitude - projection.latMin) /
-              (projection.latMax - projection.latMin)) *
-            (projection.yMax - projection.yMin)
-        };
+        const bbox = fusionnerBbox(
+          codes
+            .map((code) => featuresParCode.get(code)?.bboxProjetee)
+            .filter(Boolean)
+        );
+
+        return bboxVersViewBox(bbox, 0.16) || [...viewBoxFrance];
       }
 
       function creerElementSvg(nom) {
@@ -287,10 +390,11 @@
         }
 
         const geojson = await geojsonResponse.json();
-        const features = Array.isArray(geojson?.features) ? geojson.features : [];
-        const projection = geojson?.properties?.projectionParcs;
+        const features = Array.isArray(geojson?.features)
+          ? geojson.features
+          : [];
 
-        if (features.length === 0 || !projection) {
+        if (features.length === 0) {
           throw new Error("Données cartographiques incomplètes.");
         }
 
@@ -323,17 +427,41 @@
 
         const featuresParCode = new Map();
         const pathsParCode = new Map();
-        const etendueCarte = Array.isArray(geojson?.properties?.viewBox)
-          ? geojson.properties.viewBox.map(Number)
-          : [0, 0, 887, 886];
-        let viewBoxCourante = [...VIEWBOX_FRANCE];
+        const traces = [];
+
+        features.forEach((feature) => {
+          const code = String(feature?.properties?.code || "");
+          const trace = construireTraceGeometrie(feature?.geometry);
+
+          if (!code || !trace) {
+            return;
+          }
+
+          traces.push({
+            feature,
+            code,
+            trace
+          });
+        });
+
+        const bboxFrance = fusionnerBbox(
+          traces.map((item) => item.trace.bbox)
+        );
+        const viewBoxFrance = bboxVersViewBox(bboxFrance, 0.045);
+
+        if (!viewBoxFrance) {
+          throw new Error("Emprise de la carte inexploitable.");
+        }
+
+        const etendueCarte = [...viewBoxFrance];
+        let viewBoxCourante = [...viewBoxFrance];
         let glissement = null;
 
         function normaliserViewBox(viewBox) {
-          const minLargeur = 24;
-          const minHauteur = 24;
-          const maxLargeur = VIEWBOX_FRANCE[2];
-          const maxHauteur = VIEWBOX_FRANCE[3];
+          const minLargeur = Math.max(0.45, viewBoxFrance[2] / 35);
+          const minHauteur = Math.max(0.45, viewBoxFrance[3] / 35);
+          const maxLargeur = viewBoxFrance[2];
+          const maxHauteur = viewBoxFrance[3];
           const largeur = Math.min(maxLargeur, Math.max(minLargeur, Number(viewBox[2]) || maxLargeur));
           const hauteur = Math.min(maxHauteur, Math.max(minHauteur, Number(viewBox[3]) || maxHauteur));
           const xMinimum = etendueCarte[0];
@@ -345,9 +473,27 @@
           return [x, y, largeur, hauteur];
         }
 
+        function actualiserTailleMarqueurs() {
+          const largeurEcran = Math.max(
+            1,
+            svg.getBoundingClientRect().width
+          );
+          const rayon = Math.max(
+            0.08,
+            (viewBoxCourante[2] / largeurEcran) * 6
+          );
+
+          coucheParcs
+            .querySelectorAll(".lcdp-carte-dynamique__marker")
+            .forEach((marker) => {
+              marker.setAttribute("r", String(rayon));
+            });
+        }
+
         function appliquerViewBox(viewBox) {
           viewBoxCourante = normaliserViewBox(viewBox);
           svg.setAttribute("viewBox", viewBoxCourante.join(" "));
+          actualiserTailleMarqueurs();
         }
 
         function pointSvgDepuisEcran(clientX, clientY) {
@@ -382,16 +528,22 @@
           ]);
         }
 
-        features.forEach((feature) => {
-          const code = String(feature?.properties?.code || "");
+        traces.forEach(({ feature, code, trace }) => {
           const nom = String(feature?.properties?.nom || code);
-          if (!code) return;
+          const featureCarte = {
+            ...feature,
+            bboxProjetee: trace.bbox
+          };
 
-          featuresParCode.set(code, feature);
+          featuresParCode.set(code, featureCarte);
 
           const path = creerElementSvg("path");
-          path.setAttribute("d", String(feature?.properties?.path || ""));
-          path.setAttribute("class", "lcdp-carte-dynamique__departement");
+          path.setAttribute("d", trace.d);
+          path.setAttribute(
+            "class",
+            "lcdp-carte-dynamique__departement"
+          );
+          path.setAttribute("fill-rule", "evenodd");
           path.dataset.code = code;
 
           const title = creerElementSvg("title");
@@ -407,7 +559,13 @@
           pathsParCode.forEach((path, code) => {
             path.classList.toggle("is-selected", selection.has(code));
           });
-          appliquerViewBox(calculerViewBox(codes, featuresParCode));
+          appliquerViewBox(
+            calculerViewBox(
+              codes,
+              featuresParCode,
+              viewBoxFrance
+            )
+          );
         }
 
         boutonZoomPlus.addEventListener("click", () => zoomerCarte(0.8));
@@ -465,20 +623,30 @@
           coucheParcs.innerHTML = "";
 
           rows.forEach((parc) => {
-            const point = projeterParc(parc.latitude, parc.longitude, projection);
+            const point = projeterCoordonnee(
+              parc.longitude,
+              parc.latitude
+            );
             if (!point) return;
 
             const marker = creerElementSvg("circle");
             marker.setAttribute("cx", String(point.x));
             marker.setAttribute("cy", String(point.y));
-            marker.setAttribute("r", "5.8");
+            marker.setAttribute("r", "0.1");
             marker.setAttribute("class", "lcdp-carte-dynamique__marker");
             marker.dataset.statut = String(parc.statut || "");
             marker.setAttribute("aria-label", String(parc.nom || "Parc"));
 
             coucheParcs.appendChild(marker);
           });
+
+          actualiserTailleMarqueurs();
         }
+
+        window.addEventListener(
+          "resize",
+          actualiserTailleMarqueurs
+        );
 
         let temporisation = null;
         let numeroRequete = 0;
@@ -553,6 +721,7 @@
           programmerActualisation();
         });
 
+        appliquerViewBox(viewBoxFrance);
         actualiserSelectionVisuelle([]);
         await chargerParcs();
 
