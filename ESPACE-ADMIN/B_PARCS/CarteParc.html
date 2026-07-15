@@ -480,23 +480,31 @@
           });
         }
 
+        let temporisation = null;
+        let numeroRequete = 0;
+
         async function chargerParcs() {
           const endpoint = endpointAdminData();
           if (!endpoint) throw new Error("Endpoint admin data non configuré.");
 
           const codes = lireDepartements(inputGeo.value, featuresParCode);
-          const etat = normaliserEtat(inputEtat.value) || "prepa";
-
-          if (!STATUTS_AUTORISES.has(etat)) {
-            throw new Error("Filtre état invalide.");
-          }
+          const etat = normaliserEtat(inputEtat.value);
 
           actualiserSelectionVisuelle(codes);
+
+          if (etat && !STATUTS_AUTORISES.has(etat)) {
+            coucheParcs.innerHTML = "";
+            statutTexte.textContent = "Filtre état invalide.";
+            return;
+          }
+
+          const requeteCourante = ++numeroRequete;
           statutTexte.textContent = "Chargement des parcs…";
-          coucheParcs.innerHTML = "";
 
           const params = new URLSearchParams();
-          params.set("statut", etat);
+          if (etat) {
+            params.set("statut", etat);
+          }
           if (codes.length > 0) {
             params.set("dptmt", codes.join("|"));
           }
@@ -510,6 +518,10 @@
 
           const data = await response.json().catch(() => null);
 
+          if (requeteCourante !== numeroRequete) {
+            return;
+          }
+
           if (!response.ok || !data || data.success !== true) {
             throw new Error(data?.message || data?.detail || "Lecture des parcs impossible.");
           }
@@ -518,11 +530,27 @@
           statutTexte.textContent = "";
         }
 
+        function programmerActualisation() {
+          window.clearTimeout(temporisation);
+          temporisation = window.setTimeout(() => {
+            chargerParcs().catch((error) => {
+              statutTexte.textContent = String(error?.message || error || "");
+            });
+          }, 280);
+        }
+
+        inputGeo.addEventListener("input", () => {
+          actualiserSelectionVisuelle(
+            lireDepartements(inputGeo.value, featuresParCode)
+          );
+          programmerActualisation();
+        });
+
+        inputEtat.addEventListener("input", programmerActualisation);
+
         form.addEventListener("submit", (event) => {
           event.preventDefault();
-          chargerParcs().catch((error) => {
-            statutTexte.textContent = String(error?.message || error || "");
-          });
+          programmerActualisation();
         });
 
         actualiserSelectionVisuelle([]);
