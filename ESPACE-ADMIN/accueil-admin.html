@@ -135,6 +135,7 @@
 
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 24;
+      const SLOT_CARTE_PARC = 3;
       const SLOT_LOCALISATION_PARC = 18;
       const SLOT_QUALIFICATION_PARC = 19;
       const SLOT_CARD1_PARC = 20;
@@ -332,6 +333,18 @@
         return Array.isArray(data.buttons) ? data.buttons : [];
       }
 
+      function estSlotCarteParc(categorie, position) {
+        return categorie.id === "parcs" && Number(position) === SLOT_CARTE_PARC;
+      }
+
+      function configurerBoutonCarteParc(lien) {
+        lien.textContent = "CarteParc";
+        lien.href = urlAdmin("/ESPACE-ADMIN/B_PARCS/CarteParc.html");
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.carte";
+        lien.setAttribute("aria-label", "Ouvrir CarteParc");
+      }
+
       function estSlotLocalisationParc(categorie, position) {
         return categorie.id === "parcs" && Number(position) === SLOT_LOCALISATION_PARC;
       }
@@ -449,7 +462,9 @@
             );
           });
 
-          if (estSlotLocalisationParc(categorie, position)) {
+          if (estSlotCarteParc(categorie, position)) {
+            configurerBoutonCarteParc(lien);
+          } else if (estSlotLocalisationParc(categorie, position)) {
             configurerBoutonLocalisation(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
             configurerBoutonQualification(lien);
