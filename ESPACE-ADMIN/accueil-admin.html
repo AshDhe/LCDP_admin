@@ -77,8 +77,7 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
-        "/BOX/04-box-dialogue-champ.css",
-        "/BOX/04-box-dialogue-upload-img.css"
+        "/BOX/04-box-dialogue-champ.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -91,6 +90,14 @@
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+      ["/OBJET/BOX/04-box-dialogue-upload-img.css"].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlPublic(path) +
           '">'
         );
       });
@@ -132,9 +139,8 @@
       const SLOT_QUALIFICATION_PARC = 19;
       const SLOT_CARD1_PARC = 20;
       const SLOT_UPLOAD_IMG_PARC = 21;
-      const UPLOAD_IMG_MAX_FICHIERS = 6;
-      const UPLOAD_IMG_MAX_OCTETS_PAR_FICHIER = 15 * 1024 * 1024;
-      const UPLOAD_IMG_MAX_OCTETS_TOTAL = 60 * 1024 * 1024;
+      const CHEMIN_BOX_UPLOAD_IMG =
+        "/OBJET/BOX/04-box-dialogue-upload-img.html";
 
       const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
 
@@ -393,19 +399,7 @@
 
         lien.addEventListener("click", (event) => {
           event.preventDefault();
-
-          ouvrirWorkflowUploadIMG().catch(async (error) => {
-            console.error("Erreur workflow UploadIMG :", error);
-
-            const alerte = await ouvrirAlerteLocalisation(
-              "UploadIMG impossible : " +
-              String(error?.message || error || "")
-            );
-
-            if (alerte) {
-              alerte.afficherOk();
-            }
-          });
+          demanderEtLancerUploadIMGParc();
         });
       }
 
@@ -1086,6 +1080,494 @@
         });
       }
 
+      function ajouterOptionUploadIMG(select, value, label) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+      }
+
+      async function chargerDepartementsUploadIMG(select) {
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          throw new Error("Endpoint du worker admin parc non configuré.");
+        }
+
+        select.disabled = true;
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(select, "", "Chargement…");
+
+        const response = await fetch(
+          endpoint + "/uploadimg/departements",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json"
+            }
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger les départements."
+          );
+        }
+
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(select, "", "Choisir un département");
+
+        for (const dptmt of data.departements || []) {
+          ajouterOptionUploadIMG(
+            select,
+            String(dptmt),
+            String(dptmt)
+          );
+        }
+
+        select.disabled = false;
+      }
+
+      async function chargerParcsUploadIMG(dptmt, select) {
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          throw new Error("Endpoint du worker admin parc non configuré.");
+        }
+
+        select.disabled = true;
+        select.innerHTML = "";
+
+        if (!dptmt) {
+          ajouterOptionUploadIMG(
+            select,
+            "",
+            "Choisir d’abord un département"
+          );
+          return;
+        }
+
+        ajouterOptionUploadIMG(select, "", "Chargement…");
+
+        const response = await fetch(
+          endpoint +
+          "/uploadimg/parcs?dptmt=" +
+          encodeURIComponent(dptmt),
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json"
+            }
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger les parcs."
+          );
+        }
+
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(select, "", "Choisir un parc");
+
+        for (const parc of data.parcs || []) {
+          ajouterOptionUploadIMG(
+            select,
+            String(parc.idparc),
+            String(parc.nom || "")
+          );
+        }
+
+        select.disabled = false;
+      }
+
+      function actualiserListeImagesUploadIMG(input, liste) {
+        const fichiers = Array.from(input.files || []);
+        liste.innerHTML = "";
+
+        for (const fichier of fichiers) {
+          const item = document.createElement("li");
+          item.textContent = fichier.name;
+          liste.appendChild(item);
+        }
+
+        liste.hidden = fichiers.length === 0;
+      }
+
+      function validerImagesUploadIMG(input) {
+        const fichiers = Array.from(input.files || []);
+
+        if (fichiers.length < 1 || fichiers.length > 6) {
+          return {
+            success: false,
+            message: "Sélectionner entre 1 et 6 images."
+          };
+        }
+
+        let total = 0;
+
+        for (const fichier of fichiers) {
+          const taille = Number(fichier.size || 0);
+
+          if (!taille) {
+            return {
+              success: false,
+              message: "Image vide : " + fichier.name + "."
+            };
+          }
+
+          if (taille > 15 * 1024 * 1024) {
+            return {
+              success: false,
+              message:
+                "Image trop lourde : " +
+                fichier.name +
+                ". Maximum : 15 Mo."
+            };
+          }
+
+          total += taille;
+        }
+
+        if (total > 60 * 1024 * 1024) {
+          return {
+            success: false,
+            message: "Le poids total des images dépasse 60 Mo."
+          };
+        }
+
+        return {
+          success: true,
+          fichiers
+        };
+      }
+
+      async function ouvrirDialogueUploadIMG() {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          throw new Error("Slot lightbox admin introuvable.");
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragment(
+          urlPublic(CHEMIN_BOX_UPLOAD_IMG),
+          "Fragment LCDP_public" + CHEMIN_BOX_UPLOAD_IMG
+        );
+
+        slot.appendChild(fragment);
+
+        const boite = slot.querySelector(
+          "[data-lcdp-box-dialogue-upload-img]"
+        );
+        const form = slot.querySelector(
+          "[data-lcdp-upload-img-form]"
+        );
+        const departement = slot.querySelector(
+          "[data-lcdp-upload-img-dptmt]"
+        );
+        const parc = slot.querySelector(
+          "[data-lcdp-upload-img-parc]"
+        );
+        const images = slot.querySelector(
+          "[data-lcdp-upload-img-images]"
+        );
+        const liste = slot.querySelector(
+          "[data-lcdp-upload-img-files]"
+        );
+        const erreur = slot.querySelector(
+          "[data-lcdp-upload-img-error]"
+        );
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-upload-img-close]"
+        );
+        const boutonAnnuler = slot.querySelector(
+          "[data-lcdp-upload-img-cancel]"
+        );
+
+        if (
+          !boite ||
+          !form ||
+          !departement ||
+          !parc ||
+          !images ||
+          !liste ||
+          !erreur ||
+          !boutonAnnuler
+        ) {
+          slot.innerHTML = "";
+          throw new Error("Structure de la box UploadIMG incomplète.");
+        }
+
+        images.addEventListener("change", () => {
+          afficherErreurDialogueChamp(erreur, "");
+          actualiserListeImagesUploadIMG(images, liste);
+        });
+
+        departement.addEventListener("change", async () => {
+          afficherErreurDialogueChamp(erreur, "");
+
+          try {
+            await chargerParcsUploadIMG(
+              departement.value,
+              parc
+            );
+          } catch (errorChargement) {
+            afficherErreurDialogueChamp(
+              erreur,
+              String(
+                errorChargement?.message ||
+                errorChargement ||
+                ""
+              )
+            );
+          }
+        });
+
+        try {
+          await chargerDepartementsUploadIMG(departement);
+        } catch (errorChargement) {
+          afficherErreurDialogueChamp(
+            erreur,
+            String(
+              errorChargement?.message ||
+              errorChargement ||
+              ""
+            )
+          );
+        }
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function terminer(valeur) {
+            if (resolu) {
+              return;
+            }
+
+            resolu = true;
+            document.removeEventListener(
+              "keydown",
+              gererEchappement
+            );
+            slot.innerHTML = "";
+            resolve(valeur);
+          }
+
+          function gererEchappement(event) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(null);
+            }
+          }
+
+          document.addEventListener(
+            "keydown",
+            gererEchappement
+          );
+
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", () => {
+              terminer(null);
+            });
+          }
+
+          boutonAnnuler.addEventListener("click", () => {
+            terminer(null);
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            afficherErreurDialogueChamp(erreur, "");
+
+            if (!departement.value) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Choisir un département."
+              );
+              departement.focus();
+              return;
+            }
+
+            if (!parc.value) {
+              afficherErreurDialogueChamp(
+                erreur,
+                "Choisir un parc."
+              );
+              parc.focus();
+              return;
+            }
+
+            const validation = validerImagesUploadIMG(images);
+
+            if (!validation.success) {
+              afficherErreurDialogueChamp(
+                erreur,
+                validation.message
+              );
+              images.focus();
+              return;
+            }
+
+            const nomParc =
+              parc.options[parc.selectedIndex]
+                ?.textContent || "Parc";
+
+            terminer({
+              dptmt: departement.value,
+              idparc: parc.value,
+              nomParc,
+              fichiers: validation.fichiers
+            });
+          });
+
+          window.setTimeout(() => {
+            if (!departement.disabled) {
+              departement.focus();
+            }
+          }, 0);
+        });
+      }
+
+      async function demanderEtLancerUploadIMGParc() {
+        if (uploadIMGEnCours) {
+          return;
+        }
+
+        try {
+          const options = await ouvrirDialogueUploadIMG();
+
+          if (!options) {
+            return;
+          }
+
+          await lancerUploadIMGParc(options);
+        } catch (error) {
+          const alerte = await ouvrirAlerteLocalisation(
+            "UploadIMG impossible : " +
+            String(error?.message || error || "")
+          );
+
+          if (alerte) {
+            alerte.afficherOk();
+          }
+        }
+      }
+
+      async function lancerUploadIMGParc(options) {
+        if (uploadIMGEnCours) {
+          return;
+        }
+
+        const endpoint = endpointParcAdmin();
+
+        if (!endpoint) {
+          const alerteConfig = await ouvrirAlerteLocalisation(
+            "Endpoint du worker admin parc non configuré."
+          );
+
+          if (alerteConfig) {
+            alerteConfig.afficherOk();
+          }
+
+          return;
+        }
+
+        uploadIMGEnCours = true;
+
+        const alerte = await ouvrirAlerteLocalisation(
+          "UploadIMG en cours pour " +
+          options.nomParc +
+          ". Ne fermez pas cette page.",
+          {
+            okVisible: false
+          }
+        );
+
+        try {
+          const formData = new FormData();
+          formData.append("dptmt", options.dptmt);
+          formData.append("idparc", options.idparc);
+
+          for (const fichier of options.fichiers) {
+            formData.append(
+              "images",
+              fichier,
+              fichier.name
+            );
+          }
+
+          const response = await fetch(
+            endpoint + "/uploadimg",
+            {
+              method: "POST",
+              credentials: "include",
+              cache: "no-store",
+              headers: {
+                Accept: "application/json"
+              },
+              body: formData
+            }
+          );
+
+          const data = await response.json().catch(() => null);
+
+          if (!data) {
+            throw new Error("Réponse UploadIMG inexploitable.");
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "UploadIMG impossible."
+            );
+          }
+
+          const parc = data.parc || {};
+          const message =
+            (data.message || "UploadIMG terminé.") +
+            "\nParc : " +
+            (parc.nom || options.nomParc) +
+            "\nDépartement : " +
+            (parc.dptmt || options.dptmt) +
+            "\nImages uploadées : " +
+            String(data.uploades || 0) +
+            "\nImages précédentes versionnées : " +
+            String(data.versionnes || 0) +
+            "\nErreurs : " +
+            String(data.erreurs || 0);
+
+          if (alerte) {
+            alerte.setMessage(message);
+            alerte.afficherOk();
+          }
+        } catch (error) {
+          if (alerte) {
+            alerte.setMessage(
+              "UploadIMG interrompu : " +
+              String(error?.message || error || "")
+            );
+            alerte.afficherOk();
+          }
+        } finally {
+          uploadIMGEnCours = false;
+        }
+      }
+
       function demanderParametresCard1Fallback() {
         const dptmtSaisi = window.prompt(
           "Département Card1 :",
@@ -1610,530 +2092,6 @@
           }
         } finally {
           localisationEnCours = false;
-        }
-      }
-
-      function ajouterOptionUploadIMG(select, value, label) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label;
-        select.appendChild(option);
-      }
-
-      function afficherErreurUploadIMG(element, message) {
-        if (!element) {
-          return;
-        }
-
-        element.textContent = message || "";
-        element.hidden = !message;
-      }
-
-      function actualiserListeFichiersUploadIMG(input, liste) {
-        const fichiers = Array.from(input.files || []);
-        liste.innerHTML = "";
-
-        for (const fichier of fichiers) {
-          const item = document.createElement("li");
-          item.textContent = fichier.name;
-          liste.appendChild(item);
-        }
-
-        liste.hidden = fichiers.length === 0;
-      }
-
-      function validerFichiersUploadIMG(input) {
-        const fichiers = Array.from(input.files || []);
-
-        if (
-          fichiers.length < 1 ||
-          fichiers.length > UPLOAD_IMG_MAX_FICHIERS
-        ) {
-          return {
-            success: false,
-            message: "Sélectionner entre 1 et 6 images."
-          };
-        }
-
-        let octetsTotal = 0;
-
-        for (const fichier of fichiers) {
-          const taille = Number(fichier.size || 0);
-
-          if (!Number.isFinite(taille) || taille < 1) {
-            return {
-              success: false,
-              message: "Image vide : " + fichier.name + "."
-            };
-          }
-
-          if (taille > UPLOAD_IMG_MAX_OCTETS_PAR_FICHIER) {
-            return {
-              success: false,
-              message:
-                "Image trop lourde : " + fichier.name +
-                ". Maximum : 15 Mo."
-            };
-          }
-
-          octetsTotal += taille;
-        }
-
-        if (octetsTotal > UPLOAD_IMG_MAX_OCTETS_TOTAL) {
-          return {
-            success: false,
-            message: "Le poids total des images dépasse 60 Mo."
-          };
-        }
-
-        return {
-          success: true,
-          fichiers
-        };
-      }
-
-      async function chargerDepartementsUploadIMG(select) {
-        const endpoint = endpointParcAdmin();
-
-        if (!endpoint) {
-          throw new Error(
-            "Endpoint du worker admin parc non configuré."
-          );
-        }
-
-        select.disabled = true;
-        select.innerHTML = "";
-        ajouterOptionUploadIMG(select, "", "Chargement…");
-
-        const response = await fetch(
-          endpoint + "/uploadimg/departements",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-            headers: {
-              Accept: "application/json"
-            }
-          }
-        );
-
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || !data || data.success !== true) {
-          throw new Error(
-            data?.message ||
-            data?.detail ||
-            "Impossible de charger les départements."
-          );
-        }
-
-        select.innerHTML = "";
-        ajouterOptionUploadIMG(
-          select,
-          "",
-          "Choisir un département"
-        );
-
-        for (const dptmt of data.departements || []) {
-          ajouterOptionUploadIMG(
-            select,
-            String(dptmt),
-            String(dptmt)
-          );
-        }
-
-        select.disabled = false;
-      }
-
-      async function chargerParcsUploadIMG(dptmt, select) {
-        const endpoint = endpointParcAdmin();
-
-        if (!endpoint) {
-          throw new Error(
-            "Endpoint du worker admin parc non configuré."
-          );
-        }
-
-        select.disabled = true;
-        select.innerHTML = "";
-
-        if (!dptmt) {
-          ajouterOptionUploadIMG(
-            select,
-            "",
-            "Choisir d’abord un département"
-          );
-          return;
-        }
-
-        ajouterOptionUploadIMG(select, "", "Chargement…");
-
-        const response = await fetch(
-          endpoint +
-          "/uploadimg/parcs?dptmt=" +
-          encodeURIComponent(dptmt),
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-            headers: {
-              Accept: "application/json"
-            }
-          }
-        );
-
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || !data || data.success !== true) {
-          throw new Error(
-            data?.message ||
-            data?.detail ||
-            "Impossible de charger les parcs."
-          );
-        }
-
-        const parcs = Array.isArray(data.parcs)
-          ? data.parcs
-          : [];
-
-        select.innerHTML = "";
-
-        if (parcs.length === 0) {
-          ajouterOptionUploadIMG(
-            select,
-            "",
-            "Aucun parc prépa ou oui"
-          );
-          return;
-        }
-
-        ajouterOptionUploadIMG(select, "", "Choisir un parc");
-
-        for (const parc of parcs) {
-          ajouterOptionUploadIMG(
-            select,
-            String(parc.idparc || ""),
-            String(parc.nom || "")
-          );
-        }
-
-        select.disabled = false;
-      }
-
-      async function ouvrirWorkflowUploadIMG() {
-        if (uploadIMGEnCours) {
-          return;
-        }
-
-        const endpoint = endpointParcAdmin();
-
-        if (!endpoint) {
-          const alerte = await ouvrirAlerteLocalisation(
-            "Endpoint du worker admin parc non configuré."
-          );
-
-          if (alerte) {
-            alerte.afficherOk();
-          }
-
-          return;
-        }
-
-        const slot = document.getElementById("lcdp-lightbox-slot");
-
-        if (!slot) {
-          throw new Error("Slot lightbox admin introuvable.");
-        }
-
-        slot.innerHTML = "";
-
-        const fragment = await chargerFragmentObjet(
-          "/BOX/04-box-dialogue-upload-img.html"
-        );
-
-        slot.appendChild(fragment);
-
-        const boite = slot.querySelector(
-          "[data-lcdp-box-dialogue-upload-img]"
-        );
-        const form = slot.querySelector(
-          "[data-lcdp-upload-img-form]"
-        );
-        const selectDepartement = slot.querySelector(
-          "[data-lcdp-upload-img-dptmt]"
-        );
-        const selectParc = slot.querySelector(
-          "[data-lcdp-upload-img-parc]"
-        );
-        const inputImages = slot.querySelector(
-          "[data-lcdp-upload-img-images]"
-        );
-        const listeFichiers = slot.querySelector(
-          "[data-lcdp-upload-img-files]"
-        );
-        const erreur = slot.querySelector(
-          "[data-lcdp-upload-img-error]"
-        );
-        const boutonFermer = slot.querySelector(
-          "[data-lcdp-upload-img-close]"
-        );
-        const boutonAnnuler = slot.querySelector(
-          "[data-lcdp-upload-img-cancel]"
-        );
-        const boutonSubmit = slot.querySelector(
-          "[data-lcdp-upload-img-submit]"
-        );
-
-        if (
-          !boite ||
-          !form ||
-          !selectDepartement ||
-          !selectParc ||
-          !inputImages ||
-          !listeFichiers ||
-          !boutonAnnuler ||
-          !boutonSubmit
-        ) {
-          slot.innerHTML = "";
-          throw new Error(
-            "Structure de l’objet UploadIMG incomplète."
-          );
-        }
-
-        let dialogueFerme = false;
-
-        function fermerDialogue() {
-          if (dialogueFerme || uploadIMGEnCours) {
-            return;
-          }
-
-          dialogueFerme = true;
-          document.removeEventListener(
-            "keydown",
-            gererEchappementUploadIMG
-          );
-          slot.innerHTML = "";
-        }
-
-        function gererEchappementUploadIMG(event) {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            fermerDialogue();
-          }
-        }
-
-        document.addEventListener(
-          "keydown",
-          gererEchappementUploadIMG
-        );
-
-        if (boutonFermer) {
-          boutonFermer.addEventListener(
-            "click",
-            fermerDialogue
-          );
-        }
-
-        boutonAnnuler.addEventListener(
-          "click",
-          fermerDialogue
-        );
-
-        inputImages.addEventListener("change", () => {
-          afficherErreurUploadIMG(erreur, "");
-          actualiserListeFichiersUploadIMG(
-            inputImages,
-            listeFichiers
-          );
-        });
-
-        selectDepartement.addEventListener(
-          "change",
-          async () => {
-            afficherErreurUploadIMG(erreur, "");
-
-            try {
-              await chargerParcsUploadIMG(
-                selectDepartement.value,
-                selectParc
-              );
-            } catch (error) {
-              afficherErreurUploadIMG(
-                erreur,
-                String(error?.message || error || "")
-              );
-            }
-          }
-        );
-
-        form.addEventListener("submit", async (event) => {
-          event.preventDefault();
-
-          if (uploadIMGEnCours) {
-            return;
-          }
-
-          afficherErreurUploadIMG(erreur, "");
-
-          const dptmt = String(
-            selectDepartement.value || ""
-          ).trim();
-          const idparc = String(
-            selectParc.value || ""
-          ).trim();
-          const validation = validerFichiersUploadIMG(
-            inputImages
-          );
-
-          if (!dptmt) {
-            afficherErreurUploadIMG(
-              erreur,
-              "Choisir un département."
-            );
-            selectDepartement.focus();
-            return;
-          }
-
-          if (!idparc) {
-            afficherErreurUploadIMG(
-              erreur,
-              "Choisir un parc."
-            );
-            selectParc.focus();
-            return;
-          }
-
-          if (!validation.success) {
-            afficherErreurUploadIMG(
-              erreur,
-              validation.message
-            );
-            inputImages.focus();
-            return;
-          }
-
-          const optionParc = selectParc.options[
-            selectParc.selectedIndex
-          ];
-          const nomParc = String(
-            optionParc?.textContent || "Parc"
-          ).trim();
-          const fichiers = validation.fichiers;
-
-          dialogueFerme = true;
-          document.removeEventListener(
-            "keydown",
-            gererEchappementUploadIMG
-          );
-          slot.innerHTML = "";
-
-          await lancerUploadIMGParc({
-            dptmt,
-            idparc,
-            nomParc,
-            fichiers
-          });
-        });
-
-        try {
-          await chargerDepartementsUploadIMG(
-            selectDepartement
-          );
-          selectDepartement.focus();
-        } catch (error) {
-          afficherErreurUploadIMG(
-            erreur,
-            String(error?.message || error || "")
-          );
-        }
-      }
-
-      async function lancerUploadIMGParc(options) {
-        if (uploadIMGEnCours) {
-          return;
-        }
-
-        const endpoint = endpointParcAdmin();
-
-        if (!endpoint) {
-          return;
-        }
-
-        uploadIMGEnCours = true;
-
-        const alerte = await ouvrirAlerteLocalisation(
-          "UploadIMG en cours pour " +
-          options.nomParc +
-          ". Ne fermez pas cette page.",
-          {
-            okVisible: false
-          }
-        );
-
-        try {
-          const formData = new FormData();
-          formData.append("dptmt", options.dptmt);
-          formData.append("idparc", options.idparc);
-
-          for (const fichier of options.fichiers) {
-            formData.append("images", fichier, fichier.name);
-          }
-
-          const response = await fetch(
-            endpoint + "/uploadimg",
-            {
-              method: "POST",
-              credentials: "include",
-              cache: "no-store",
-              headers: {
-                Accept: "application/json"
-              },
-              body: formData
-            }
-          );
-
-          const data = await response.json().catch(() => null);
-
-          if (!data) {
-            throw new Error("Réponse UploadIMG inexploitable.");
-          }
-
-          if (!response.ok) {
-            throw new Error(
-              data?.message ||
-              data?.detail ||
-              "UploadIMG impossible."
-            );
-          }
-
-          const parc = data.parc || {};
-          const message =
-            (data.message || "UploadIMG terminé.") +
-            "\nParc : " +
-            (parc.nom || options.nomParc) +
-            "\nDépartement : " +
-            (parc.dptmt || options.dptmt) +
-            "\nImages uploadées : " +
-            String(data.uploades || 0) +
-            "\nImages précédentes versionnées : " +
-            String(data.versionnes || 0) +
-            "\nErreurs : " +
-            String(data.erreurs || 0);
-
-          if (alerte) {
-            alerte.setMessage(message);
-            alerte.afficherOk();
-          }
-        } catch (error) {
-          if (alerte) {
-            alerte.setMessage(
-              "UploadIMG interrompu : " +
-              String(error?.message || error || "")
-            );
-            alerte.afficherOk();
-          }
-        } finally {
-          uploadIMGEnCours = false;
         }
       }
 
