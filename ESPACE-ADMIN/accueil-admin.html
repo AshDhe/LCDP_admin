@@ -1538,6 +1538,20 @@
           }
 
           const parc = data.parc || {};
+          const erreursDetaillees = Array.isArray(data.details)
+            ? data.details
+                .filter((detail) => detail?.success === false)
+                .map((detail) => {
+                  const nom = String(detail?.nom || "Image");
+                  const detailMessage = String(
+                    detail?.message || "Erreur non détaillée."
+                  );
+
+                  return nom + " : " + detailMessage;
+                })
+                .join("\n")
+            : "";
+
           const message =
             (data.message || "UploadIMG terminé.") +
             "\nParc : " +
@@ -1549,7 +1563,10 @@
             "\nImages précédentes versionnées : " +
             String(data.versionnes || 0) +
             "\nErreurs : " +
-            String(data.erreurs || 0);
+            String(data.erreurs || 0) +
+            (erreursDetaillees
+              ? "\nDétail :\n" + erreursDetaillees
+              : "");
 
           if (alerte) {
             alerte.setMessage(message);
