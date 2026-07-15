@@ -86,7 +86,6 @@
       </section>
     </main>
   </div>
-
   <script>
     (() => {
       "use strict";
@@ -95,33 +94,25 @@
       const CHEMIN_OBJET_CARTE = "/BOX/04-carte-dynamique.html";
       const CHEMIN_GEOJSON_CARTE = "/BOX/04-carte-dynamique.geojson";
       const VIEWBOX_FRANCE = [60, 35, 770, 820];
-      const STATUT_INITIAL = "prepa";
+      const STATUTS_AUTORISES = new Set([
+        "recherche",
+        "prepa",
+        "non",
+        "oui",
+        "nonconforme",
+        "acreuserfautinfo"
+      ]);
 
       function urlAdmin(path) {
-        return typeof window.LCDP_urlAdmin === "function" ? window.LCDP_urlAdmin(path) : path;
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
       }
 
       function urlObjet(path) {
-        return typeof window.LCDP_urlObjet === "function" ? window.LCDP_urlObjet(path) : path;
-      }
-
-      function appliquerRoutes(racine = document) {
-        racine.querySelectorAll("[data-site-href]").forEach((element) => {
-          const path = element.dataset.siteHref || "";
-          const space = element.dataset.space || "public";
-
-          element.setAttribute(
-            "href",
-            space === "admin" ? urlAdmin(path) : path
-          );
-        });
-
-        racine.querySelectorAll("[data-site-src]").forEach((element) => {
-          const path = String(element.dataset.siteSrc || "")
-            .replace(/^\/?OBJET\/?/, "/");
-
-          element.setAttribute("src", urlObjet(path));
-        });
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
       }
 
       function endpointAdminData() {
@@ -149,6 +140,23 @@
         return template.content.cloneNode(true);
       }
 
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : window.LCDP_urlPublic(path)
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
       async function initialiserBandeau() {
         const slot = document.getElementById("lcdp-bandeau-slot");
         if (!slot) return;
@@ -162,18 +170,51 @@
         appliquerRoutes(slot);
       }
 
-      function comparerCodesDepartement(a, b) {
-        const ordre = (value) => {
-          if (value === "2A") return 20.1;
-          if (value === "2B") return 20.2;
-          const nombre = Number(value);
-          return Number.isFinite(nombre) ? nombre : 999;
-        };
-        return ordre(a) - ordre(b) || a.localeCompare(b, "fr");
+      function normaliserDepartement(value) {
+        const brut = String(value || "")
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "");
+
+        if (brut === "2A" || brut === "2B") {
+          return brut;
+        }
+
+        if (/^\d{1,2}$/.test(brut)) {
+          return brut.padStart(2, "0");
+        }
+
+        return "";
+      }
+
+      function lireDepartements(value, featuresParCode) {
+        const brut = String(value || "").trim();
+
+        if (!brut) {
+          return [];
+        }
+
+        return Array.from(
+          new Set(
+            brut
+              .split("|")
+              .map(normaliserDepartement)
+              .filter((code) => code && featuresParCode.has(code))
+          )
+        );
+      }
+
+      function normaliserEtat(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[\s_-]+/g, "");
       }
 
       function calculerViewBox(codes, featuresParCode) {
-        if (codes.length === 0 || codes.length >= featuresParCode.size) {
+        if (codes.length === 0) {
           return [...VIEWBOX_FRANCE];
         }
 
@@ -191,7 +232,7 @@
         const maxY = Math.max(...boxes.map((bbox) => Number(bbox[3])));
         const largeur = Math.max(36, maxX - minX);
         const hauteur = Math.max(36, maxY - minY);
-        const marge = Math.max(14, Math.max(largeur, hauteur) * 0.14);
+        const marge = Math.max(14, Math.max(largeur, hauteur) * 0.16);
 
         return [
           minX - marge,
@@ -209,24 +250,28 @@
           return null;
         }
 
-        const x = projection.xMin +
-          ((longitude - projection.lonMin) / (projection.lonMax - projection.lonMin)) *
-          (projection.xMax - projection.xMin);
-
-        const y = projection.yMax -
-          ((latitude - projection.latMin) / (projection.latMax - projection.latMin)) *
-          (projection.yMax - projection.yMin);
-
-        return { x, y };
+        return {
+          x: projection.xMin +
+            ((longitude - projection.lonMin) /
+              (projection.lonMax - projection.lonMin)) *
+            (projection.xMax - projection.xMin),
+          y: projection.yMax -
+            ((latitude - projection.latMin) /
+              (projection.latMax - projection.latMin)) *
+            (projection.yMax - projection.yMin)
+        };
       }
 
       function creerElementSvg(nom) {
         return document.createElementNS("http://www.w3.org/2000/svg", nom);
       }
-
       async function initialiserCarte() {
         const slot = document.getElementById("lcdp-carte-parc-slot");
         if (!slot) throw new Error("Slot CarteParc introuvable.");
+
+        const main = document.getElementById("lcdp-main-admin");
+        if (main) main.hidden = false;
+        slot.textContent = "Chargement de CarteParc…";
 
         const [fragment, geojsonResponse] = await Promise.all([
           chargerFragment(urlObjet(CHEMIN_OBJET_CARTE), "Objet carte dynamique"),
@@ -253,9 +298,8 @@
         slot.appendChild(fragment);
 
         const form = slot.querySelector("[data-lcdp-carte-filters]");
-        const tous = slot.querySelector("[data-lcdp-carte-tous]");
-        const listeDepartements = slot.querySelector("[data-lcdp-carte-departements]");
-        const selectStatut = slot.querySelector("[data-lcdp-carte-statut]");
+        const inputGeo = slot.querySelector("[data-lcdp-carte-geo]");
+        const inputEtat = slot.querySelector("[data-lcdp-carte-etat]");
         const statutTexte = slot.querySelector("[data-lcdp-carte-status]");
         const svg = slot.querySelector("[data-lcdp-carte-svg]");
         const boutonZoomPlus = slot.querySelector("[data-lcdp-carte-zoom-plus]");
@@ -265,9 +309,8 @@
 
         if (
           !form ||
-          !tous ||
-          !listeDepartements ||
-          !selectStatut ||
+          !inputGeo ||
+          !inputEtat ||
           !statutTexte ||
           !svg ||
           !boutonZoomPlus ||
@@ -291,27 +334,14 @@
           const minHauteur = 24;
           const maxLargeur = VIEWBOX_FRANCE[2];
           const maxHauteur = VIEWBOX_FRANCE[3];
-          const largeur = Math.min(
-            maxLargeur,
-            Math.max(minLargeur, Number(viewBox[2]) || maxLargeur)
-          );
-          const hauteur = Math.min(
-            maxHauteur,
-            Math.max(minHauteur, Number(viewBox[3]) || maxHauteur)
-          );
+          const largeur = Math.min(maxLargeur, Math.max(minLargeur, Number(viewBox[2]) || maxLargeur));
+          const hauteur = Math.min(maxHauteur, Math.max(minHauteur, Number(viewBox[3]) || maxHauteur));
           const xMinimum = etendueCarte[0];
           const yMinimum = etendueCarte[1];
           const xMaximum = etendueCarte[0] + etendueCarte[2] - largeur;
           const yMaximum = etendueCarte[1] + etendueCarte[3] - hauteur;
-          const x = Math.min(
-            Math.max(Number(viewBox[0]) || 0, xMinimum),
-            Math.max(xMinimum, xMaximum)
-          );
-          const y = Math.min(
-            Math.max(Number(viewBox[1]) || 0, yMinimum),
-            Math.max(yMinimum, yMaximum)
-          );
-
+          const x = Math.min(Math.max(Number(viewBox[0]) || 0, xMinimum), Math.max(xMinimum, xMaximum));
+          const y = Math.min(Math.max(Number(viewBox[1]) || 0, yMinimum), Math.max(yMinimum, yMaximum));
           return [x, y, largeur, hauteur];
         }
 
@@ -325,7 +355,6 @@
           point.x = clientX;
           point.y = clientY;
           const matrice = svg.getScreenCTM();
-
           return matrice
             ? point.matrixTransform(matrice.inverse())
             : {
@@ -353,119 +382,45 @@
           ]);
         }
 
-        features
-          .slice()
-          .sort((a, b) => comparerCodesDepartement(a.properties.code, b.properties.code))
-          .forEach((feature) => {
-            const code = String(feature?.properties?.code || "");
-            const nom = String(feature?.properties?.nom || code);
-            if (!code) return;
+        features.forEach((feature) => {
+          const code = String(feature?.properties?.code || "");
+          const nom = String(feature?.properties?.nom || code);
+          if (!code) return;
 
-            featuresParCode.set(code, feature);
+          featuresParCode.set(code, feature);
 
-            const label = document.createElement("label");
-            label.className = "lcdp-carte-dynamique__check";
+          const path = creerElementSvg("path");
+          path.setAttribute("d", String(feature?.properties?.path || ""));
+          path.setAttribute("class", "lcdp-carte-dynamique__departement");
+          path.dataset.code = code;
 
-            const input = document.createElement("input");
-            input.type = "checkbox";
-            input.value = code;
-            input.dataset.lcdpCarteDepartement = code;
-            input.disabled = true;
+          const title = creerElementSvg("title");
+          title.textContent = code + " · " + nom;
+          path.appendChild(title);
 
-            const texte = document.createElement("span");
-            texte.textContent = code + " · " + nom;
+          coucheDepartements.appendChild(path);
+          pathsParCode.set(code, path);
+        });
 
-            label.appendChild(input);
-            label.appendChild(texte);
-            listeDepartements.appendChild(label);
-
-            const path = creerElementSvg("path");
-            path.setAttribute("d", String(feature?.properties?.path || ""));
-            path.setAttribute("class", "lcdp-carte-dynamique__departement is-selected");
-            path.dataset.code = code;
-
-            const title = creerElementSvg("title");
-            title.textContent = code + " · " + nom;
-            path.appendChild(title);
-
-            coucheDepartements.appendChild(path);
-            pathsParCode.set(code, path);
-          });
-
-        selectStatut.value = STATUT_INITIAL;
-
-        function codesSelectionnes() {
-          if (tous.checked) {
-            return Array.from(featuresParCode.keys());
-          }
-
-          return Array.from(
-            listeDepartements.querySelectorAll("input[data-lcdp-carte-departement]:checked")
-          ).map((input) => input.value);
-        }
-
-        function actualiserSelectionVisuelle() {
-          const selection = new Set(codesSelectionnes());
+        function actualiserSelectionVisuelle(codes) {
+          const selection = new Set(codes);
           pathsParCode.forEach((path, code) => {
             path.classList.toggle("is-selected", selection.has(code));
           });
-
-          const viewBox = calculerViewBox(Array.from(selection), featuresParCode);
-          appliquerViewBox(viewBox);
+          appliquerViewBox(calculerViewBox(codes, featuresParCode));
         }
 
-        tous.addEventListener("change", () => {
-          listeDepartements
-            .querySelectorAll("input[data-lcdp-carte-departement]")
-            .forEach((input) => {
-              input.disabled = tous.checked;
-              if (tous.checked) input.checked = false;
-            });
-          actualiserSelectionVisuelle();
-        });
+        boutonZoomPlus.addEventListener("click", () => zoomerCarte(0.8));
+        boutonZoomMoins.addEventListener("click", () => zoomerCarte(1.25));
 
-        listeDepartements.addEventListener("change", () => {
-          const checked = listeDepartements.querySelectorAll(
-            "input[data-lcdp-carte-departement]:checked"
-          ).length;
-
-          if (checked === 0) {
-            tous.checked = true;
-            listeDepartements
-              .querySelectorAll("input[data-lcdp-carte-departement]")
-              .forEach((input) => {
-                input.disabled = true;
-              });
-          }
-          actualiserSelectionVisuelle();
-        });
-
-        boutonZoomPlus.addEventListener("click", () => {
-          zoomerCarte(0.8);
-        });
-
-        boutonZoomMoins.addEventListener("click", () => {
-          zoomerCarte(1.25);
-        });
-
-        svg.addEventListener(
-          "wheel",
-          (event) => {
-            event.preventDefault();
-            const centre = pointSvgDepuisEcran(
-              event.clientX,
-              event.clientY
-            );
-            zoomerCarte(event.deltaY < 0 ? 0.85 : 1.18, centre);
-          },
-          { passive: false }
-        );
+        svg.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          const centre = pointSvgDepuisEcran(event.clientX, event.clientY);
+          zoomerCarte(event.deltaY < 0 ? 0.85 : 1.18, centre);
+        }, { passive: false });
 
         svg.addEventListener("pointerdown", (event) => {
-          if (event.button !== 0) {
-            return;
-          }
-
+          if (event.button !== 0) return;
           glissement = {
             pointerId: event.pointerId,
             clientX: event.clientX,
@@ -477,19 +432,14 @@
         });
 
         svg.addEventListener("pointermove", (event) => {
-          if (!glissement || glissement.pointerId !== event.pointerId) {
-            return;
-          }
-
+          if (!glissement || glissement.pointerId !== event.pointerId) return;
           const rect = svg.getBoundingClientRect();
           const deplacementX =
             (event.clientX - glissement.clientX) *
-            glissement.viewBox[2] /
-            Math.max(1, rect.width);
+            glissement.viewBox[2] / Math.max(1, rect.width);
           const deplacementY =
             (event.clientY - glissement.clientY) *
-            glissement.viewBox[3] /
-            Math.max(1, rect.height);
+            glissement.viewBox[3] / Math.max(1, rect.height);
 
           appliquerViewBox([
             glissement.viewBox[0] - deplacementX,
@@ -500,14 +450,10 @@
         });
 
         function terminerGlissement(event) {
-          if (!glissement || glissement.pointerId !== event.pointerId) {
-            return;
-          }
-
+          if (!glissement || glissement.pointerId !== event.pointerId) return;
           if (svg.hasPointerCapture(event.pointerId)) {
             svg.releasePointerCapture(event.pointerId);
           }
-
           glissement = null;
           svg.classList.remove("is-dragging");
         }
@@ -515,20 +461,45 @@
         svg.addEventListener("pointerup", terminerGlissement);
         svg.addEventListener("pointercancel", terminerGlissement);
 
+        function dessinerParcs(rows) {
+          coucheParcs.innerHTML = "";
+
+          rows.forEach((parc) => {
+            const point = projeterParc(parc.latitude, parc.longitude, projection);
+            if (!point) return;
+
+            const marker = creerElementSvg("circle");
+            marker.setAttribute("cx", String(point.x));
+            marker.setAttribute("cy", String(point.y));
+            marker.setAttribute("r", "5.8");
+            marker.setAttribute("class", "lcdp-carte-dynamique__marker");
+            marker.dataset.statut = String(parc.statut || "");
+            marker.setAttribute("aria-label", String(parc.nom || "Parc"));
+
+            coucheParcs.appendChild(marker);
+          });
+        }
+
         async function chargerParcs() {
           const endpoint = endpointAdminData();
           if (!endpoint) throw new Error("Endpoint admin data non configuré.");
 
-          const codes = codesSelectionnes();
-          const params = new URLSearchParams();
-          params.set("statut", selectStatut.value);
+          const codes = lireDepartements(inputGeo.value, featuresParCode);
+          const etat = normaliserEtat(inputEtat.value) || "prepa";
 
-          if (!tous.checked) {
-            params.set("dptmt", codes.join(","));
+          if (!STATUTS_AUTORISES.has(etat)) {
+            throw new Error("Filtre état invalide.");
           }
 
+          actualiserSelectionVisuelle(codes);
           statutTexte.textContent = "Chargement des parcs…";
           coucheParcs.innerHTML = "";
+
+          const params = new URLSearchParams();
+          params.set("statut", etat);
+          if (codes.length > 0) {
+            params.set("dptmt", codes.join("|"));
+          }
 
           const response = await fetch(endpoint + "/carte-parc?" + params.toString(), {
             method: "GET",
@@ -540,32 +511,11 @@
           const data = await response.json().catch(() => null);
 
           if (!response.ok || !data || data.success !== true) {
-            throw new Error(
-              data?.message || data?.detail || "Lecture des parcs impossible."
-            );
+            throw new Error(data?.message || data?.detail || "Lecture des parcs impossible.");
           }
 
-          const rows = Array.isArray(data.rows) ? data.rows : [];
-
-          rows.forEach((parc) => {
-            const point = projeterParc(parc.latitude, parc.longitude, projection);
-            if (!point) return;
-
-            const marker = creerElementSvg("circle");
-            marker.setAttribute("cx", String(point.x));
-            marker.setAttribute("cy", String(point.y));
-            marker.setAttribute("r", "5.4");
-            marker.setAttribute("class", "lcdp-carte-dynamique__marker");
-            marker.dataset.statut = String(parc.statut || "");
-
-            coucheParcs.appendChild(marker);
-          });
-
-          actualiserSelectionVisuelle();
-
-          statutTexte.textContent = rows.length === 0
-            ? "Aucun parc ne correspond aux filtres sélectionnés."
-            : "";
+          dessinerParcs(Array.isArray(data.rows) ? data.rows : []);
+          statutTexte.textContent = "";
         }
 
         form.addEventListener("submit", (event) => {
@@ -575,8 +525,9 @@
           });
         });
 
-        actualiserSelectionVisuelle();
+        actualiserSelectionVisuelle([]);
         await chargerParcs();
+
       }
 
       async function verifierSessionAdmin() {
@@ -594,18 +545,18 @@
         const main = document.getElementById("lcdp-main-admin");
         if (main) main.hidden = false;
 
-        const slot = document.getElementById("lcdp-carte-parc-slot");
-        if (slot) {
-          slot.textContent = "Chargement de CarteParc…";
-        }
-
         await Promise.all([initialiserBandeau(), initialiserCarte()]);
       }
 
       initialiserPage().catch((error) => {
         console.error(error);
+        const main = document.getElementById("lcdp-main-admin");
+        if (main) main.hidden = false;
         const slot = document.getElementById("lcdp-carte-parc-slot");
-        if (slot) slot.textContent = "CarteParc indisponible : " + String(error?.message || error || "");
+        if (slot) {
+          slot.textContent = "CarteParc indisponible : " +
+            String(error?.message || error || "");
+        }
       });
     })();
   </script>
