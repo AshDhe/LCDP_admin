@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>CardParc - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Contrôle des Card Parc par département dans l’espace admin."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        if (typeof config.adminUrl === "function") {
+          return config.adminUrl(path);
+        }
+
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        if (typeof config.objetUrl === "function") {
+          return config.objetUrl(path);
+        }
+
+        return construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/04-box-card-parc.css",
+        "/BOX/04-box-fiche-parc.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
+        ) +
+        '">'
+      );
+    })();
+  </script>
+
+  <style>
+    .lcdp-card-parc-admin {
+      width: min(100%, 1100px);
+      margin: 0 auto;
+      padding: var(--lcdp-space-4);
+      border: 1px solid var(--lcdp-color-border);
+      border-radius: var(--lcdp-radius-large);
+      background: var(--lcdp-color-surface);
+      box-shadow: 0 12px 30px rgba(31, 42, 36, 0.08);
+      box-sizing: border-box;
+    }
+
+    .lcdp-card-parc-admin__header {
+      margin-bottom: var(--lcdp-space-4);
+    }
+
+    .lcdp-card-parc-admin__title {
+      margin: 0;
+      color: var(--lcdp-color-text);
+    }
+
+    .lcdp-card-parc-admin__filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--lcdp-space-2);
+      margin-bottom: var(--lcdp-space-4);
+    }
+
+    .lcdp-card-parc-admin__label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--lcdp-space-1);
+      color: var(--lcdp-color-text);
+      font-weight: 700;
+    }
+
+    .lcdp-card-parc-admin__input {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid var(--lcdp-color-border);
+      border-radius: var(--lcdp-radius-medium);
+      background: var(--lcdp-color-surface);
+      color: var(--lcdp-color-text);
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    .lcdp-card-parc-admin__input:focus {
+      outline: 2px solid var(--lcdp-color-primary);
+      outline-offset: 1px;
+    }
+
+    .lcdp-card-parc-admin__status {
+      min-height: 1.5rem;
+      margin: 0 0 var(--lcdp-space-3);
+      color: var(--lcdp-color-text-muted);
+    }
+
+    .lcdp-card-parc-admin__list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--lcdp-space-4);
+    }
+
+    .lcdp-card-parc-admin__list .lcdp-box-card-parc {
+      min-width: 0;
+    }
+
+    @media (max-width: 767px) {
+      .lcdp-card-parc-admin {
+        padding: var(--lcdp-space-3);
+      }
+    }
+  </style>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-card-parc">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Card Parc">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-content">
+            <section class="lcdp-card-parc-admin">
+              <header class="lcdp-card-parc-admin__header">
+                <h1 class="lcdp-card-parc-admin__title">CardParc</h1>
+              </header>
+
+              <form
+                class="lcdp-card-parc-admin__filters"
+                data-lcdp-card-parc-filters
+              >
+                <label class="lcdp-card-parc-admin__label">
+                  Filtre géo
+                  <input
+                    class="lcdp-card-parc-admin__input"
+                    type="text"
+                    autocomplete="off"
+                    data-lcdp-card-parc-geo
+                  >
+                </label>
+              </form>
+
+              <p
+                class="lcdp-card-parc-admin__status"
+                aria-live="polite"
+                data-lcdp-card-parc-status
+              ></p>
+
+              <div
+                class="lcdp-card-parc-admin__list"
+                data-lcdp-card-parc-list
+              ></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="lcdp-lightbox-slot"></div>
+
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+      const CHEMIN_OBJET_CARD_PARC = "/BOX/04-box-card-parc.html";
+      const CHEMIN_OBJET_FICHE_PARC = "/BOX/04-box-fiche-parc.html";
+      const DOSSIER_IMAGES_PARC = "/IMAG/PARC";
+      const NOM_IMAGE_CARD_PARC = "card1.webp";
+      const CHEMIN_IMAGE_CARDLOGO =
+        DOSSIER_IMAGES_PARC + "/cardlogo.webp";
+
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
+      }
+
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+
+        return template.content.cloneNode(true);
+      }
+
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+
+          element.setAttribute(
+            "href",
+            space === "admin"
+              ? urlAdmin(path)
+              : window.LCDP_urlPublic(path)
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) {
+          return;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragment(
+          urlAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+          ),
+          "Bandeau admin"
+        );
+
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+
+      function normaliserDepartement(value) {
+        const brut = String(value || "")
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "");
+
+        if (brut === "2A" || brut === "2B") {
+          return brut;
+        }
+
+        if (/^\d{1,2}$/.test(brut)) {
+          return brut.padStart(2, "0");
+        }
+
+        return "";
+      }
+
+      function lireDepartements(value) {
+        return Array.from(
+          new Set(
+            String(value || "")
+              .split(/[|,;]/)
+              .map(normaliserDepartement)
+              .filter(Boolean)
+          )
+        );
+      }
+
+      function dossierParcDepuisNom(nom) {
+        return String(nom || "")
+          .trim()
+          .replace(/\s+/g, "_");
+      }
+
+      function construireUrlImageCardParc(parc) {
+        const dptmt = normaliserDepartement(parc?.dptmt);
+        const dossierParc = dossierParcDepuisNom(parc?.nom);
+
+        if (!dptmt || !dossierParc) {
+          return urlObjet(CHEMIN_IMAGE_CARDLOGO);
+        }
+
+        return urlObjet(
+          DOSSIER_IMAGES_PARC +
+          "/" + encodeURIComponent(dptmt) +
+          "/" + encodeURIComponent(dossierParc) +
+          "/" + NOM_IMAGE_CARD_PARC
+        );
+      }
+
+      function installerImageCardParc(image, media, parc) {
+        if (!image) {
+          return;
+        }
+
+        let fallbackCharge = false;
+
+        image.src = construireUrlImageCardParc(parc);
+        image.alt = "Image du parc " +
+          String(parc?.nom || "Parc");
+        image.loading = "lazy";
+        image.decoding = "async";
+
+        image.addEventListener("error", () => {
+          if (!fallbackCharge) {
+            fallbackCharge = true;
+            image.src = urlObjet(CHEMIN_IMAGE_CARDLOGO);
+            return;
+          }
+
+          if (media) {
+            media.hidden = true;
+          }
+        });
+      }
+
+      async function afficherAlerte(message) {
+        const slot = document.getElementById("lcdp-lightbox-slot");
+
+        if (!slot) {
+          window.alert(message || "");
+          return;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragment(
+          urlObjet("/BOX/02-box-alerte.html"),
+          "Objet alerte"
+        );
+
+        slot.appendChild(fragment);
+
+        const alerte = slot.querySelector("[data-lcdp-box-alerte]");
+        const texte = slot.querySelector("[data-lcdp-alerte-message]");
+        const boutonFermer = slot.querySelector(
+          "[data-lcdp-alerte-close]"
+        );
+        const boutonOk = slot.querySelector("[data-lcdp-alerte-ok]");
+
+        if (!alerte || !texte || !boutonOk) {
+          slot.innerHTML = "";
+          window.alert(message || "");
+          return;
+        }
+
+        texte.textContent = message || "";
+
+        function fermer() {
+          slot.innerHTML = "";
+        }
+
+        if (boutonFermer) {
+          boutonFermer.addEventListener("click", fermer);
+        }
+
+        boutonOk.addEventListener("click", fermer);
+
+        alerte.addEventListener("click", (event) => {
+          if (event.target === alerte) {
+            fermer();
+          }
+        });
+      }
+
+      function remplirBlocTexteFiche(conteneur, texte) {
+        if (!conteneur) {
+          return;
+        }
+
+        conteneur.innerHTML = "";
+
+        const paragraphe = document.createElement("p");
+        paragraphe.textContent =
+          String(texte || "").trim() ||
+          "Présentation non renseignée.";
+
+        conteneur.appendChild(paragraphe);
+      }
+
+      function ouvrirFicheParc(parc, templateFicheParc) {
+        const lightboxSlot = document.getElementById(
+          "lcdp-lightbox-slot"
+        );
+
+        if (!lightboxSlot || !templateFicheParc) {
+          return;
+        }
+
+        lightboxSlot.innerHTML = "";
+
+        const fiche = templateFicheParc.cloneNode(true);
+        const titre = fiche.querySelector(
+          "[data-lcdp-fiche-parc-title]"
+        );
+        const actionsSlot = fiche.querySelector(
+          "[data-lcdp-fiche-parc-actions]"
+        );
+        const presentation = fiche.querySelector(
+          "[data-lcdp-fiche-parc-presentation]"
+        );
+        const galerieSlot = fiche.querySelector(
+          "[data-lcdp-fiche-parc-galerie-slot]"
+        );
+        const mapSlot = fiche.querySelector(
+          "[data-lcdp-fiche-parc-map-slot]"
+        );
+        const contact = fiche.querySelector(
+          "[data-lcdp-fiche-parc-contact]"
+        );
+        const boutonFermer = fiche.querySelector(
+          "[data-lcdp-fiche-parc-close]"
+        );
+
+        if (titre) {
+          titre.textContent =
+            "Parc de " + String(parc?.nom || "Parc");
+        }
+
+        if (actionsSlot) {
+          actionsSlot.remove();
+        }
+
+        remplirBlocTexteFiche(
+          presentation,
+          parc?.prez || "Présentation non renseignée."
+        );
+
+        if (galerieSlot) {
+          galerieSlot.innerHTML = "";
+
+          const media = document.createElement("div");
+          const image = document.createElement("img");
+
+          image.className = "lcdp-box-fiche-parc__image";
+          installerImageCardParc(image, media, parc);
+
+          media.appendChild(image);
+          galerieSlot.appendChild(media);
+        }
+
+        if (mapSlot) {
+          const section = mapSlot.closest(
+            ".lcdp-box-fiche-parc__section"
+          );
+
+          if (section) {
+            section.hidden = true;
+          }
+        }
+
+        if (contact) {
+          const section = contact.closest(
+            ".lcdp-box-fiche-parc__section"
+          );
+
+          if (section) {
+            section.hidden = true;
+          }
+        }
+
+        function fermerFiche() {
+          lightboxSlot.innerHTML = "";
+        }
+
+        if (boutonFermer) {
+          boutonFermer.addEventListener(
+            "click",
+            fermerFiche
+          );
+        }
+
+        fiche.addEventListener("click", (event) => {
+          if (event.target === fiche) {
+            fermerFiche();
+          }
+        });
+
+        lightboxSlot.appendChild(fiche);
+      }
+
+      function creerCardParc(
+        parc,
+        templateCardParc,
+        templateFicheParc
+      ) {
+        const card = templateCardParc.cloneNode(true);
+        const image = card.querySelector(
+          "[data-lcdp-card-parc-image]"
+        );
+        const media = card.querySelector(
+          ".lcdp-box-card-parc__media"
+        );
+        const titre = card.querySelector(
+          "[data-lcdp-card-parc-title]"
+        );
+        const meta = card.querySelector(
+          "[data-lcdp-card-parc-meta]"
+        );
+        const description = card.querySelector(
+          "[data-lcdp-card-parc-description]"
+        );
+        const badgePrepa = card.querySelector(
+          "[data-lcdp-card-parc-badge-prepa]"
+        );
+        const boutonFiche = card.querySelector(
+          "[data-action='ouvrir-fiche-parc']"
+        );
+        const boutonPlanning = card.querySelector(
+          "[data-action='voir-planning-parc']"
+        );
+        const boutonReserver = card.querySelector(
+          "[data-action='nouvelle-date-parc']"
+        );
+
+        card.dataset.idparc = String(parc?.idparc || "");
+
+        if (titre) {
+          titre.textContent = String(parc?.nom || "Parc");
+        }
+
+        if (meta) {
+          meta.textContent = parc?.dptmt
+            ? "Département " + String(parc.dptmt)
+            : "";
+        }
+
+        if (description) {
+          const texte = String(parc?.prez || "").trim();
+          description.textContent = texte;
+          description.hidden = !texte;
+        }
+
+        if (badgePrepa) {
+          badgePrepa.hidden = false;
+        }
+
+        if (boutonReserver) {
+          boutonReserver.remove();
+        }
+
+        if (boutonFiche) {
+          boutonFiche.addEventListener("click", (event) => {
+            event.preventDefault();
+            ouvrirFicheParc(parc, templateFicheParc);
+          });
+        }
+
+        if (boutonPlanning) {
+          boutonPlanning.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            afficherAlerte(
+              "Le planning Parc n’est pas encore raccordé à CardParc admin."
+            ).catch(console.error);
+          });
+        }
+
+        installerImageCardParc(image, media, parc);
+
+        return card;
+      }
+
+      function mettreAJourUrl(departements) {
+        const url = new URL(window.location.href);
+
+        if (departements.length > 0) {
+          url.searchParams.set(
+            "dptmt",
+            departements.join("|")
+          );
+        } else {
+          url.searchParams.delete("dptmt");
+        }
+
+        window.history.replaceState(null, "", url);
+      }
+
+      async function chargerCards(
+        inputGeo,
+        statutTexte,
+        liste,
+        templateCardParc,
+        templateFicheParc,
+        requeteCourante,
+        lireNumeroRequete
+      ) {
+        const endpoint = endpointAdminData();
+
+        if (!endpoint) {
+          throw new Error(
+            "Endpoint admin data non configuré."
+          );
+        }
+
+        const departements = lireDepartements(inputGeo.value);
+
+        liste.innerHTML = "";
+        mettreAJourUrl(departements);
+
+        if (departements.length === 0) {
+          statutTexte.textContent =
+            "Saisir au moins un département.";
+          return;
+        }
+
+        statutTexte.textContent =
+          "Chargement des Card Parc…";
+
+        const params = new URLSearchParams();
+
+        params.set("dptmt", departements.join("|"));
+
+        const response = await fetch(
+          endpoint + "/card-parc?" + params.toString(),
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json"
+            }
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (requeteCourante !== lireNumeroRequete()) {
+          return;
+        }
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Lecture des Card Parc impossible."
+          );
+        }
+
+        const parcs = Array.isArray(data.rows)
+          ? data.rows
+          : [];
+
+        if (parcs.length === 0) {
+          statutTexte.textContent =
+            "Aucun parc prépa trouvé.";
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        parcs.forEach((parc) => {
+          fragment.appendChild(
+            creerCardParc(
+              parc,
+              templateCardParc,
+              templateFicheParc
+            )
+          );
+        });
+
+        liste.appendChild(fragment);
+        statutTexte.textContent = "";
+      }
+
+      async function initialiserCardParc() {
+        const form = document.querySelector(
+          "[data-lcdp-card-parc-filters]"
+        );
+        const inputGeo = document.querySelector(
+          "[data-lcdp-card-parc-geo]"
+        );
+        const statutTexte = document.querySelector(
+          "[data-lcdp-card-parc-status]"
+        );
+        const liste = document.querySelector(
+          "[data-lcdp-card-parc-list]"
+        );
+
+        if (!form || !inputGeo || !statutTexte || !liste) {
+          throw new Error(
+            "Structure de la page CardParc incomplète."
+          );
+        }
+
+        const [fragmentCard, fragmentFiche] =
+          await Promise.all([
+            chargerFragment(
+              urlObjet(CHEMIN_OBJET_CARD_PARC),
+              "Objet Card Parc"
+            ),
+            chargerFragment(
+              urlObjet(CHEMIN_OBJET_FICHE_PARC),
+              "Objet Fiche Parc"
+            )
+          ]);
+
+        const templateCardParc = fragmentCard.querySelector(
+          "[data-lcdp-box-card-parc]"
+        );
+        const templateFicheParc = fragmentFiche.querySelector(
+          "[data-lcdp-box-fiche-parc]"
+        );
+
+        if (!templateCardParc || !templateFicheParc) {
+          throw new Error(
+            "Templates Card Parc ou Fiche Parc introuvables."
+          );
+        }
+
+        inputGeo.value = String(
+          new URLSearchParams(window.location.search)
+            .get("dptmt") || ""
+        );
+
+        let temporisation = null;
+        let numeroRequete = 0;
+
+        async function actualiser() {
+          const requeteCourante = ++numeroRequete;
+
+          try {
+            await chargerCards(
+              inputGeo,
+              statutTexte,
+              liste,
+              templateCardParc,
+              templateFicheParc,
+              requeteCourante,
+              () => numeroRequete
+            );
+          } catch (error) {
+            if (requeteCourante !== numeroRequete) {
+              return;
+            }
+
+            liste.innerHTML = "";
+            statutTexte.textContent =
+              String(error?.message || error || "");
+          }
+        }
+
+        function programmerActualisation() {
+          window.clearTimeout(temporisation);
+
+          temporisation = window.setTimeout(
+            actualiser,
+            280
+          );
+        }
+
+        inputGeo.addEventListener(
+          "input",
+          programmerActualisation
+        );
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          programmerActualisation();
+        });
+
+        await actualiser();
+      }
+
+      async function verifierSessionAdmin() {
+        const guard = window.LCDP_GUARD_ADMIN;
+
+        if (
+          !guard ||
+          typeof guard.verifierAccesPageAdmin !== "function"
+        ) {
+          throw new Error(
+            "Garde admin centralisé indisponible."
+          );
+        }
+
+        return guard.verifierAccesPageAdmin();
+      }
+
+      async function initialiserPage() {
+        const sessionValide = await verifierSessionAdmin();
+
+        if (!sessionValide) {
+          return;
+        }
+
+        const main = document.getElementById("lcdp-main-admin");
+
+        if (main) {
+          main.hidden = false;
+        }
+
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserCardParc()
+        ]);
+      }
+
+      initialiserPage().catch((error) => {
+        console.error(error);
+
+        const main = document.getElementById("lcdp-main-admin");
+
+        if (main) {
+          main.hidden = false;
+        }
+
+        const statutTexte = document.querySelector(
+          "[data-lcdp-card-parc-status]"
+        );
+
+        if (statutTexte) {
+          statutTexte.textContent =
+            "CardParc indisponible : " +
+            String(error?.message || error || "");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
