@@ -131,6 +131,16 @@
         ).replace(/\/+$/, "");
       }
 
+      function endpointParcAdmin() {
+        return String(
+          config.workerParcAdminUrl ||
+          config.WORKER_PARC_ADMIN_URL ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN_URL ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
       async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
@@ -692,6 +702,97 @@
           cardSlot.hidden = true;
         }
 
+        async function afficherAlerteValidationCarte(message) {
+          const lightboxSlot = document.getElementById("lcdp-lightbox-slot");
+
+          if (!lightboxSlot) {
+            window.alert(message || "");
+            return;
+          }
+
+          lightboxSlot.innerHTML = "";
+
+          const fragmentAlerte = await chargerFragment(
+            urlObjet("/BOX/02-box-alerte.html"),
+            "Objet alerte"
+          );
+
+          lightboxSlot.appendChild(fragmentAlerte);
+
+          const alerte = lightboxSlot.querySelector("[data-lcdp-box-alerte]");
+          const texte = lightboxSlot.querySelector("[data-lcdp-alerte-message]");
+          const boutonFermer = lightboxSlot.querySelector(
+            "[data-lcdp-alerte-close]"
+          );
+          const boutonOk = lightboxSlot.querySelector(
+            "[data-lcdp-alerte-ok]"
+          );
+
+          if (!alerte || !texte || !boutonOk) {
+            lightboxSlot.innerHTML = "";
+            window.alert(message || "");
+            return;
+          }
+
+          texte.textContent = message || "";
+
+          function fermer() {
+            lightboxSlot.innerHTML = "";
+          }
+
+          if (boutonFermer) {
+            boutonFermer.addEventListener("click", fermer);
+          }
+
+          boutonOk.addEventListener("click", fermer);
+
+          alerte.addEventListener("click", (event) => {
+            if (event.target === alerte) {
+              fermer();
+            }
+          });
+        }
+
+        async function validerParcSurCarte(parc) {
+          const endpoint = endpointParcAdmin();
+          const idparc = String(parc?.idparc || parc?.id || "").trim();
+
+          if (!endpoint) {
+            throw new Error("Endpoint du worker admin parc non configuré.");
+          }
+
+          if (!idparc) {
+            throw new Error("Identifiant du parc manquant.");
+          }
+
+          const response = await fetch(endpoint + "/validcarte", {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              idparc
+            })
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok || !data || data.success !== true) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "Validation du parc impossible."
+            );
+          }
+
+          await afficherAlerteValidationCarte(
+            "Le parc est validé sur la carte."
+          );
+        }
+
         function dossierParcDepuisNom(nom) {
           return String(nom || "")
             .trim()
@@ -871,7 +972,29 @@
           }
 
           if (boutonReserver) {
-            boutonReserver.remove();
+            boutonReserver.textContent = "Valider";
+            boutonReserver.dataset.action = "valider-carte-parc";
+
+            boutonReserver.addEventListener("click", async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+
+              if (boutonReserver.disabled) {
+                return;
+              }
+
+              boutonReserver.disabled = true;
+
+              try {
+                await validerParcSurCarte(parc);
+              } catch (error) {
+                await afficherAlerteValidationCarte(
+                  String(error?.message || error || "")
+                );
+              } finally {
+                boutonReserver.disabled = false;
+              }
+            });
           }
 
           if (boutonFiche) {
