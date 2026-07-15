@@ -105,6 +105,25 @@
         return typeof window.LCDP_urlObjet === "function" ? window.LCDP_urlObjet(path) : path;
       }
 
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : path
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
       function endpointAdminData() {
         return String(
           config.workerAdminDataUrl ||
@@ -140,6 +159,7 @@
           "Bandeau admin"
         );
         slot.appendChild(fragment);
+        appliquerRoutes(slot);
       }
 
       function comparerCodesDepartement(a, b) {
@@ -571,10 +591,15 @@
         const sessionValide = await verifierSessionAdmin();
         if (!sessionValide) return;
 
-        await Promise.all([initialiserBandeau(), initialiserCarte()]);
-
         const main = document.getElementById("lcdp-main-admin");
         if (main) main.hidden = false;
+
+        const slot = document.getElementById("lcdp-carte-parc-slot");
+        if (slot) {
+          slot.textContent = "Chargement de CarteParc…";
+        }
+
+        await Promise.all([initialiserBandeau(), initialiserCarte()]);
       }
 
       initialiserPage().catch((error) => {
