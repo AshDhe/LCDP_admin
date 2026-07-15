@@ -74,6 +74,30 @@
     })();
   </script>
 
+  <style>
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="recherche"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="acreuserfautinfo"] {
+      fill: #9a9a93;
+      stroke: #595954;
+    }
+
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="prepa"] {
+      fill: #76a966;
+      stroke: #3f6f33;
+    }
+
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="oui"] {
+      fill: #6ea9c9;
+      stroke: #356d8d;
+    }
+
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="non"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="nonconforme"] {
+      fill: #d98d8d;
+      stroke: #974d4d;
+    }
+  </style>
+
   <script src="../A_STRUCTURE/guard-admin.js"></script>
 </head>
 <body class="lcdp-page-admin-interieure lcdp-page-carte-parc">
@@ -753,6 +777,34 @@
           });
         }
 
+        function valeurBooleenneCarte(value) {
+          return (
+            value === true ||
+            value === "true" ||
+            value === 1 ||
+            value === "1"
+          );
+        }
+
+        function actualiserCouleurParcValide(parc) {
+          const idparc = String(parc?.idparc || parc?.id || "").trim();
+
+          if (!idparc) {
+            return;
+          }
+
+          coucheParcs
+            .querySelectorAll(".lcdp-carte-dynamique__marker")
+            .forEach((marker) => {
+              if (String(marker.dataset.idparc || "") !== idparc) {
+                return;
+              }
+
+              marker.classList.add("is-validcarte");
+              marker.dataset.validcarte = "true";
+            });
+        }
+
         async function validerParcSurCarte(parc) {
           const endpoint = endpointParcAdmin();
           const idparc = String(parc?.idparc || parc?.id || "").trim();
@@ -787,6 +839,9 @@
               "Validation du parc impossible."
             );
           }
+
+          parc.validcarte = true;
+          actualiserCouleurParcValide(parc);
 
           await afficherAlerteValidationCarte(
             "Le parc est validé sur la carte."
@@ -1111,7 +1166,13 @@
             marker.setAttribute("class", "lcdp-carte-dynamique__marker");
             marker.setAttribute("tabindex", "0");
             marker.setAttribute("role", "button");
+            marker.dataset.idparc = String(parc.idparc || parc.id || "");
             marker.dataset.statut = String(parc.statut || "");
+
+            const parcValideCarte = valeurBooleenneCarte(parc.validcarte);
+            marker.classList.toggle("is-validcarte", parcValideCarte);
+            marker.dataset.validcarte = parcValideCarte ? "true" : "false";
+
             marker.setAttribute(
               "aria-label",
               "Ouvrir la Card Parc de " + String(parc.nom || "Parc")
