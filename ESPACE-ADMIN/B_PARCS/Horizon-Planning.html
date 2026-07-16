@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>HorizonPlanning - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Prolongation de l’horizon des tables de planning des parcs."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
+        ) +
+        '">'
+      );
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-horizon-planning">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Horizon des plannings"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <section
+                class="lcdp-box-formulaire"
+                aria-labelledby="lcdp-horizon-planning-title"
+              >
+                <header class="lcdp-box-formulaire__header">
+                  <h1
+                    id="lcdp-horizon-planning-title"
+                    class="lcdp-box-formulaire__title"
+                  >
+                    HorizonPlanning
+                  </h1>
+
+                  <p>
+                    Prolonger simultanément les colonnes journalières de
+                    <code>hparcs</code>, <code>hbooked</code>,
+                    <code>hratio</code> et <code>hratiocouleur</code>.
+                  </p>
+                </header>
+
+                <div class="lcdp-box-formulaire__body">
+                  <p>
+                    Horizon commun actuel :
+                    <strong id="lcdp-horizon-commun">Chargement…</strong>
+                  </p>
+
+                  <div class="lcdp-table-responsive">
+                    <table class="lcdp-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Table</th>
+                          <th scope="col">Dernière date</th>
+                          <th scope="col">Colonnes journalières</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lcdp-horizon-tables"></tbody>
+                    </table>
+                  </div>
+
+                  <form id="lcdp-horizon-form">
+                    <div class="lcdp-box-champ-formulaire">
+                      <label
+                        class="lcdp-box-champ-formulaire__label"
+                        for="lcdp-horizon-mois"
+                      >
+                        Nombre de mois à ajouter
+                      </label>
+
+                      <select
+                        id="lcdp-horizon-mois"
+                        class="lcdp-box-champ-formulaire__input"
+                        name="mois"
+                        required
+                      >
+                        <option value="1">1 mois</option>
+                        <option value="2">2 mois</option>
+                        <option value="3">3 mois</option>
+                      </select>
+
+                      <p>
+                        Maximum autorisé par opération : trois mois.
+                        Toutes les journées des mois concernés seront créées.
+                      </p>
+                    </div>
+
+                    <p>
+                      Nouvelle date d’horizon prévue :
+                      <strong id="lcdp-horizon-cible">—</strong>
+                    </p>
+
+                    <div class="lcdp-box-formulaire__actions">
+                      <button
+                        id="lcdp-horizon-submit"
+                        class="lcdp-button lcdp-button-orange"
+                        type="submit"
+                      >
+                        Prolonger l’horizon
+                      </button>
+                    </div>
+                  </form>
+
+                  <p
+                    id="lcdp-horizon-status"
+                    role="status"
+                    aria-live="polite"
+                    hidden
+                  ></p>
+                </div>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+      const TABLES_ATTENDUES = [
+        "hparcs",
+        "hbooked",
+        "hratio",
+        "hratiocouleur"
+      ];
+
+      let etatCourant = null;
+      let actionEnCours = false;
+
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
+      }
+
+      function urlPublic(path) {
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(path)
+          : path;
+      }
+
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
+      }
+
+      function endpointHorizonPlanning() {
+        if (typeof config.apiUrl === "function") {
+          return String(
+            config.apiUrl("horizon-planning-api") || ""
+          ).replace(/\/+$/, "");
+        }
+
+        return "https://horizon-planning-api.lacleduparc.fr";
+      }
+
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : urlPublic(path)
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+
+        return template.content.cloneNode(true);
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) {
+          return;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragment(
+          urlAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+          ),
+          "Bandeau admin"
+        );
+
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (
+          !moduleMenu ||
+          typeof moduleMenu.initialiser !== "function"
+        ) {
+          throw new Error(
+            "Menu gauche admin centralisé indisponible."
+          );
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "parcs"
+        });
+      }
+
+      function formaterDateFr(value) {
+        const texte = String(value || "").trim();
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(texte)) {
+          return "Non disponible";
+        }
+
+        const [annee, mois, jour] = texte.split("-");
+
+        return jour + "/" + mois + "/" + annee;
+      }
+
+      function calculerFinMois(horizonISO, moisAjoutes) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(horizonISO)) {
+          return "";
+        }
+
+        const [annee, mois] = horizonISO
+          .split("-")
+          .map(Number);
+
+        const date = new Date(
+          Date.UTC(
+            annee,
+            mois - 1 + moisAjoutes + 1,
+            0
+          )
+        );
+
+        return date.toISOString().slice(0, 10);
+      }
+
+      function afficherStatus(message, erreur = false) {
+        const status = document.getElementById(
+          "lcdp-horizon-status"
+        );
+
+        if (!status) {
+          return;
+        }
+
+        status.textContent = message || "";
+        status.hidden = !message;
+        status.dataset.etat = erreur ? "erreur" : "succes";
+      }
+
+      function afficherEtat(data) {
+        etatCourant = data;
+
+        const horizonCommun = document.getElementById(
+          "lcdp-horizon-commun"
+        );
+        const corps = document.getElementById(
+          "lcdp-horizon-tables"
+        );
+
+        if (!horizonCommun || !corps) {
+          return;
+        }
+
+        horizonCommun.textContent = formaterDateFr(
+          data?.horizonCommun
+        );
+
+        corps.innerHTML = "";
+
+        const tablesParNom = new Map(
+          (Array.isArray(data?.tables) ? data.tables : [])
+            .map((item) => [String(item.table || ""), item])
+        );
+
+        TABLES_ATTENDUES.forEach((nomTable) => {
+          const item = tablesParNom.get(nomTable) || {};
+          const ligne = document.createElement("tr");
+
+          const celluleTable = document.createElement("th");
+          celluleTable.scope = "row";
+          celluleTable.textContent = nomTable;
+
+          const celluleHorizon = document.createElement("td");
+          celluleHorizon.textContent = formaterDateFr(
+            item.horizon
+          );
+
+          const celluleNombre = document.createElement("td");
+          celluleNombre.textContent = String(
+            item.colonnesJournalieres ?? 0
+          );
+
+          ligne.appendChild(celluleTable);
+          ligne.appendChild(celluleHorizon);
+          ligne.appendChild(celluleNombre);
+          corps.appendChild(ligne);
+        });
+
+        actualiserCible();
+      }
+
+      function actualiserCible() {
+        const select = document.getElementById(
+          "lcdp-horizon-mois"
+        );
+        const cible = document.getElementById(
+          "lcdp-horizon-cible"
+        );
+
+        if (!select || !cible) {
+          return;
+        }
+
+        const mois = Number.parseInt(select.value, 10);
+        const horizonISO = String(
+          etatCourant?.horizonCommun || ""
+        );
+
+        const cibleISO =
+          Number.isInteger(mois) &&
+          mois >= 1 &&
+          mois <= 3
+            ? calculerFinMois(horizonISO, mois)
+            : "";
+
+        cible.textContent = formaterDateFr(cibleISO);
+        cible.dataset.iso = cibleISO;
+      }
+
+      async function appelerWorker(path, options = {}) {
+        const endpoint = endpointHorizonPlanning();
+
+        if (!endpoint) {
+          throw new Error(
+            "Endpoint HorizonPlanning non configuré."
+          );
+        }
+
+        const response = await fetch(
+          endpoint + path,
+          {
+            method: options.method || "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json",
+              ...(options.body !== undefined
+                ? { "Content-Type": "application/json" }
+                : {})
+            },
+            body:
+              options.body !== undefined
+                ? JSON.stringify(options.body)
+                : undefined
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Réponse HorizonPlanning inexploitable."
+          );
+        }
+
+        return data;
+      }
+
+      async function chargerEtat() {
+        afficherStatus("Lecture de l’horizon en cours…");
+
+        const data = await appelerWorker("/etat");
+
+        afficherEtat(data);
+        afficherStatus("");
+      }
+
+      async function prolongerHorizon(mois) {
+        if (actionEnCours) {
+          return;
+        }
+
+        if (
+          !Number.isInteger(mois) ||
+          mois < 1 ||
+          mois > 3
+        ) {
+          throw new Error(
+            "Le nombre de mois doit être compris entre 1 et 3."
+          );
+        }
+
+        const bouton = document.getElementById(
+          "lcdp-horizon-submit"
+        );
+
+        actionEnCours = true;
+
+        if (bouton) {
+          bouton.disabled = true;
+        }
+
+        afficherStatus(
+          "Prolongation de l’horizon en cours. " +
+          "Ne fermez pas cette page."
+        );
+
+        try {
+          const data = await appelerWorker(
+            "/prolonger",
+            {
+              method: "POST",
+              body: { mois }
+            }
+          );
+
+          afficherEtat(data);
+
+          const totalAjoute = (data.tables || [])
+            .reduce((total, item) => {
+              return total +
+                Number(item.colonnesAjoutees || 0);
+            }, 0);
+
+          afficherStatus(
+            "Horizon prolongé jusqu’au " +
+            formaterDateFr(data.horizonCommun) +
+            ". Colonnes journalières ajoutées : " +
+            String(totalAjoute) +
+            "."
+          );
+        } finally {
+          actionEnCours = false;
+
+          if (bouton) {
+            bouton.disabled = false;
+          }
+        }
+      }
+
+      async function verifierSessionAdmin() {
+        const guard = window.LCDP_GUARD_ADMIN;
+
+        if (
+          !guard ||
+          typeof guard.verifierAccesPageAdmin !== "function"
+        ) {
+          throw new Error(
+            "Garde admin centralisé indisponible."
+          );
+        }
+
+        return guard.verifierAccesPageAdmin();
+      }
+
+      async function initialiserPage() {
+        const autorise = await verifierSessionAdmin();
+
+        if (!autorise) {
+          return;
+        }
+
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserMenuGauche()
+        ]);
+
+        const main = document.getElementById(
+          "lcdp-main-admin"
+        );
+
+        if (main) {
+          main.hidden = false;
+        }
+
+        const select = document.getElementById(
+          "lcdp-horizon-mois"
+        );
+        const form = document.getElementById(
+          "lcdp-horizon-form"
+        );
+
+        if (!select || !form) {
+          throw new Error(
+            "Structure HorizonPlanning incomplète."
+          );
+        }
+
+        select.addEventListener("change", actualiserCible);
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          afficherStatus("");
+
+          const mois = Number.parseInt(select.value, 10);
+          const cible = document.getElementById(
+            "lcdp-horizon-cible"
+          );
+          const dateCible = cible?.textContent || "";
+
+          const confirmation = window.confirm(
+            "Prolonger simultanément les quatre tables " +
+            "jusqu’au " +
+            dateCible +
+            " ?"
+          );
+
+          if (!confirmation) {
+            return;
+          }
+
+          try {
+            await prolongerHorizon(mois);
+          } catch (error) {
+            afficherStatus(
+              String(error?.message || error || ""),
+              true
+            );
+          }
+        });
+
+        await chargerEtat();
+      }
+
+      initialiserPage().catch((error) => {
+        console.error(error);
+
+        const main = document.getElementById(
+          "lcdp-main-admin"
+        );
+
+        if (main) {
+          main.hidden = false;
+        }
+
+        afficherStatus(
+          "HorizonPlanning indisponible : " +
+          String(error?.message || error || ""),
+          true
+        );
+      });
+    })();
+  </script>
+</body>
+</html>
