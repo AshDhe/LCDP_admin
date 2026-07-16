@@ -134,7 +134,7 @@
       "use strict";
 
       const config = window.SITE_CONFIG || {};
-      const NOMBRE_BOUTONS_PAR_MENU = 28;
+      const NOMBRE_BOUTONS_PAR_MENU = 30;
       const SLOT_CARTE_PARC = 3;
       const SLOT_CARD_PARC = 4;
       const SLOT_LOCALISATION_PARC = 18;
@@ -145,6 +145,8 @@
       const SLOT_PLANNING_PARC = 26;
       const SLOT_INSERT_FAMILLE = 27;
       const SLOT_AJUST_FAMILLE = 28;
+      const SLOT_ADJUST_COACH = 29;
+      const SLOT_ADJUST_DUO = 30;
       const CHEMIN_BOX_UPLOAD_IMG =
         "/OBJET/BOX/04-box-dialogue-upload-img.html";
 
@@ -598,6 +600,82 @@
         });
       }
 
+      function estSlotAdjustCoach(categorie, position) {
+        return (
+          categorie.id === "parcs" &&
+          Number(position) === SLOT_ADJUST_COACH
+        );
+      }
+
+      function configurerBoutonAdjustCoach(lien) {
+        lien.textContent = "AdjustCoach";
+        lien.href = "#adjustcoach";
+        lien.classList.remove(
+          "lcdp-button-primary",
+          "lcdp-button-secondary"
+        );
+        lien.classList.add("lcdp-button-orange");
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.planning";
+        lien.setAttribute(
+          "aria-label",
+          "Ajuster le planning COACH d’un parc"
+        );
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          ouvrirAdjustCoachDepuisAccueil().catch(async (error) => {
+            const alerte = await ouvrirAlerteLocalisation(
+              "AdjustCoach indisponible : " +
+              String(error?.message || error || "")
+            );
+
+            if (alerte) {
+              alerte.afficherOk();
+            }
+          });
+        });
+      }
+
+      function estSlotAdjustDuo(categorie, position) {
+        return (
+          categorie.id === "parcs" &&
+          Number(position) === SLOT_ADJUST_DUO
+        );
+      }
+
+      function configurerBoutonAdjustDuo(lien) {
+        lien.textContent = "AdjustDuo";
+        lien.href = "#adjustduo";
+        lien.classList.remove(
+          "lcdp-button-primary",
+          "lcdp-button-secondary"
+        );
+        lien.classList.add("lcdp-button-orange");
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "parcs.planning";
+        lien.setAttribute(
+          "aria-label",
+          "Ajuster le planning DUO d’un parc"
+        );
+
+        lien.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          ouvrirAdjustDuoDepuisAccueil().catch(async (error) => {
+            const alerte = await ouvrirAlerteLocalisation(
+              "AdjustDuo indisponible : " +
+              String(error?.message || error || "")
+            );
+
+            if (alerte) {
+              alerte.afficherOk();
+            }
+          });
+        });
+      }
+
       function estSlotOrangeAdminOuMembres(categorie, position) {
         return (
           (
@@ -677,6 +755,10 @@
             configurerBoutonInsertFamille(lien);
           } else if (estSlotAjustFamille(categorie, position)) {
             configurerBoutonAjustFamille(lien);
+          } else if (estSlotAdjustCoach(categorie, position)) {
+            configurerBoutonAdjustCoach(lien);
+          } else if (estSlotAdjustDuo(categorie, position)) {
+            configurerBoutonAdjustDuo(lien);
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
@@ -1963,6 +2045,46 @@
 
         window.location.href = urlAdmin(
           "/ESPACE-ADMIN/B_PARCS/AjustFamille.html?" +
+          params.toString()
+        );
+      }
+
+      async function ouvrirAdjustCoachDepuisAccueil() {
+        const selection = await ouvrirDialoguePlanningParc(
+          "AdjustCoach"
+        );
+
+        if (!selection) {
+          return;
+        }
+
+        const params = new URLSearchParams({
+          dptmt: selection.dptmt,
+          idparc: selection.idparc
+        });
+
+        window.location.href = urlAdmin(
+          "/ESPACE-ADMIN/B_PARCS/AdjustCoach.html?" +
+          params.toString()
+        );
+      }
+
+      async function ouvrirAdjustDuoDepuisAccueil() {
+        const selection = await ouvrirDialoguePlanningParc(
+          "AdjustDuo"
+        );
+
+        if (!selection) {
+          return;
+        }
+
+        const params = new URLSearchParams({
+          dptmt: selection.dptmt,
+          idparc: selection.idparc
+        });
+
+        window.location.href = urlAdmin(
+          "/ESPACE-ADMIN/B_PARCS/AdjustDuo.html?" +
           params.toString()
         );
       }
