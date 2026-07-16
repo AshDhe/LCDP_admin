@@ -101,15 +101,23 @@
   <style>
     .lcdp-page-insert-famille .lcdp-box-formulaire__actions {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
-      gap: 12px;
+      gap: 18px;
       flex-wrap: wrap;
+      padding: 22px 0 12px;
     }
 
     .lcdp-page-insert-famille .lcdp-box-formulaire__actions .lcdp-button {
-      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: min(100%, 270px);
+      min-height: 50px;
       margin: 0;
+      padding: 10px 18px;
+      line-height: 1.2;
+      text-align: center;
     }
 
     .lcdp-insert-famille-regle-fermeture {
