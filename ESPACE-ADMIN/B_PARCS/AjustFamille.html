@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>AjustFamille - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Ajustement ponctuel du planning FAMILLE d’un parc dans l’espace admin."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
+        ) +
+        '">'
+      );
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <script src="./AjustFamille.js" defer></script>
+
+  <style>
+    .lcdp-page-ajust-famille .lcdp-box-formulaire__actions {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 22px 0 12px;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-box-formulaire__actions .lcdp-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: min(100%, 270px);
+      min-height: 50px;
+      margin: 0;
+      padding: 10px 18px;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .lcdp-ajust-famille-information {
+      padding: 12px 14px;
+      border: 1px solid currentColor;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-ajust-famille">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Ajustement du planning FAMILLE"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <section class="lcdp-box-formulaire">
+                <header class="lcdp-box-formulaire__header">
+                  <h1 class="lcdp-box-formulaire__title">
+                    AjustFamille
+                  </h1>
+
+                  <p id="lcdp-ajust-famille-identite">
+                    Chargement du parc…
+                  </p>
+                </header>
+
+                <p class="lcdp-ajust-famille-information">
+                  L’ajustement peut ouvrir, fermer ou modifier la capacité
+                  d’une plage FAMILLE. Seules les dates et les plages déclarées
+                  sont modifiées. Le reste du planning demeure strictement inchangé.
+                </p>
+
+                <form id="lcdp-ajust-famille-form">
+                  <div class="lcdp-box-champ-formulaire">
+                    <label
+                      class="lcdp-box-champ-formulaire__label"
+                      for="lcdp-ajust-famille-ajustement"
+                    >
+                      Ajustement
+                    </label>
+                    <textarea
+                      id="lcdp-ajust-famille-ajustement"
+                      class="lcdp-box-champ-formulaire__input"
+                      rows="5"
+                      placeholder="Ex. Le parc est ouvert exceptionnellement aux familles de 18 h à 22 h le vendredi 12, puis fermé aux familles de 8 h à 12 h le samedi 13."
+                      required
+                    ></textarea>
+                    <button
+                      class="lcdp-button lcdp-button-secondary"
+                      type="button"
+                      data-dictee-cible="lcdp-ajust-famille-ajustement"
+                    >
+                      Dicter
+                    </button>
+                  </div>
+
+                  <div class="lcdp-box-champ-formulaire">
+                    <label
+                      class="lcdp-box-champ-formulaire__label"
+                      for="lcdp-ajust-famille-capacite"
+                    >
+                      Capacité d’accueil du parc, si elle change
+                    </label>
+                    <textarea
+                      id="lcdp-ajust-famille-capacite"
+                      class="lcdp-box-champ-formulaire__input"
+                      rows="4"
+                      placeholder="Facultatif. Ex. La capacité d’accueil FAMILLE est portée à 15 personnes le 12 novembre 2026 de 18 h à 22 h."
+                    ></textarea>
+                    <button
+                      class="lcdp-button lcdp-button-secondary"
+                      type="button"
+                      data-dictee-cible="lcdp-ajust-famille-capacite"
+                    >
+                      Dicter
+                    </button>
+                  </div>
+
+                  <div class="lcdp-box-formulaire__actions">
+                    <button
+                      id="lcdp-ajust-famille-analyser"
+                      class="lcdp-button lcdp-button-orange"
+                      type="submit"
+                    >
+                      Analyser l’ajustement IA
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section
+                id="lcdp-ajust-famille-validation"
+                class="lcdp-box-formulaire"
+                hidden
+              >
+                <header class="lcdp-box-formulaire__header">
+                  <h2 class="lcdp-box-formulaire__title">
+                    Validation de l’ajustement FAMILLE
+                  </h2>
+                </header>
+
+                <div id="lcdp-ajust-famille-resume"></div>
+                <div id="lcdp-ajust-famille-alertes" hidden></div>
+
+                <details>
+                  <summary>Voir le JSON proposé</summary>
+                  <pre id="lcdp-ajust-famille-json"></pre>
+                </details>
+
+                <div class="lcdp-box-formulaire__actions">
+                  <button
+                    id="lcdp-ajust-famille-corriger"
+                    class="lcdp-button lcdp-button-secondary"
+                    type="button"
+                  >
+                    Corriger l’ajustement
+                  </button>
+
+                  <button
+                    id="lcdp-ajust-famille-valider"
+                    class="lcdp-button lcdp-button-orange"
+                    type="button"
+                  >
+                    Valider et ajuster hparcs
+                  </button>
+                </div>
+              </section>
+
+              <p
+                id="lcdp-ajust-famille-status"
+                role="status"
+                aria-live="polite"
+                hidden
+              ></p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+</body>
+</html>
