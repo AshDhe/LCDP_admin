@@ -6,6 +6,9 @@
   let parcCourant = null;
   let briefCourant = null;
   let reconnaissance = null;
+  let dicteeActive = false;
+  let boutonDicteeActif = null;
+  let cibleDicteeActive = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -29,28 +32,12 @@
     return String(
       config.workerParcPlanningUrl ||
       config.WORKER_PARC_PLANNING_URL ||
+      config.endpointParcPlanning ||
       window.ADMIN_CONFIG?.API_PARC_PLANNING ||
       ""
     ).replace(/\/+$/, "");
   }
 
-  function endpointShift1() {
-    return String(
-      config.workerIaShiftHparcs1Url ||
-      config.WORKER_IA_SHIFT_HPARCS_1_URL ||
-      window.ADMIN_CONFIG?.API_IA_SHIFT_HPARCS_1 ||
-      ""
-    ).replace(/\/+$/, "");
-  }
-
-  function endpointShift2() {
-    return String(
-      config.workerIaShiftHparcs2Url ||
-      config.WORKER_IA_SHIFT_HPARCS_2_URL ||
-      window.ADMIN_CONFIG?.API_IA_SHIFT_HPARCS_2 ||
-      ""
-    ).replace(/\/+$/, "");
-  }
 
   function appliquerRoutes(racine = document) {
     racine.querySelectorAll("[data-site-href]").forEach((element) => {
@@ -283,11 +270,11 @@
       return;
     }
 
-    const endpoint = endpointShift1();
+    const endpoint = endpointParcPlanning();
     const bouton = document.getElementById("lcdp-planning-analyser");
 
     if (!endpoint) {
-      afficherStatus("Endpoint IA Shift Hparcs 1 non configuré.", true);
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
       return;
     }
 
@@ -335,11 +322,11 @@
   async function validerBrief() {
     if (!briefCourant || !parcCourant) return;
 
-    const endpoint = endpointShift2();
+    const endpoint = endpointParcPlanning();
     const bouton = document.getElementById("lcdp-planning-valider");
 
     if (!endpoint) {
-      afficherStatus("Endpoint IA Shift Hparcs 2 non configuré.", true);
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
       return;
     }
 
@@ -389,6 +376,34 @@
     document.getElementById("lcdp-planning-fermetures")?.focus();
   }
 
+  function restaurerBoutonDictee(bouton) {
+    if (!bouton) return;
+
+    bouton.disabled = false;
+    bouton.textContent = "Dicter";
+  }
+
+  function arreterDictee() {
+    dicteeActive = false;
+
+    const instance = reconnaissance;
+    const bouton = boutonDicteeActif;
+
+    reconnaissance = null;
+    boutonDicteeActif = null;
+    cibleDicteeActive = null;
+
+    if (instance) {
+      try {
+        instance.stop();
+      } catch {
+        // La reconnaissance peut déjà être arrêtée par le navigateur.
+      }
+    }
+
+    restaurerBoutonDictee(bouton);
+  }
+
   function initialiserDictee() {
     const SpeechRecognition =
       window.SpeechRecognition ||
@@ -408,37 +423,121 @@
 
         if (!cible) return;
 
-        if (reconnaissance) {
-          reconnaissance.stop();
-          reconnaissance = null;
+        if (
+          dicteeActive &&
+          reconnaissance &&
+          boutonDicteeActif === bouton
+        ) {
+          arreterDictee();
+          return;
         }
 
-        reconnaissance = new SpeechRecognition();
-        reconnaissance.lang = "fr-FR";
-        reconnaissance.interimResults = false;
-        reconnaissance.continuous = false;
+        if (reconnaissance) {
+          arreterDictee();
+        }
 
-        bouton.disabled = true;
-        bouton.textContent = "Écoute…";
+        const instance = new SpeechRecognition();
 
-        reconnaissance.addEventListener("result", (event) => {
-          const texte = event.results?.[0]?.[0]?.transcript || "";
-          cible.value = [cible.value.trim(), texte.trim()]
+        reconnaissance = instance;
+        dicteeActive = true;
+        boutonDicteeActif = bouton;
+        cibleDicteeActive = cible;
+
+        instance.lang = "fr-FR";
+        instance.interimResults = false;
+        instance.continuous = true;
+
+        bouton.disabled = false;
+        bouton.textContent = "Arrêter";
+
+        instance.addEventListener("result", (event) => {
+          const morceaux = [];
+
+          for (
+            let index = event.resultIndex || 0;
+            index < event.results.length;
+            index += 1
+          ) {
+            const resultat = event.results[index];
+
+            if (resultat?.isFinal === false) {
+              continue;
+            }
+
+            const texte = resultat?.[0]?.transcript || "";
+
+            if (texte.trim()) {
+              morceaux.push(texte.trim());
+            }
+          }
+
+          if (!morceaux.length || cibleDicteeActive !== cible) {
+            return;
+          }
+
+          cible.value = [cible.value.trim(), morceaux.join(" ")]
             .filter(Boolean)
             .join(" ");
         });
 
-        reconnaissance.addEventListener("end", () => {
-          bouton.disabled = false;
-          bouton.textContent = "Dicter";
-          reconnaissance = null;
+        instance.addEventListener("end", () => {
+          if (
+            dicteeActive &&
+            reconnaissance === instance &&
+            boutonDicteeActif === bouton
+          ) {
+            window.setTimeout(() => {
+              if (
+                !dicteeActive ||
+                reconnaissance !== instance ||
+                boutonDicteeActif !== bouton
+              ) {
+                return;
+              }
+
+              try {
+                instance.start();
+              } catch {
+                arreterDictee();
+                afficherStatus(
+                  "La dictée a été arrêtée par le navigateur.",
+                  true
+                );
+              }
+            }, 180);
+
+            return;
+          }
+
+          restaurerBoutonDictee(bouton);
         });
 
-        reconnaissance.addEventListener("error", () => {
-          afficherStatus("Dictée interrompue.", true);
+        instance.addEventListener("error", (event) => {
+          const code = String(event?.error || "");
+
+          if (code === "no-speech") {
+            return;
+          }
+
+          if (code === "aborted" && !dicteeActive) {
+            return;
+          }
+
+          arreterDictee();
+          afficherStatus(
+            code === "not-allowed" || code === "service-not-allowed"
+              ? "Autorisation du microphone refusée."
+              : "Dictée interrompue.",
+            true
+          );
         });
 
-        reconnaissance.start();
+        try {
+          instance.start();
+        } catch {
+          arreterDictee();
+          afficherStatus("Impossible de démarrer la dictée.", true);
+        }
       });
     });
   }
@@ -457,15 +556,6 @@
     const autorise = await verifierAcces();
     if (!autorise) return;
 
-    await Promise.all([
-      initialiserBandeau(),
-      initialiserMenuGauche(),
-      chargerParc()
-    ]);
-
-    const main = document.getElementById("lcdp-main-admin");
-    if (main) main.hidden = false;
-
     document.getElementById("lcdp-planning-parc-form")
       ?.addEventListener("submit", analyserBrief);
 
@@ -476,6 +566,22 @@
       ?.addEventListener("click", corrigerBrief);
 
     initialiserDictee();
+
+    const main = document.getElementById("lcdp-main-admin");
+    if (main) main.hidden = false;
+
+    await chargerParc();
+
+    const initialisationsPeripheriques = await Promise.allSettled([
+      initialiserBandeau(),
+      initialiserMenuGauche()
+    ]);
+
+    initialisationsPeripheriques.forEach((resultat) => {
+      if (resultat.status === "rejected") {
+        console.error(resultat.reason);
+      }
+    });
   }
 
   initialiserPage().catch((error) => {
