@@ -461,6 +461,11 @@
         lien.href = urlAdmin(
           "/ESPACE-ADMIN/B_PARCS/Horizon-Planning.html"
         );
+        lien.classList.remove(
+          "lcdp-button-primary",
+          "lcdp-button-secondary"
+        );
+        lien.classList.add("lcdp-button-orange");
         lien.removeAttribute("aria-disabled");
         lien.setAttribute(
           "aria-label",
