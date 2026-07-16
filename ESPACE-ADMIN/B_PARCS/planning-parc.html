@@ -99,25 +99,140 @@
   <script src="./planning-parc.js" defer></script>
 
   <style>
+    .lcdp-page-planning-parc .lcdp-box-formulaire {
+      margin-bottom: 22px;
+    }
+
+    .lcdp-page-planning-parc .lcdp-box-champ-formulaire {
+      margin-bottom: 18px;
+    }
+
+    .lcdp-page-planning-parc .lcdp-box-champ-formulaire__input[type="number"] {
+      width: min(100%, 220px);
+    }
+
+    .lcdp-page-planning-parc textarea.lcdp-box-champ-formulaire__input {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    .lcdp-page-planning-parc .lcdp-button-secondary[data-dictee-cible] {
+      margin-top: 10px;
+      min-width: 140px;
+    }
+
     .lcdp-page-planning-parc .lcdp-box-formulaire__actions {
       display: flex;
       align-items: stretch;
       justify-content: center;
       gap: 18px;
       flex-wrap: wrap;
-      padding: 22px 0 12px;
+      padding: 18px 0 8px;
+      margin-top: 8px;
     }
 
     .lcdp-page-planning-parc .lcdp-box-formulaire__actions .lcdp-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: min(100%, 270px);
-      min-height: 50px;
+      width: min(100%, 280px);
+      min-height: 52px;
       margin: 0;
-      padding: 10px 18px;
-      line-height: 1.2;
+      padding: 12px 18px;
+      line-height: 1.25;
       text-align: center;
+      border-radius: 14px;
+    }
+
+    .lcdp-page-planning-parc #lcdp-planning-status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #f4f4ef;
+      border: 1px solid #d9dccf;
+    }
+
+    .lcdp-page-planning-parc #lcdp-planning-status[data-etat="erreur"] {
+      background: #fff1ef;
+      border-color: #e2b7b0;
+    }
+
+    .lcdp-page-planning-parc #lcdp-planning-status[data-etat="succes"] {
+      background: #f3f7ec;
+      border-color: #cbd8b6;
+    }
+
+    .lcdp-page-planning-parc .lcdp-validation-bloc {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 14px;
+      background: #fafaf7;
+    }
+
+    .lcdp-page-planning-parc .lcdp-validation-bloc h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .lcdp-page-planning-parc .lcdp-validation-liste {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .lcdp-page-planning-parc .lcdp-validation-liste li + li {
+      margin-top: 6px;
+    }
+
+    .lcdp-page-planning-parc #lcdp-planning-alertes {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-page-planning-parc .lcdp-validation-note {
+      margin: 12px 0 0;
+      font-size: 0.95rem;
+      color: #505a3d;
+    }
+
+    .lcdp-page-planning-parc details {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px solid #d8ddd0;
+      border-radius: 12px;
+      background: #fbfbf9;
+    }
+
+    .lcdp-page-planning-parc details summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .lcdp-page-planning-parc #lcdp-planning-json {
+      margin: 12px 0 0;
+      padding: 14px;
+      max-height: 340px;
+      overflow: auto;
+      border-radius: 10px;
+      background: #f2f4ef;
+      font-size: 0.92rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    @media (max-width: 768px) {
+      .lcdp-page-planning-parc textarea.lcdp-box-champ-formulaire__input {
+        min-height: 84px;
+      }
+
+      .lcdp-page-planning-parc .lcdp-box-formulaire__actions {
+        gap: 12px;
+      }
+
+      .lcdp-page-planning-parc .lcdp-box-formulaire__actions .lcdp-button {
+        width: 100%;
+      }
     }
   </style>
 
@@ -191,7 +306,7 @@
                     <textarea
                       id="lcdp-planning-fermetures"
                       class="lcdp-box-champ-formulaire__input"
-                      rows="3"
+                      rows="2"
                       placeholder="Ex. Tous les lundis, le vendredi 11 septembre 2026 et le jeudi 26 novembre 2026."
                       required
                     ></textarea>
@@ -214,7 +329,7 @@
                     <textarea
                       id="lcdp-planning-semaine"
                       class="lcdp-box-champ-formulaire__input"
-                      rows="3"
+                      rows="2"
                       placeholder="Ex. De 6 h à 22 h du lundi au vendredi jusqu’au 30 septembre 2026, puis de 6 h à 18 h."
                       required
                     ></textarea>
@@ -237,7 +352,7 @@
                     <textarea
                       id="lcdp-planning-weekend"
                       class="lcdp-box-champ-formulaire__input"
-                      rows="3"
+                      rows="2"
                       placeholder="Ex. De 6 h à 22 h le samedi et de 6 h à 21 h le dimanche."
                       required
                     ></textarea>
