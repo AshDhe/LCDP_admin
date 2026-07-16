@@ -6,10 +6,6 @@
   let parcCourant = null;
   let briefCourant = null;
   let reconnaissance = null;
-  let dicteeActive = false;
-  let boutonDicteeActif = null;
-  let cibleDicteeActive = null;
-  let sessionDictee = 0;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -377,35 +373,6 @@
     document.getElementById("lcdp-planning-fermetures")?.focus();
   }
 
-  function restaurerBoutonDictee(bouton) {
-    if (!bouton) return;
-
-    bouton.disabled = false;
-    bouton.textContent = "Dicter";
-  }
-
-  function arreterDictee() {
-    dicteeActive = false;
-    sessionDictee += 1;
-
-    const instance = reconnaissance;
-    const bouton = boutonDicteeActif;
-
-    reconnaissance = null;
-    boutonDicteeActif = null;
-    cibleDicteeActive = null;
-
-    if (instance) {
-      try {
-        instance.abort();
-      } catch {
-        // La reconnaissance peut déjà être terminée.
-      }
-    }
-
-    restaurerBoutonDictee(bouton);
-  }
-
   function initialiserDictee() {
     const SpeechRecognition =
       window.SpeechRecognition ||
@@ -425,133 +392,37 @@
 
         if (!cible) return;
 
-        if (
-          dicteeActive &&
-          boutonDicteeActif === bouton
-        ) {
-          arreterDictee();
-          return;
+        if (reconnaissance) {
+          reconnaissance.stop();
+          reconnaissance = null;
         }
 
-        if (dicteeActive || reconnaissance) {
-          arreterDictee();
-        }
+        reconnaissance = new SpeechRecognition();
+        reconnaissance.lang = "fr-FR";
+        reconnaissance.interimResults = false;
+        reconnaissance.continuous = false;
 
-        dicteeActive = true;
-        boutonDicteeActif = bouton;
-        cibleDicteeActive = cible;
-        sessionDictee += 1;
+        bouton.disabled = true;
+        bouton.textContent = "Écoute…";
 
-        const sessionCourante = sessionDictee;
+        reconnaissance.addEventListener("result", (event) => {
+          const texte = event.results?.[0]?.[0]?.transcript || "";
+          cible.value = [cible.value.trim(), texte.trim()]
+            .filter(Boolean)
+            .join(" ");
+        });
 
-        bouton.disabled = false;
-        bouton.textContent = "Arrêter";
+        reconnaissance.addEventListener("end", () => {
+          bouton.disabled = false;
+          bouton.textContent = "Dicter";
+          reconnaissance = null;
+        });
 
-        function demarrerCycleDictee() {
-          if (
-            !dicteeActive ||
-            sessionDictee !== sessionCourante ||
-            boutonDicteeActif !== bouton ||
-            cibleDicteeActive !== cible
-          ) {
-            return;
-          }
+        reconnaissance.addEventListener("error", () => {
+          afficherStatus("Dictée interrompue.", true);
+        });
 
-          const instance = new SpeechRecognition();
-
-          reconnaissance = instance;
-          instance.lang = "fr-FR";
-          instance.interimResults = false;
-          instance.continuous = false;
-
-          instance.addEventListener("result", (event) => {
-            const morceaux = [];
-
-            for (
-              let index = event.resultIndex || 0;
-              index < event.results.length;
-              index += 1
-            ) {
-              const resultat = event.results[index];
-              const texte = resultat?.[0]?.transcript || "";
-
-              if (texte.trim()) {
-                morceaux.push(texte.trim());
-              }
-            }
-
-            if (
-              !morceaux.length ||
-              !dicteeActive ||
-              sessionDictee !== sessionCourante ||
-              cibleDicteeActive !== cible
-            ) {
-              return;
-            }
-
-            cible.value = [cible.value.trim(), morceaux.join(" ")]
-              .filter(Boolean)
-              .join(" ");
-          });
-
-          instance.addEventListener("end", () => {
-            if (reconnaissance === instance) {
-              reconnaissance = null;
-            }
-
-            if (
-              !dicteeActive ||
-              sessionDictee !== sessionCourante ||
-              boutonDicteeActif !== bouton ||
-              cibleDicteeActive !== cible
-            ) {
-              restaurerBoutonDictee(bouton);
-              return;
-            }
-
-            window.setTimeout(demarrerCycleDictee, 300);
-          });
-
-          instance.addEventListener("error", (event) => {
-            const code = String(event?.error || "");
-
-            if (code === "no-speech" || code === "aborted") {
-              return;
-            }
-
-            if (
-              sessionDictee !== sessionCourante ||
-              !dicteeActive
-            ) {
-              return;
-            }
-
-            arreterDictee();
-
-            afficherStatus(
-              code === "not-allowed" || code === "service-not-allowed"
-                ? "Autorisation du microphone refusée."
-                : code === "audio-capture"
-                  ? "Microphone indisponible."
-                  : "Dictée interrompue.",
-              true
-            );
-          });
-
-          try {
-            instance.start();
-          } catch {
-            if (
-              dicteeActive &&
-              sessionDictee === sessionCourante
-            ) {
-              reconnaissance = null;
-              window.setTimeout(demarrerCycleDictee, 500);
-            }
-          }
-        }
-
-        demarrerCycleDictee();
+        reconnaissance.start();
       });
     });
   }
@@ -570,6 +441,15 @@
     const autorise = await verifierAcces();
     if (!autorise) return;
 
+    await Promise.all([
+      initialiserBandeau(),
+      initialiserMenuGauche(),
+      chargerParc()
+    ]);
+
+    const main = document.getElementById("lcdp-main-admin");
+    if (main) main.hidden = false;
+
     document.getElementById("lcdp-planning-parc-form")
       ?.addEventListener("submit", analyserBrief);
 
@@ -580,22 +460,6 @@
       ?.addEventListener("click", corrigerBrief);
 
     initialiserDictee();
-
-    const main = document.getElementById("lcdp-main-admin");
-    if (main) main.hidden = false;
-
-    await chargerParc();
-
-    const initialisationsPeripheriques = await Promise.allSettled([
-      initialiserBandeau(),
-      initialiserMenuGauche()
-    ]);
-
-    initialisationsPeripheriques.forEach((resultat) => {
-      if (resultat.status === "rejected") {
-        console.error(resultat.reason);
-      }
-    });
   }
 
   initialiserPage().catch((error) => {
