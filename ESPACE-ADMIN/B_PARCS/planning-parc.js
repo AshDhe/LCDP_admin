@@ -112,7 +112,10 @@
   }
 
   async function appelerJson(url, options = {}) {
-    const response = await fetch(url, {
+    let response;
+
+    try {
+      response = await fetch(url, {
       method: options.method || "GET",
       credentials: "include",
       cache: "no-store",
@@ -125,7 +128,13 @@
       body: options.body !== undefined
         ? JSON.stringify(options.body)
         : undefined
-    });
+      });
+    } catch (error) {
+      throw new Error(
+        "Connexion impossible avec le worker Parc Planning. " +
+        String(error?.message || error || "")
+      );
+    }
 
     const data = await response.json().catch(() => null);
 
@@ -226,6 +235,7 @@
     const resumeLisible = Array.isArray(jsonbrief.resume_lisible)
       ? jsonbrief.resume_lisible
       : [];
+    const resumeOral = String(jsonbrief.resume_oral || "").trim();
     const listeAlertes = Array.isArray(jsonbrief.alertes)
       ? jsonbrief.alertes
       : [];
@@ -234,12 +244,12 @@
     alertes.innerHTML = "";
     alertes.hidden = true;
 
-    const blocResume = document.createElement("div");
-    blocResume.className = "lcdp-validation-bloc";
+    const blocStructure = document.createElement("div");
+    blocStructure.className = "lcdp-validation-bloc";
 
-    const titreResume = document.createElement("h3");
-    titreResume.textContent = "Résumé proposé par l’IA";
-    blocResume.appendChild(titreResume);
+    const titreStructure = document.createElement("h3");
+    titreStructure.textContent = "Résumé structuré";
+    blocStructure.appendChild(titreStructure);
 
     if (resumeLisible.length > 0) {
       const listeResume = document.createElement("ul");
@@ -251,14 +261,28 @@
         listeResume.appendChild(item);
       }
 
-      blocResume.appendChild(listeResume);
+      blocStructure.appendChild(listeResume);
     } else {
       const vide = document.createElement("p");
-      vide.textContent = "Aucun résumé lisible n’a été renvoyé.";
-      blocResume.appendChild(vide);
+      vide.textContent = "Aucun résumé structuré n’a été renvoyé.";
+      blocStructure.appendChild(vide);
     }
 
-    resume.appendChild(blocResume);
+    resume.appendChild(blocStructure);
+
+    const blocOral = document.createElement("div");
+    blocOral.className = "lcdp-validation-bloc";
+
+    const titreOral = document.createElement("h3");
+    titreOral.textContent = "Lecture en langage courant";
+    blocOral.appendChild(titreOral);
+
+    const texteOral = document.createElement("p");
+    texteOral.textContent = resumeOral ||
+      "Aucun résumé oral n’a été renvoyé.";
+    blocOral.appendChild(texteOral);
+
+    resume.appendChild(blocOral);
 
     if (listeAlertes.length > 0) {
       alertes.hidden = false;
@@ -267,10 +291,6 @@
       const titreAlertes = document.createElement("h3");
       titreAlertes.textContent = "Points de vigilance";
       alertes.appendChild(titreAlertes);
-
-      const intro = document.createElement("p");
-      intro.textContent = "Tu peux corriger le brief, ou valider si le rendu te convient malgré ces points.";
-      alertes.appendChild(intro);
 
       const liste = document.createElement("ul");
       liste.className = "lcdp-validation-liste";
@@ -287,15 +307,11 @@
     const note = document.createElement("p");
     note.className = "lcdp-validation-note";
     note.textContent = listeAlertes.length > 0
-      ? "Le bouton de validation reste disponible : la décision finale revient à l’administrateur."
+      ? "La validation reste possible après vérification des points de vigilance."
       : "Le brief est prêt à être validé et envoyé dans hparcs.";
     resume.appendChild(note);
 
     boutonValider.disabled = false;
-    boutonValider.textContent = listeAlertes.length > 0
-      ? "Valider et écrire dans hparcs"
-      : "Valider et écrire dans hparcs";
-
     json.textContent = JSON.stringify(jsonbrief, null, 2);
     section.hidden = false;
     section.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -501,6 +517,7 @@
           const instance = new SpeechRecognition();
           const texteAvantCycle = cible.value.trim();
           let texteFinalCycle = "";
+          let dernierIntermediaireCycle = "";
 
           reconnaissance = instance;
           instance.lang = "fr-FR";
@@ -531,6 +548,7 @@
                 intermediaire = [intermediaire, texte]
                   .filter(Boolean)
                   .join(" ");
+                dernierIntermediaireCycle = intermediaire;
               }
             }
 
@@ -576,7 +594,10 @@
               reconnaissance = null;
             }
 
-            cible.value = [texteAvantCycle, texteFinalCycle]
+            const texteCycleConserve =
+              texteFinalCycle || dernierIntermediaireCycle;
+
+            cible.value = [texteAvantCycle, texteCycleConserve]
               .filter(Boolean)
               .join(" ");
 
@@ -592,7 +613,7 @@
             minuterieRelanceDictee = window.setTimeout(() => {
               minuterieRelanceDictee = null;
               lancerCycle();
-            }, 650);
+            }, 220);
           });
 
           try {
@@ -602,7 +623,7 @@
             minuterieRelanceDictee = window.setTimeout(() => {
               minuterieRelanceDictee = null;
               lancerCycle();
-            }, 900);
+            }, 450);
           }
         };
 
