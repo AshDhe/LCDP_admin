@@ -42,10 +42,7 @@
     dashboardCapacite: "https://dashboard-capacite-api.lacleduparc.fr",
 
     autocompleteParc: "https://autocomplete-parc-api.lacleduparc.fr",
-    iaShiftHparcs1: "https://ia-shift-hparcs-1-api.lacleduparc.fr",
-    iaShiftHparcs2: "https://ia-shift-hparcs-2-api.lacleduparc.fr",
 
-    writeInHparcs: "https://write-in-hparcs-api.lacleduparc.fr"
   };
 
   function buildUrl(base, path) {
@@ -77,10 +74,6 @@
     workerDashboardCapaciteUrl: WORKERS.dashboardCapacite,
 
     workerAutocompleteParcUrl: WORKERS.autocompleteParc,
-    workerIaShiftHparcs1Url: WORKERS.iaShiftHparcs1,
-    workerIaShiftHparcs2Url: WORKERS.iaShiftHparcs2,
-
-    workerWriteInHparcsUrl: WORKERS.writeInHparcs,
 
     PUBLIC_BASE: active.publicBase,
     MEMBRE_BASE: active.membreBase,
@@ -99,10 +92,6 @@
     WORKER_DASHBOARD_CAPACITE_URL: WORKERS.dashboardCapacite,
 
     WORKER_AUTOCOMPLETE_PARC_URL: WORKERS.autocompleteParc,
-    WORKER_IA_SHIFT_HPARCS_1_URL: WORKERS.iaShiftHparcs1,
-    WORKER_IA_SHIFT_HPARCS_2_URL: WORKERS.iaShiftHparcs2,
-
-    WORKER_WRITE_IN_HPARCS_URL: WORKERS.writeInHparcs,
 
     publicUrl(path) {
       return buildUrl(active.publicBase, path);
@@ -146,9 +135,6 @@
     API_DASHBOARD_CAPACITE: WORKERS.dashboardCapacite,
 
     API_AUTOCOMPLETE_PARC: WORKERS.autocompleteParc,
-    API_IA_SHIFT_HPARCS_1: WORKERS.iaShiftHparcs1,
-    API_IA_SHIFT_HPARCS_2: WORKERS.iaShiftHparcs2,
 
-    API_WRITE_IN_HPARCS: WORKERS.writeInHparcs
   };
 })();
