@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>AdjustDuo - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Ajustement ponctuel du planning DUO d’un parc dans l’espace admin."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
+        ) +
+        '">'
+      );
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <script src="./AdjustDuo.js" defer></script>
+
+  <style>
+    .lcdp-page-adjust-groupe .lcdp-box-formulaire__actions {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 22px 0 12px;
+    }
+
+    .lcdp-page-adjust-groupe .lcdp-box-formulaire__actions .lcdp-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: min(100%, 270px);
+      min-height: 50px;
+      margin: 0;
+      padding: 10px 18px;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .lcdp-adjust-groupe-information {
+      padding: 12px 14px;
+      border: 1px solid currentColor;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-adjust-groupe">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Ajustement du planning DUO"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <section class="lcdp-box-formulaire">
+                <header class="lcdp-box-formulaire__header">
+                  <h1 class="lcdp-box-formulaire__title">
+                    AdjustDuo
+                  </h1>
+
+                  <p id="lcdp-adjust-identite">
+                    Chargement du parc…
+                  </p>
+                </header>
+
+                <p class="lcdp-adjust-groupe-information">
+                  L’ajustement peut ouvrir ou fermer une plage DUO,
+                  ou augmenter sa capacité. Seules les dates et plages
+                  déclarées sont modifiées.
+                </p>
+
+                <form id="lcdp-adjust-form">
+                  <div class="lcdp-box-champ-formulaire">
+                    <label
+                      class="lcdp-box-champ-formulaire__label"
+                      for="lcdp-adjust-instruction"
+                    >
+                      Ajustement DUO
+                    </label>
+                    <textarea
+                      id="lcdp-adjust-instruction"
+                      class="lcdp-box-champ-formulaire__input"
+                      rows="5"
+                      placeholder="Ex. Le parc est ouvert en DUO de 23 h le vendredi 11 novembre à 5 h le samedi 12 novembre."
+                      required
+                    ></textarea>
+                    <button
+                      class="lcdp-button lcdp-button-secondary"
+                      type="button"
+                      data-dictee-cible="lcdp-adjust-instruction"
+                    >
+                      Dicter
+                    </button>
+                  </div>
+
+                  <div class="lcdp-box-champ-formulaire">
+                    <label
+                      class="lcdp-box-champ-formulaire__label"
+                      for="lcdp-adjust-capacite"
+                    >
+                      Capacité d’accueil, uniquement si elle augmente
+                    </label>
+                    <textarea
+                      id="lcdp-adjust-capacite"
+                      class="lcdp-box-champ-formulaire__input"
+                      rows="3"
+                      placeholder="Facultatif. Ex. La capacité DUO est portée à 50 personnes durant ces horaires."
+                    ></textarea>
+                    <button
+                      class="lcdp-button lcdp-button-secondary"
+                      type="button"
+                      data-dictee-cible="lcdp-adjust-capacite"
+                    >
+                      Dicter
+                    </button>
+                  </div>
+
+                  <div class="lcdp-box-formulaire__actions">
+                    <button
+                      id="lcdp-adjust-analyser"
+                      class="lcdp-button lcdp-button-orange"
+                      type="submit"
+                    >
+                      Analyser l’ajustement IA
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section
+                id="lcdp-adjust-validation"
+                class="lcdp-box-formulaire"
+                hidden
+              >
+                <header class="lcdp-box-formulaire__header">
+                  <h2 class="lcdp-box-formulaire__title">
+                    Validation de l’ajustement DUO
+                  </h2>
+                </header>
+
+                <div id="lcdp-adjust-resume"></div>
+                <div id="lcdp-adjust-alertes" hidden></div>
+
+                <details>
+                  <summary>Voir le JSON proposé</summary>
+                  <pre id="lcdp-adjust-json"></pre>
+                </details>
+
+                <div class="lcdp-box-formulaire__actions">
+                  <button
+                    id="lcdp-adjust-corriger"
+                    class="lcdp-button lcdp-button-secondary"
+                    type="button"
+                  >
+                    Corriger l’ajustement
+                  </button>
+
+                  <button
+                    id="lcdp-adjust-valider"
+                    class="lcdp-button lcdp-button-orange"
+                    type="button"
+                  >
+                    Valider et ajuster hparcs
+                  </button>
+                </div>
+              </section>
+
+              <p
+                id="lcdp-adjust-status"
+                role="status"
+                aria-live="polite"
+                hidden
+              ></p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+</body>
+</html>
