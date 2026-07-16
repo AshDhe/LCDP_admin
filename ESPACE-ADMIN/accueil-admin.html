@@ -145,8 +145,8 @@
       const SLOT_PLANNING_PARC = 26;
       const SLOT_INSERT_FAMILLE = 27;
       const SLOT_AJUST_FAMILLE = 28;
-      const SLOT_ADJUST_COACH = 29;
-      const SLOT_ADJUST_DUO = 30;
+      const SLOT_AJUST_COACH = 29;
+      const SLOT_AJUST_DUO = 30;
       const CHEMIN_BOX_UPLOAD_IMG =
         "/OBJET/BOX/04-box-dialogue-upload-img.html";
 
@@ -600,16 +600,16 @@
         });
       }
 
-      function estSlotAdjustCoach(categorie, position) {
+      function estSlotAjustCoach(categorie, position) {
         return (
           categorie.id === "parcs" &&
-          Number(position) === SLOT_ADJUST_COACH
+          Number(position) === SLOT_AJUST_COACH
         );
       }
 
-      function configurerBoutonAdjustCoach(lien) {
-        lien.textContent = "AdjustCoach";
-        lien.href = "#adjustcoach";
+      function configurerBoutonAjustCoach(lien) {
+        lien.textContent = "AjustCoach";
+        lien.href = "#ajustcoach";
         lien.classList.remove(
           "lcdp-button-primary",
           "lcdp-button-secondary"
@@ -625,9 +625,9 @@
         lien.addEventListener("click", (event) => {
           event.preventDefault();
 
-          ouvrirAdjustCoachDepuisAccueil().catch(async (error) => {
+          ouvrirAjustCoachDepuisAccueil().catch(async (error) => {
             const alerte = await ouvrirAlerteLocalisation(
-              "AdjustCoach indisponible : " +
+              "AjustCoach indisponible : " +
               String(error?.message || error || "")
             );
 
@@ -638,16 +638,16 @@
         });
       }
 
-      function estSlotAdjustDuo(categorie, position) {
+      function estSlotAjustDuo(categorie, position) {
         return (
           categorie.id === "parcs" &&
-          Number(position) === SLOT_ADJUST_DUO
+          Number(position) === SLOT_AJUST_DUO
         );
       }
 
-      function configurerBoutonAdjustDuo(lien) {
-        lien.textContent = "AdjustDuo";
-        lien.href = "#adjustduo";
+      function configurerBoutonAjustDuo(lien) {
+        lien.textContent = "AjustDuo";
+        lien.href = "#ajustduo";
         lien.classList.remove(
           "lcdp-button-primary",
           "lcdp-button-secondary"
@@ -663,9 +663,9 @@
         lien.addEventListener("click", (event) => {
           event.preventDefault();
 
-          ouvrirAdjustDuoDepuisAccueil().catch(async (error) => {
+          ouvrirAjustDuoDepuisAccueil().catch(async (error) => {
             const alerte = await ouvrirAlerteLocalisation(
-              "AdjustDuo indisponible : " +
+              "AjustDuo indisponible : " +
               String(error?.message || error || "")
             );
 
@@ -755,10 +755,10 @@
             configurerBoutonInsertFamille(lien);
           } else if (estSlotAjustFamille(categorie, position)) {
             configurerBoutonAjustFamille(lien);
-          } else if (estSlotAdjustCoach(categorie, position)) {
-            configurerBoutonAdjustCoach(lien);
-          } else if (estSlotAdjustDuo(categorie, position)) {
-            configurerBoutonAdjustDuo(lien);
+          } else if (estSlotAjustCoach(categorie, position)) {
+            configurerBoutonAjustCoach(lien);
+          } else if (estSlotAjustDuo(categorie, position)) {
+            configurerBoutonAjustDuo(lien);
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
@@ -2049,9 +2049,9 @@
         );
       }
 
-      async function ouvrirAdjustCoachDepuisAccueil() {
+      async function ouvrirAjustCoachDepuisAccueil() {
         const selection = await ouvrirDialoguePlanningParc(
-          "AdjustCoach"
+          "AjustCoach"
         );
 
         if (!selection) {
@@ -2064,14 +2064,14 @@
         });
 
         window.location.href = urlAdmin(
-          "/ESPACE-ADMIN/B_PARCS/AdjustCoach.html?" +
+          "/ESPACE-ADMIN/B_PARCS/AjustCoach.html?" +
           params.toString()
         );
       }
 
-      async function ouvrirAdjustDuoDepuisAccueil() {
+      async function ouvrirAjustDuoDepuisAccueil() {
         const selection = await ouvrirDialoguePlanningParc(
-          "AdjustDuo"
+          "AjustDuo"
         );
 
         if (!selection) {
@@ -2084,7 +2084,7 @@
         });
 
         window.location.href = urlAdmin(
-          "/ESPACE-ADMIN/B_PARCS/AdjustDuo.html?" +
+          "/ESPACE-ADMIN/B_PARCS/AjustDuo.html?" +
           params.toString()
         );
       }
