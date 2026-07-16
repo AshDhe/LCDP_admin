@@ -6,6 +6,10 @@
   let parcCourant = null;
   let briefCourant = null;
   let reconnaissance = null;
+  let dicteeActive = false;
+  let boutonDicteeActif = null;
+  let cibleDicteeActive = null;
+  let minuterieRelanceDictee = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -415,6 +419,39 @@
     document.getElementById("lcdp-planning-fermetures")?.focus();
   }
 
+  function restaurerBoutonDictee(bouton) {
+    if (!bouton) return;
+
+    bouton.disabled = false;
+    bouton.textContent = "Dicter";
+  }
+
+  function arreterDictee() {
+    dicteeActive = false;
+
+    if (minuterieRelanceDictee) {
+      window.clearTimeout(minuterieRelanceDictee);
+      minuterieRelanceDictee = null;
+    }
+
+    const instance = reconnaissance;
+    const bouton = boutonDicteeActif;
+
+    reconnaissance = null;
+    boutonDicteeActif = null;
+    cibleDicteeActive = null;
+
+    if (instance) {
+      try {
+        instance.abort();
+      } catch {
+        // La reconnaissance peut déjà être terminée.
+      }
+    }
+
+    restaurerBoutonDictee(bouton);
+  }
+
   function initialiserDictee() {
     const SpeechRecognition =
       window.SpeechRecognition ||
@@ -434,37 +471,142 @@
 
         if (!cible) return;
 
-        if (reconnaissance) {
-          reconnaissance.stop();
-          reconnaissance = null;
+        if (
+          dicteeActive &&
+          boutonDicteeActif === bouton
+        ) {
+          arreterDictee();
+          return;
         }
 
-        reconnaissance = new SpeechRecognition();
-        reconnaissance.lang = "fr-FR";
-        reconnaissance.interimResults = false;
-        reconnaissance.continuous = false;
+        if (dicteeActive || reconnaissance) {
+          arreterDictee();
+        }
 
-        bouton.disabled = true;
-        bouton.textContent = "Écoute…";
+        dicteeActive = true;
+        boutonDicteeActif = bouton;
+        cibleDicteeActive = cible;
+        bouton.disabled = false;
+        bouton.textContent = "Arrêter";
 
-        reconnaissance.addEventListener("result", (event) => {
-          const texte = event.results?.[0]?.[0]?.transcript || "";
-          cible.value = [cible.value.trim(), texte.trim()]
-            .filter(Boolean)
-            .join(" ");
-        });
+        const lancerCycle = () => {
+          if (
+            !dicteeActive ||
+            boutonDicteeActif !== bouton ||
+            cibleDicteeActive !== cible
+          ) {
+            return;
+          }
 
-        reconnaissance.addEventListener("end", () => {
-          bouton.disabled = false;
-          bouton.textContent = "Dicter";
-          reconnaissance = null;
-        });
+          const instance = new SpeechRecognition();
+          const texteAvantCycle = cible.value.trim();
+          let texteFinalCycle = "";
 
-        reconnaissance.addEventListener("error", () => {
-          afficherStatus("Dictée interrompue.", true);
-        });
+          reconnaissance = instance;
+          instance.lang = "fr-FR";
+          instance.interimResults = true;
+          instance.continuous = false;
 
-        reconnaissance.start();
+          instance.addEventListener("result", (event) => {
+            let finalAjoute = "";
+            let intermediaire = "";
+
+            for (
+              let index = event.resultIndex || 0;
+              index < event.results.length;
+              index += 1
+            ) {
+              const resultat = event.results[index];
+              const texte = String(
+                resultat?.[0]?.transcript || ""
+              ).trim();
+
+              if (!texte) continue;
+
+              if (resultat.isFinal) {
+                finalAjoute = [finalAjoute, texte]
+                  .filter(Boolean)
+                  .join(" ");
+              } else {
+                intermediaire = [intermediaire, texte]
+                  .filter(Boolean)
+                  .join(" ");
+              }
+            }
+
+            if (finalAjoute) {
+              texteFinalCycle = [texteFinalCycle, finalAjoute]
+                .filter(Boolean)
+                .join(" ");
+            }
+
+            cible.value = [
+              texteAvantCycle,
+              texteFinalCycle,
+              intermediaire
+            ]
+              .filter(Boolean)
+              .join(" ");
+          });
+
+          instance.addEventListener("error", (event) => {
+            const code = String(event?.error || "");
+
+            if (
+              code === "no-speech" ||
+              code === "aborted"
+            ) {
+              return;
+            }
+
+            arreterDictee();
+            afficherStatus(
+              code === "not-allowed" ||
+              code === "service-not-allowed"
+                ? "Autorisation du microphone refusée."
+                : code === "audio-capture"
+                  ? "Microphone indisponible."
+                  : "Dictée interrompue.",
+              true
+            );
+          });
+
+          instance.addEventListener("end", () => {
+            if (reconnaissance === instance) {
+              reconnaissance = null;
+            }
+
+            cible.value = [texteAvantCycle, texteFinalCycle]
+              .filter(Boolean)
+              .join(" ");
+
+            if (
+              !dicteeActive ||
+              boutonDicteeActif !== bouton ||
+              cibleDicteeActive !== cible
+            ) {
+              restaurerBoutonDictee(bouton);
+              return;
+            }
+
+            minuterieRelanceDictee = window.setTimeout(() => {
+              minuterieRelanceDictee = null;
+              lancerCycle();
+            }, 650);
+          });
+
+          try {
+            instance.start();
+          } catch {
+            reconnaissance = null;
+            minuterieRelanceDictee = window.setTimeout(() => {
+              minuterieRelanceDictee = null;
+              lancerCycle();
+            }, 900);
+          }
+        };
+
+        lancerCycle();
       });
     });
   }
