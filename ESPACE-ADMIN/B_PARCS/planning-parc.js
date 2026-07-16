@@ -413,9 +413,22 @@
         }
       );
 
-      afficherStatus(
+      const avertissements = Array.isArray(
+        data.writeResult?.avertissements
+      )
+        ? data.writeResult.avertissements
+            .map((item) => String(item || "").trim())
+            .filter(Boolean)
+        : [];
+
+      const messageSucces =
         "Planning DUO et COACH enregistré dans hparcs jusqu’au " +
-        String(data.jsonfinal?.horizon || "") + "."
+        String(data.jsonfinal?.horizon || "") + ".";
+
+      afficherStatus(
+        avertissements.length > 0
+          ? messageSucces + " " + avertissements.join(" ")
+          : messageSucces
       );
     } catch (error) {
       afficherStatus(String(error?.message || error || ""), true);
