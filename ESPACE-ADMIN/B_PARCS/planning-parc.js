@@ -139,10 +139,16 @@
     const data = await response.json().catch(() => null);
 
     if (!response.ok || !data || data.success !== true) {
+      const message = String(data?.message || "").trim();
+      const detail = String(data?.detail || "").trim();
+      const texteErreur = [message, detail]
+        .filter((item, index, liste) => {
+          return item && liste.indexOf(item) === index;
+        })
+        .join(" — ");
+
       throw new Error(
-        data?.message ||
-        data?.detail ||
-        "Réponse serveur inexploitable."
+        texteErreur || "Réponse serveur inexploitable."
       );
     }
 
