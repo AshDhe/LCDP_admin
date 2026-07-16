@@ -307,6 +307,15 @@
         ).replace(/\/+$/, "");
       }
 
+      function endpointParcPlanning() {
+        return String(
+          config.workerParcPlanningUrl ||
+          config.WORKER_PARC_PLANNING_URL ||
+          window.ADMIN_CONFIG?.API_PARC_PLANNING ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
       async function chargerBoutonsAdmin() {
         const endpoint = endpointAdminData();
 
@@ -1496,6 +1505,117 @@
         select.disabled = false;
       }
 
+
+      async function chargerDepartementsPlanningParc(select) {
+        const endpoint = endpointParcPlanning();
+
+        if (!endpoint) {
+          throw new Error(
+            "Endpoint du worker Parc Planning non configuré."
+          );
+        }
+
+        select.disabled = true;
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(select, "", "Chargement…");
+
+        const response = await fetch(
+          endpoint + "/departements",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" }
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger les départements."
+          );
+        }
+
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(
+          select,
+          "",
+          "Choisir un département"
+        );
+
+        for (const dptmt of data.departements || []) {
+          ajouterOptionUploadIMG(
+            select,
+            String(dptmt),
+            String(dptmt)
+          );
+        }
+
+        select.disabled = false;
+      }
+
+      async function chargerParcsPlanningParc(dptmt, select) {
+        const endpoint = endpointParcPlanning();
+
+        if (!endpoint) {
+          throw new Error(
+            "Endpoint du worker Parc Planning non configuré."
+          );
+        }
+
+        select.disabled = true;
+        select.innerHTML = "";
+
+        if (!dptmt) {
+          ajouterOptionUploadIMG(
+            select,
+            "",
+            "Choisir d’abord un département"
+          );
+          return;
+        }
+
+        ajouterOptionUploadIMG(select, "", "Chargement…");
+
+        const response = await fetch(
+          endpoint +
+          "/parcs?dptmt=" +
+          encodeURIComponent(dptmt),
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" }
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible de charger les parcs."
+          );
+        }
+
+        select.innerHTML = "";
+        ajouterOptionUploadIMG(select, "", "Choisir un parc");
+
+        for (const parc of data.parcs || []) {
+          ajouterOptionUploadIMG(
+            select,
+            String(parc.idparc),
+            String(parc.nom || "")
+          );
+        }
+
+        select.disabled = false;
+      }
+
       async function ouvrirDialoguePlanningParc() {
         const slot = document.getElementById("lcdp-lightbox-slot");
 
@@ -1579,7 +1699,7 @@
             afficherErreurDialogueChamp(erreur, "");
 
             try {
-              await chargerParcsUploadIMG(
+              await chargerParcsPlanningParc(
                 champDepartement.select.value,
                 champParc.select
               );
@@ -1597,7 +1717,7 @@
         );
 
         try {
-          await chargerDepartementsUploadIMG(
+          await chargerDepartementsPlanningParc(
             champDepartement.select
           );
         } catch (errorChargement) {
