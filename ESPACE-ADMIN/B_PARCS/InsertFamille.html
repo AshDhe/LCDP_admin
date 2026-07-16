@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
 
-  <title>PlanningParc - La Clé du Parc</title>
+  <title>InsertFamille - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta
     name="description"
-    content="Paramétrage IA du planning d’un parc dans l’espace admin."
+    content="Insertion du planning FAMILLE d’un parc dans l’espace admin."
   >
 
   <script src="../../config.js"></script>
@@ -96,10 +96,10 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./planning-parc.js" defer></script>
+  <script src="./InsertFamille.js" defer></script>
 
   <style>
-    .lcdp-page-planning-parc .lcdp-box-formulaire__actions {
+    .lcdp-page-insert-famille .lcdp-box-formulaire__actions {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -107,15 +107,20 @@
       flex-wrap: wrap;
     }
 
-    .lcdp-page-planning-parc .lcdp-box-formulaire__actions .lcdp-button {
+    .lcdp-page-insert-famille .lcdp-box-formulaire__actions .lcdp-button {
       min-height: 44px;
       margin: 0;
     }
-  </style>
 
+    .lcdp-insert-famille-regle-fermeture {
+      padding: 12px 14px;
+      border: 1px solid currentColor;
+      border-radius: 12px;
+    }
+  </style>
 </head>
 
-<body class="lcdp-page-admin-interieure lcdp-page-planning-parc">
+<body class="lcdp-page-admin-interieure lcdp-page-insert-famille">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
@@ -123,7 +128,7 @@
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
       <section
         class="lcdp-page-section"
-        aria-label="Paramétrage du planning du parc"
+        aria-label="Insertion du planning FAMILLE"
       >
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
@@ -134,24 +139,24 @@
               <section class="lcdp-box-formulaire">
                 <header class="lcdp-box-formulaire__header">
                   <h1 class="lcdp-box-formulaire__title">
-                    PlanningParc
+                    InsertFamille
                   </h1>
 
-                  <p id="lcdp-planning-parc-identite">
+                  <p id="lcdp-insert-famille-identite">
                     Chargement du parc…
                   </p>
                 </header>
 
-                <form id="lcdp-planning-parc-form">
+                <form id="lcdp-insert-famille-form">
                   <div class="lcdp-box-champ-formulaire">
                     <label
                       class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-date-debut"
+                      for="lcdp-insert-famille-date-debut"
                     >
                       À partir de
                     </label>
                     <input
-                      id="lcdp-planning-date-debut"
+                      id="lcdp-insert-famille-date-debut"
                       class="lcdp-box-champ-formulaire__input"
                       type="date"
                       required
@@ -161,12 +166,12 @@
                   <div class="lcdp-box-champ-formulaire">
                     <label
                       class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-horizon"
+                      for="lcdp-insert-famille-horizon"
                     >
                       Horizon
                     </label>
                     <input
-                      id="lcdp-planning-horizon"
+                      id="lcdp-insert-famille-horizon"
                       class="lcdp-box-champ-formulaire__input"
                       type="date"
                       required
@@ -174,46 +179,34 @@
                   </div>
 
                   <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-fermetures"
-                    >
-                      Dates de fermeture
-                    </label>
-                    <textarea
-                      id="lcdp-planning-fermetures"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="3"
-                      placeholder="Ex. Tous les lundis, le vendredi 11 septembre 2026 et le jeudi 26 novembre 2026."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-planning-fermetures"
-                    >
-                      Dicter
-                    </button>
+                    <span class="lcdp-box-champ-formulaire__label">
+                      Date de fermeture
+                    </span>
+                    <p class="lcdp-insert-famille-regle-fermeture">
+                      Il n’y en a pas à saisir : le parc est fermé à
+                      FAMILLE par défaut. Il est ouvert à FAMILLE
+                      uniquement aux jours et horaires indiqués ci-dessous.
+                    </p>
                   </div>
 
                   <div class="lcdp-box-champ-formulaire">
                     <label
                       class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-semaine"
+                      for="lcdp-insert-famille-semaine"
                     >
                       Ouverture semaine
                     </label>
                     <textarea
-                      id="lcdp-planning-semaine"
+                      id="lcdp-insert-famille-semaine"
                       class="lcdp-box-champ-formulaire__input"
-                      rows="3"
-                      placeholder="Ex. De 6 h à 22 h du lundi au vendredi jusqu’au 30 septembre 2026, puis de 6 h à 18 h."
+                      rows="4"
+                      placeholder="Ex. Tous les mercredis de 13 h à 18 h jusqu’au 30 septembre 2026, puis tous les mercredis de 13 h à 16 h à partir du 1er octobre 2026, et tous les vendredis de 16 h à 18 h jusqu’au 30 septembre 2026."
                       required
                     ></textarea>
                     <button
                       class="lcdp-button lcdp-button-secondary"
                       type="button"
-                      data-dictee-cible="lcdp-planning-semaine"
+                      data-dictee-cible="lcdp-insert-famille-semaine"
                     >
                       Dicter
                     </button>
@@ -222,21 +215,21 @@
                   <div class="lcdp-box-champ-formulaire">
                     <label
                       class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-weekend"
+                      for="lcdp-insert-famille-weekend"
                     >
                       Ouverture week-end
                     </label>
                     <textarea
-                      id="lcdp-planning-weekend"
+                      id="lcdp-insert-famille-weekend"
                       class="lcdp-box-champ-formulaire__input"
                       rows="3"
-                      placeholder="Ex. De 6 h à 22 h le samedi et de 6 h à 21 h le dimanche."
+                      placeholder="Ex. De 10 h à 18 h le samedi et de 10 h à 18 h le dimanche."
                       required
                     ></textarea>
                     <button
                       class="lcdp-button lcdp-button-secondary"
                       type="button"
-                      data-dictee-cible="lcdp-planning-weekend"
+                      data-dictee-cible="lcdp-insert-famille-weekend"
                     >
                       Dicter
                     </button>
@@ -245,12 +238,12 @@
                   <div class="lcdp-box-champ-formulaire">
                     <label
                       class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-capacite"
+                      for="lcdp-insert-famille-capacite"
                     >
-                      Capacité d’accueil du parc
+                      Capacité d’accueil du parc pour FAMILLE
                     </label>
                     <input
-                      id="lcdp-planning-capacite"
+                      id="lcdp-insert-famille-capacite"
                       class="lcdp-box-champ-formulaire__input"
                       type="number"
                       min="1"
@@ -261,7 +254,7 @@
 
                   <div class="lcdp-box-formulaire__actions">
                     <button
-                      id="lcdp-planning-analyser"
+                      id="lcdp-insert-famille-analyser"
                       class="lcdp-button lcdp-button-orange"
                       type="submit"
                     >
@@ -272,27 +265,27 @@
               </section>
 
               <section
-                id="lcdp-planning-validation"
+                id="lcdp-insert-famille-validation"
                 class="lcdp-box-formulaire"
                 hidden
               >
                 <header class="lcdp-box-formulaire__header">
                   <h2 class="lcdp-box-formulaire__title">
-                    Validation du brief IA
+                    Validation du brief IA FAMILLE
                   </h2>
                 </header>
 
-                <div id="lcdp-planning-resume"></div>
-                <div id="lcdp-planning-alertes" hidden></div>
+                <div id="lcdp-insert-famille-resume"></div>
+                <div id="lcdp-insert-famille-alertes" hidden></div>
 
                 <details>
                   <summary>Voir le JSON proposé</summary>
-                  <pre id="lcdp-planning-json"></pre>
+                  <pre id="lcdp-insert-famille-json"></pre>
                 </details>
 
                 <div class="lcdp-box-formulaire__actions">
                   <button
-                    id="lcdp-planning-corriger"
+                    id="lcdp-insert-famille-corriger"
                     class="lcdp-button lcdp-button-secondary"
                     type="button"
                   >
@@ -300,17 +293,17 @@
                   </button>
 
                   <button
-                    id="lcdp-planning-valider"
+                    id="lcdp-insert-famille-valider"
                     class="lcdp-button lcdp-button-orange"
                     type="button"
                   >
-                    Valider et écrire dans hparcs
+                    Valider et écrire FAMILLE dans hparcs
                   </button>
                 </div>
               </section>
 
               <p
-                id="lcdp-planning-status"
+                id="lcdp-insert-famille-status"
                 role="status"
                 aria-live="polite"
                 hidden
