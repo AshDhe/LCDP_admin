@@ -35,7 +35,8 @@
     logSessAdmin: "https://ad-log-sess-api.lacleduparc.fr",
     adminData: "https://admin-data-api.lacleduparc.fr",
     parcAdmin: "https://parc-admin-api.lacleduparc.fr",
-    parkPlanning: "https://parc-planning-api.lacleduparc.fr",
+    parcPlanning: "https://parc-planning-api.lacleduparc.fr",
+    insertFamille: "https://insert-famille-api.lacleduparc.fr",
 
     creaParc: "https://crea-parc-api.lacleduparc.fr",
     dashboardParc: "https://dashboard-parc-api.lacleduparc.fr",
@@ -70,7 +71,8 @@
     workerLogSessAdminUrl: WORKERS.logSessAdmin,
     workerAdminDataUrl: WORKERS.adminData,
     workerParcAdminUrl: WORKERS.parcAdmin,
-    workerParcPlanningUrl: WORKERS.parkPlanning,
+    workerParcPlanningUrl: WORKERS.parcPlanning,
+    workerInsertFamilleUrl: WORKERS.insertFamille,
 
     workerCreaParcUrl: WORKERS.creaParc,
     workerDashboardParcUrl: WORKERS.dashboardParc,
@@ -92,7 +94,8 @@
     WORKER_LOG_SESS_ADMIN_URL: WORKERS.logSessAdmin,
     WORKER_ADMIN_DATA_URL: WORKERS.adminData,
     WORKER_PARC_ADMIN_URL: WORKERS.parcAdmin,
-    WORKER_PARC_PLANNING_URL: WORKERS.parkPlanning,
+    WORKER_PARC_PLANNING_URL: WORKERS.parcPlanning,
+    WORKER_INSERT_FAMILLE_URL: WORKERS.insertFamille,
 
     WORKER_CREA_PARC_URL: WORKERS.creaParc,
     WORKER_DASHBOARD_PARC_URL: WORKERS.dashboardParc,
@@ -139,7 +142,8 @@
     API_LOG_SESS_AD: WORKERS.logSessAdmin,
     API_ADMIN_DATA: WORKERS.adminData,
     API_PARC_ADMIN: WORKERS.parcAdmin,
-    API_PARC_PLANNING: WORKERS.parkPlanning,
+    API_PARC_PLANNING: WORKERS.parcPlanning,
+    API_INSERT_FAMILLE: WORKERS.insertFamille,
 
     API_CREA_PARC: WORKERS.creaParc,
     API_DASHBOARD_PARC: WORKERS.dashboardParc,
