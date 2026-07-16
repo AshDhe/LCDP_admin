@@ -34,14 +34,6 @@
     ).replace(/\/+$/, "");
   }
 
-  function endpointInsertFamille() {
-    return String(
-      config.workerInsertFamilleUrl ||
-      config.WORKER_INSERT_FAMILLE_URL ||
-      window.ADMIN_CONFIG?.API_INSERT_FAMILLE ||
-      ""
-    ).replace(/\/+$/, "");
-  }
 
   function appliquerRoutes(racine = document) {
     racine.querySelectorAll("[data-site-href]").forEach((element) => {
@@ -279,13 +271,13 @@
       return;
     }
 
-    const endpoint = endpointInsertFamille();
+    const endpoint = endpointParcPlanning();
     const bouton = document.getElementById(
       "lcdp-insert-famille-analyser"
     );
 
     if (!endpoint) {
-      afficherStatus("Endpoint InsertFamille non configuré.", true);
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
       return;
     }
 
@@ -309,7 +301,7 @@
 
     try {
       const data = await appelerJson(
-        endpoint + "/brief",
+        endpoint + "/famille/brief",
         {
           method: "POST",
           body: {
@@ -332,13 +324,13 @@
   async function validerBrief() {
     if (!briefCourant || !parcCourant) return;
 
-    const endpoint = endpointInsertFamille();
+    const endpoint = endpointParcPlanning();
     const bouton = document.getElementById(
       "lcdp-insert-famille-valider"
     );
 
     if (!endpoint) {
-      afficherStatus("Endpoint InsertFamille non configuré.", true);
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
       return;
     }
 
@@ -355,7 +347,7 @@
 
     try {
       const data = await appelerJson(
-        endpoint + "/valider",
+        endpoint + "/famille/valider",
         {
           method: "POST",
           body: {
