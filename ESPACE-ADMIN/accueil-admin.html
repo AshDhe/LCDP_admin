@@ -520,6 +520,19 @@
         });
       }
 
+      function estSlotOrangeAdminOuMembres(categorie, position) {
+        return (
+          (
+            categorie.id === "admin" ||
+            categorie.id === "membres"
+          ) &&
+          (
+            Number(position) === 25 ||
+            Number(position) === 26
+          )
+        );
+      }
+
       function afficherCategorie(categorieId) {
         const categorie = categoriesAdmin.find(
           (item) => item.id === categorieId
@@ -599,6 +612,14 @@
             lien.addEventListener("click", (event) => {
               event.preventDefault();
             });
+          }
+
+          if (estSlotOrangeAdminOuMembres(categorie, position)) {
+            lien.classList.remove(
+              "lcdp-button-primary",
+              "lcdp-button-secondary"
+            );
+            lien.classList.add("lcdp-button-orange");
           }
 
           grid.appendChild(lien);
