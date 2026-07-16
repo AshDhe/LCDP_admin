@@ -218,31 +218,58 @@
       throw new Error("Bloc de validation PlanningParc incomplet.");
     }
 
-    resume.innerHTML = "";
-
-    const listeResume = document.createElement("ul");
-
-    for (const ligne of data.jsonbrief.resume_lisible || []) {
-      const item = document.createElement("li");
-      item.textContent = String(ligne || "");
-      listeResume.appendChild(item);
-    }
-
-    resume.appendChild(listeResume);
-
-    const listeAlertes = Array.isArray(data.jsonbrief.alertes)
-      ? data.jsonbrief.alertes
+    const jsonbrief = data?.jsonbrief || {};
+    const resumeLisible = Array.isArray(jsonbrief.resume_lisible)
+      ? jsonbrief.resume_lisible
+      : [];
+    const listeAlertes = Array.isArray(jsonbrief.alertes)
+      ? jsonbrief.alertes
       : [];
 
+    resume.innerHTML = "";
     alertes.innerHTML = "";
-    alertes.hidden = listeAlertes.length === 0;
+    alertes.hidden = true;
+
+    const blocResume = document.createElement("div");
+    blocResume.className = "lcdp-validation-bloc";
+
+    const titreResume = document.createElement("h3");
+    titreResume.textContent = "Résumé proposé par l’IA";
+    blocResume.appendChild(titreResume);
+
+    if (resumeLisible.length > 0) {
+      const listeResume = document.createElement("ul");
+      listeResume.className = "lcdp-validation-liste";
+
+      for (const ligne of resumeLisible) {
+        const item = document.createElement("li");
+        item.textContent = String(ligne || "");
+        listeResume.appendChild(item);
+      }
+
+      blocResume.appendChild(listeResume);
+    } else {
+      const vide = document.createElement("p");
+      vide.textContent = "Aucun résumé lisible n’a été renvoyé.";
+      blocResume.appendChild(vide);
+    }
+
+    resume.appendChild(blocResume);
 
     if (listeAlertes.length > 0) {
-      const titre = document.createElement("p");
-      titre.textContent = "Alertes à corriger avant validation :";
-      alertes.appendChild(titre);
+      alertes.hidden = false;
+      alertes.className = "lcdp-validation-bloc";
+
+      const titreAlertes = document.createElement("h3");
+      titreAlertes.textContent = "Points de vigilance";
+      alertes.appendChild(titreAlertes);
+
+      const intro = document.createElement("p");
+      intro.textContent = "Tu peux corriger le brief, ou valider si le rendu te convient malgré ces points.";
+      alertes.appendChild(intro);
 
       const liste = document.createElement("ul");
+      liste.className = "lcdp-validation-liste";
 
       for (const alerte of listeAlertes) {
         const item = document.createElement("li");
@@ -253,8 +280,19 @@
       alertes.appendChild(liste);
     }
 
-    boutonValider.disabled = listeAlertes.length > 0;
-    json.textContent = JSON.stringify(data.jsonbrief, null, 2);
+    const note = document.createElement("p");
+    note.className = "lcdp-validation-note";
+    note.textContent = listeAlertes.length > 0
+      ? "Le bouton de validation reste disponible : la décision finale revient à l’administrateur."
+      : "Le brief est prêt à être validé et envoyé dans hparcs.";
+    resume.appendChild(note);
+
+    boutonValider.disabled = false;
+    boutonValider.textContent = listeAlertes.length > 0
+      ? "Valider et écrire dans hparcs"
+      : "Valider et écrire dans hparcs";
+
+    json.textContent = JSON.stringify(jsonbrief, null, 2);
     section.hidden = false;
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -287,7 +325,7 @@
       !Number.isInteger(brief.capacite) ||
       brief.capacite < 1
     ) {
-      afficherStatus("Le brief fermé est incomplet.", true);
+      afficherStatus("Le brief est incomplet. Vérifie les dates, les textes et la capacité.", true);
       return;
     }
 
@@ -327,8 +365,12 @@
       return;
     }
 
+    const aDesAlertes = Array.isArray(briefCourant?.jsonbrief?.alertes) && briefCourant.jsonbrief.alertes.length > 0;
+
     const confirmation = window.confirm(
-      "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
+      aDesAlertes
+        ? "Des points de vigilance sont encore affichés. Valider quand même ce brief et écrire le planning DUO et COACH dans hparcs ?"
+        : "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
     );
 
     if (!confirmation) return;
