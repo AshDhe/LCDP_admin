@@ -12,7 +12,7 @@
   "resumeTitle": "Résumé du PlanningParc",
   "readyMessage": "Le PlanningParc est prêt à être validé.",
   "confirmTitle": "Validation PlanningParc",
-  "confirmMessage": "Valider ce PlanningParc et écrire DUO, COACH et les fermetures ?",
+  "confirmMessage": "Valider ce PlanningParc et écrire simultanément DUO, COACH et les fermetures explicites ?",
   "analysisMessage": "Analyse IA du PlanningParc en cours…",
   "analysisReadyMessage": "PlanningParc IA prêt à être vérifié.",
   "validationMessage": "Écriture du PlanningParc en cours. Ne ferme pas cette page.",
@@ -46,6 +46,7 @@
     return String(
       config.workerParcPlanningUrl ||
       config.WORKER_PARC_PLANNING_URL ||
+      config.endpointParcPlanning ||
       window.ADMIN_CONFIG?.API_PARC_PLANNING ||
       ""
     ).replace(/\/+$/, "");
@@ -579,9 +580,7 @@ function construireBrief() {
     fermetures,
     ouvertureSemaine,
     ouvertureWeekend,
-    capacite,
-    etatOuverture: true,
-    etatFermeture: "FERMETURE"
+    capacite
   };
 }
 
