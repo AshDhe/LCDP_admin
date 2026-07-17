@@ -624,12 +624,13 @@ function ouvertureDemandee() {
 function actualiserCapacite() {
   const zone = document.querySelector("[data-capacite-zone]");
   const input = document.getElementById("lcdp-insert-famille-capacite");
-  const active = ouvertureDemandee();
 
-  if (zone) zone.hidden = !active;
+  if (zone) zone.hidden = false;
+
   if (input) {
-    input.required = active;
-    if (!active) input.value = "";
+    input.required = false;
+    input.placeholder =
+      "Laisser vide pour une fermeture FAMILLE uniquement";
   }
 }
 
@@ -660,10 +661,10 @@ function construireBrief() {
     : null;
 
   if (
-    ouvertureDemandee() &&
+    capacite !== null &&
     (!Number.isInteger(capacite) || capacite < 1)
   ) {
-    throw new Error("La capacité FAMILLE est obligatoire pour une ouverture.");
+    throw new Error("La capacité FAMILLE est invalide.");
   }
 
   const actionSemaine = valeur(
@@ -692,7 +693,7 @@ function construireBrief() {
         "lcdp-insert-famille-weekend-precision"
       )
     },
-    capacite: ouvertureDemandee() ? capacite : null
+    capacite
   };
 }
 
