@@ -44,10 +44,9 @@
 
   function endpointWorker() {
     return String(
-      config.workerParcPlanningUrl ||
-      config.WORKER_PARC_PLANNING_URL ||
-      config.endpointParcPlanning ||
-      window.ADMIN_CONFIG?.API_PARC_PLANNING ||
+      config.workerParcPlanningAdminUrl ||
+      config.WORKER_PARC_PLANNING_ADMIN_URL ||
+      window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN ||
       ""
     ).replace(/\/+$/, "");
   }

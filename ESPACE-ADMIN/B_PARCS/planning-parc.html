@@ -85,7 +85,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./planning-parc.js?v=20260717-1500" defer></script>
+  <script src="./planning-parc.js?v=20260717-1811" defer></script>
 
   <style>
     .lcdp-page-planning-workflow .lcdp-box-formulaire {
@@ -154,9 +154,14 @@
 
     .lcdp-time-range {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
-      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+      gap: 12px;
       align-items: end;
+      margin-bottom: 14px;
+      padding: 14px;
+      border: 1px solid #d8ddd0;
+      border-radius: 14px;
+      background: #fff;
     }
 
     .lcdp-time-range__arrow {
@@ -164,7 +169,9 @@
       align-items: center;
       justify-content: center;
       min-height: 48px;
-      font-size: 1.35rem;
+      padding-bottom: 2px;
+      font-size: 1.15rem;
+      font-weight: 700;
       color: #596351;
     }
 
@@ -331,7 +338,7 @@
                   <p id="lcdp-planning-parc-identite">Chargement du parc…</p>
                 </header>
                 <p class="lcdp-workflow-intro">
-                  PlanningParc définit l’ouverture générale de DUO et COACH. Une fermeture explicite active l’état de fermeture du segment sans supprimer les capacités.
+                  PlanningParc analyse les horaires avec l’IA, puis écrit simultanément DUO et COACH. Une fermeture explicite active l’état global de fermeture sans supprimer les capacités.
                 </p>
                 <form id="lcdp-planning-parc-form">
                   <div class="lcdp-form-grid">

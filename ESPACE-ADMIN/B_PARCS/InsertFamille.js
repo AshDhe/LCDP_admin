@@ -44,9 +44,9 @@
 
   function endpointWorker() {
     return String(
-      config.workerParcPlanningUrl ||
-      config.WORKER_PARC_PLANNING_URL ||
-      window.ADMIN_CONFIG?.API_PARC_PLANNING ||
+      config.workerInsertFamilleAdminUrl ||
+      config.WORKER_INSERT_FAMILLE_ADMIN_URL ||
+      window.ADMIN_CONFIG?.API_INSERT_FAMILLE_ADMIN ||
       ""
     ).replace(/\/+$/, "");
   }
