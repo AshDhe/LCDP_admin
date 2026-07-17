@@ -166,7 +166,7 @@
     const selection = lireSelectionUrl();
 
     if (!endpoint) {
-      throw new Error("Endpoint Parc Planning non configuré.");
+      throw new Error("Endpoint InsertFamille non configuré.");
     }
 
     if (!selection.dptmt || !selection.idparc) {
@@ -361,18 +361,83 @@
     });
   }
 
+  function normaliserMotDictee(value) {
+    return String(value || "")
+      .toLocaleLowerCase("fr-FR")
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .replace(
+        /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,
+        ""
+      );
+  }
+
+  function supprimerDoublonsConsecutifsDictee(value) {
+    const mots = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const resultat = [];
+
+    for (const mot of mots) {
+      resultat.push(mot);
+
+      let doublonSupprime = true;
+
+      while (doublonSupprime) {
+        doublonSupprime = false;
+
+        const longueurMax = Math.min(
+          8,
+          Math.floor(resultat.length / 2)
+        );
+
+        for (
+          let longueur = longueurMax;
+          longueur >= 1;
+          longueur -= 1
+        ) {
+          const debutPremier =
+            resultat.length - 2 * longueur;
+          const debutSecond =
+            resultat.length - longueur;
+          let identiques = true;
+
+          for (let index = 0; index < longueur; index += 1) {
+            if (
+              normaliserMotDictee(
+                resultat[debutPremier + index]
+              ) !==
+              normaliserMotDictee(
+                resultat[debutSecond + index]
+              )
+            ) {
+              identiques = false;
+              break;
+            }
+          }
+
+          if (!identiques) continue;
+
+          resultat.splice(debutSecond, longueur);
+          doublonSupprime = true;
+          break;
+        }
+      }
+    }
+
+    return resultat.join(" ");
+  }
+
   function fusionnerTexteDictee(texteInitial, texteReconnu) {
-    return [texteInitial, texteReconnu]
+    const texte = [texteInitial, texteReconnu]
       .map((item) => String(item || "").trim())
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
-      .replace(
-        /\b(\d{1,2})\s*h(?:\s*(\d{1,2}))?\s+\1\s*h(?:\s*\2)?\s*$/i,
-        (_, heure, minutes) =>
-          heure + " h" + (minutes ? " " + minutes : "")
-      )
       .trim();
+
+    return supprimerDoublonsConsecutifsDictee(texte);
   }
 
   function restaurerBoutonDictee(bouton) {
@@ -562,7 +627,10 @@ function actualiserCapacite() {
   const active = ouvertureDemandee();
 
   if (zone) zone.hidden = !active;
-  if (input) input.required = active;
+  if (input) {
+    input.required = active;
+    if (!active) input.value = "";
+  }
 }
 
 function construireBrief() {
@@ -573,13 +641,13 @@ function construireBrief() {
     throw new Error("La période globale FAMILLE est invalide.");
   }
 
-  const ouvertureSemaine = construireRegleFamille(
+  construireRegleFamille(
     "du lundi au vendredi",
     "lcdp-insert-famille-semaine",
     "lcdp-insert-famille-semaine-precision",
     "de semaine"
   );
-  const ouvertureWeekend = construireRegleFamille(
+  construireRegleFamille(
     "du samedi et du dimanche",
     "lcdp-insert-famille-weekend",
     "lcdp-insert-famille-weekend-precision",
@@ -598,13 +666,33 @@ function construireBrief() {
     throw new Error("La capacité FAMILLE est obligatoire pour une ouverture.");
   }
 
+  const actionSemaine = valeur(
+    "lcdp-insert-famille-semaine-action"
+  );
+  const actionWeekend = valeur(
+    "lcdp-insert-famille-weekend-action"
+  );
+
   return {
     dateDebut,
     horizon,
-    ouvertureSemaine,
-    ouvertureWeekend,
-    capacite,
-    fermetureConserveCapacite: true
+    semaine: {
+      action: actionSemaine,
+      debut: valeur("lcdp-insert-famille-semaine-debut"),
+      fin: valeur("lcdp-insert-famille-semaine-fin"),
+      precision: valeur(
+        "lcdp-insert-famille-semaine-precision"
+      )
+    },
+    weekend: {
+      action: actionWeekend,
+      debut: valeur("lcdp-insert-famille-weekend-debut"),
+      fin: valeur("lcdp-insert-famille-weekend-fin"),
+      precision: valeur(
+        "lcdp-insert-famille-weekend-precision"
+      )
+    },
+    capacite: ouvertureDemandee() ? capacite : null
   };
 }
 
@@ -635,7 +723,7 @@ function initialiserComportementsFormulaire() {
     const bouton = document.getElementById(PAGE.prefix + "-analyser");
 
     if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      afficherStatus("Endpoint InsertFamille non configuré.", true);
       return;
     }
 
@@ -680,7 +768,7 @@ function initialiserComportementsFormulaire() {
     const bouton = document.getElementById(PAGE.prefix + "-valider");
 
     if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      afficherStatus("Endpoint InsertFamille non configuré.", true);
       return;
     }
 
