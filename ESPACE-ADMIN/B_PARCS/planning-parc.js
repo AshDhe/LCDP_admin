@@ -451,6 +451,20 @@
       .trim();
   }
 
+  function terminerPhraseDictee(value) {
+    const texte = String(value || "").trim();
+
+    if (!texte) {
+      return "";
+    }
+
+    if (/[.!?…]$/.test(texte)) {
+      return texte;
+    }
+
+    return texte.replace(/[,:;]+$/, "") + ".";
+  }
+
   function fermerFluxMicroDictee() {
     if (!fluxMicroDictee) return;
 
@@ -685,7 +699,7 @@
           if (texteCycle) {
             texteValideSession = joindreSegmentsDictee(
               texteValideSession,
-              texteCycle
+              terminerPhraseDictee(texteCycle)
             );
             cible.value = texteValideSession;
           }
