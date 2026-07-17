@@ -9,6 +9,12 @@
   let parcCourant = null;
   let briefCourant = null;
   let reconnaissance = null;
+  let dicteeActive = false;
+  let boutonDicteeActif = null;
+  let cibleDicteeActive = null;
+  let minuterieRelanceDictee = null;
+  let sessionDictee = 0;
+  let fluxMicroDictee = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -284,7 +290,7 @@
 
     try {
       const data = await appelerJson(
-        endpoint + "/" + ROUTE_GROUPE + "/adjust/brief",
+        endpoint + "/" + ROUTE_GROUPE + "/ajust/brief",
         {
           method: "POST",
           body: {
@@ -331,7 +337,7 @@
 
     try {
       const data = await appelerJson(
-        endpoint + "/" + ROUTE_GROUPE + "/adjust/valider",
+        endpoint + "/" + ROUTE_GROUPE + "/ajust/valider",
         {
           method: "POST",
           body: {
@@ -366,6 +372,80 @@
     )?.focus();
   }
 
+  function restaurerBoutonDictee(bouton) {
+    if (!bouton) return;
+
+    bouton.disabled = false;
+    bouton.textContent = "Dicter";
+  }
+
+  function joindreSegmentsDictee(...segments) {
+    return segments
+      .map((segment) => String(segment || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function terminerPhraseDictee(value) {
+    const texte = String(value || "").trim();
+
+    if (!texte) {
+      return "";
+    }
+
+    if (/[.!?…]$/.test(texte)) {
+      return texte;
+    }
+
+    return texte.replace(/[,:;]+$/, "") + ".";
+  }
+
+  function terminerEtatDictee(
+    instance,
+    bouton,
+    sessionCourante
+  ) {
+    if (
+      reconnaissance !== instance ||
+      sessionDictee !== sessionCourante
+    ) {
+      return;
+    }
+
+    dicteeActive = false;
+    reconnaissance = null;
+    boutonDicteeActif = null;
+    cibleDicteeActive = null;
+    restaurerBoutonDictee(bouton);
+  }
+
+  function arreterDictee() {
+    const instance = reconnaissance;
+    const bouton = boutonDicteeActif;
+
+    dicteeActive = false;
+    reconnaissance = null;
+    boutonDicteeActif = null;
+    cibleDicteeActive = null;
+    sessionDictee += 1;
+
+    if (instance) {
+      try {
+        instance.stop();
+      } catch {
+        try {
+          instance.abort();
+        } catch {
+          // La reconnaissance est déjà arrêtée.
+        }
+      }
+    }
+
+    restaurerBoutonDictee(bouton);
+  }
+
   function initialiserDictee() {
     const SpeechRecognition =
       window.SpeechRecognition ||
@@ -385,39 +465,148 @@
 
         if (!cible) return;
 
-        if (reconnaissance) {
-          reconnaissance.stop();
-          reconnaissance = null;
+        if (
+          dicteeActive &&
+          boutonDicteeActif === bouton
+        ) {
+          arreterDictee();
+          return;
         }
 
-        reconnaissance = new SpeechRecognition();
-        reconnaissance.lang = "fr-FR";
-        reconnaissance.interimResults = false;
-        reconnaissance.continuous = false;
+        if (dicteeActive || reconnaissance) {
+          arreterDictee();
+        }
 
-        bouton.disabled = true;
-        bouton.textContent = "Écoute…";
+        const sessionCourante = ++sessionDictee;
+        const texteInitial = String(cible.value || "").trim();
+        const resultats = new Map();
+        const instance = new SpeechRecognition();
 
-        reconnaissance.addEventListener("result", (event) => {
-          const texte = event.results?.[0]?.[0]?.transcript || "";
-          cible.value = [cible.value.trim(), texte.trim()]
+        dicteeActive = true;
+        reconnaissance = instance;
+        boutonDicteeActif = bouton;
+        cibleDicteeActive = cible;
+
+        bouton.disabled = false;
+        bouton.textContent = "Arrêter";
+
+        instance.lang = "fr-FR";
+        instance.interimResults = true;
+        instance.continuous = true;
+        instance.maxAlternatives = 1;
+
+        const sessionToujoursActive = () => {
+          return (
+            dicteeActive &&
+            reconnaissance === instance &&
+            sessionDictee === sessionCourante &&
+            boutonDicteeActif === bouton &&
+            cibleDicteeActive === cible
+          );
+        };
+
+        const texteReconnu = () => {
+          return Array.from(resultats.entries())
+            .sort(([indexA], [indexB]) => indexA - indexB)
+            .map(([, resultat]) => resultat.texte)
             .filter(Boolean)
-            .join(" ");
+            .join(" ")
+            .trim();
+        };
+
+        instance.addEventListener("result", (event) => {
+          if (!sessionToujoursActive()) return;
+
+          for (
+            let index = event.resultIndex || 0;
+            index < event.results.length;
+            index += 1
+          ) {
+            const resultat = event.results[index];
+            const texte = String(
+              resultat?.[0]?.transcript || ""
+            ).trim();
+
+            if (!texte) {
+              resultats.delete(index);
+              continue;
+            }
+
+            resultats.set(index, {
+              texte,
+              final: Boolean(resultat.isFinal)
+            });
+          }
+
+          cible.value = joindreSegmentsDictee(
+            texteInitial,
+            texteReconnu()
+          );
         });
 
-        reconnaissance.addEventListener("end", () => {
-          bouton.disabled = false;
-          bouton.textContent = "Dicter";
-          reconnaissance = null;
+        instance.addEventListener("error", (event) => {
+          if (!sessionToujoursActive()) return;
+
+          const code = String(event?.error || "");
+
+          if (
+            code === "not-allowed" ||
+            code === "service-not-allowed"
+          ) {
+            afficherStatus(
+              "Autorisation du microphone refusée.",
+              true
+            );
+          } else if (
+            code !== "no-speech" &&
+            code !== "aborted"
+          ) {
+            afficherStatus(
+              "La dictée a été interrompue : " + code + ".",
+              true
+            );
+          }
         });
 
-        reconnaissance.addEventListener("error", () => {
-          afficherStatus("Dictée interrompue.", true);
+        instance.addEventListener("end", () => {
+          if (
+            reconnaissance !== instance ||
+            sessionDictee !== sessionCourante
+          ) {
+            return;
+          }
+
+          cible.value = joindreSegmentsDictee(
+            texteInitial,
+            texteReconnu()
+          );
+
+          terminerEtatDictee(
+            instance,
+            bouton,
+            sessionCourante
+          );
         });
 
-        reconnaissance.start();
+        try {
+          instance.start();
+        } catch (error) {
+          terminerEtatDictee(
+            instance,
+            bouton,
+            sessionCourante
+          );
+
+          afficherStatus(
+            "Impossible de démarrer la dictée : " +
+            String(error?.message || error || ""),
+            true
+          );
+        }
       });
     });
+
+    window.addEventListener("beforeunload", arreterDictee);
   }
 
   async function verifierAcces() {
