@@ -74,6 +74,7 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
@@ -96,7 +97,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./planning-parc.js?v=20260717-0415" defer></script>
+  <script src="./planning-parc.js?v=20260717-0525" defer></script>
 
   <style>
     .lcdp-page-planning-parc .lcdp-box-formulaire {
@@ -221,7 +222,16 @@
       word-break: break-word;
     }
 
+    .lcdp-page-planning-parc .lcdp-box-dialogue-bouton__actions {
+      grid-template-columns: repeat(2, minmax(0, 200px));
+      justify-content: center;
+    }
+
     @media (max-width: 768px) {
+      .lcdp-page-planning-parc .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
+
       .lcdp-page-planning-parc textarea.lcdp-box-champ-formulaire__input {
         min-height: 84px;
       }
@@ -444,6 +454,8 @@
         </div>
       </section>
     </main>
+
+    <div id="lcdp-lightbox-slot"></div>
 
   </div>
 </body>

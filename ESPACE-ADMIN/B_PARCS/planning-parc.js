@@ -76,6 +76,113 @@
     return template.content.cloneNode(true);
   }
 
+  async function demanderConfirmationPlanning(message) {
+    const slot = document.getElementById("lcdp-lightbox-slot");
+
+    if (!slot) {
+      throw new Error("Slot de dialogue PlanningParc absent.");
+    }
+
+    slot.innerHTML = "";
+
+    const fragment = await chargerFragment(
+      urlObjet("/BOX/02-box-dialogue-bouton.html"),
+      "Boîte de dialogue"
+    );
+
+    slot.appendChild(fragment);
+
+    const dialogue = slot.querySelector(
+      "[data-lcdp-box-dialogue-bouton]"
+    );
+    const titre = slot.querySelector(
+      "[data-lcdp-dialogue-title]"
+    );
+    const texte = slot.querySelector(
+      "[data-lcdp-dialogue-text]"
+    );
+    const actions = slot.querySelector(
+      "[data-lcdp-dialogue-actions]"
+    );
+    const boutonFermer = slot.querySelector(
+      "[data-lcdp-dialogue-close]"
+    );
+
+    if (!dialogue || !titre || !texte || !actions) {
+      slot.innerHTML = "";
+      throw new Error("Structure de la boîte de dialogue incomplète.");
+    }
+
+    if (boutonFermer) {
+      boutonFermer.remove();
+    }
+
+    titre.textContent = "Validation du planning";
+    texte.textContent = String(message || "").trim();
+
+    const boutonAnnuler = document.createElement("button");
+    boutonAnnuler.type = "button";
+    boutonAnnuler.className =
+      "lcdp-button lcdp-button-secondary";
+    boutonAnnuler.textContent = "Annuler";
+
+    const boutonOk = document.createElement("button");
+    boutonOk.type = "button";
+    boutonOk.className =
+      "lcdp-button lcdp-button-orange";
+    boutonOk.textContent = "OK";
+
+    actions.append(boutonAnnuler, boutonOk);
+
+    return new Promise((resolve) => {
+      let resolu = false;
+
+      function terminer(valeur) {
+        if (resolu) return;
+
+        resolu = true;
+        document.removeEventListener(
+          "keydown",
+          gererToucheDialogue
+        );
+        slot.innerHTML = "";
+        resolve(valeur);
+      }
+
+      function gererToucheDialogue(event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          terminer(false);
+        }
+      }
+
+      boutonAnnuler.addEventListener(
+        "click",
+        () => terminer(false)
+      );
+
+      boutonOk.addEventListener(
+        "click",
+        () => terminer(true)
+      );
+
+      dialogue.addEventListener("click", (event) => {
+        if (event.target === dialogue) {
+          terminer(false);
+        }
+      });
+
+      document.addEventListener(
+        "keydown",
+        gererToucheDialogue
+      );
+
+      window.setTimeout(() => {
+        boutonOk.focus();
+      }, 0);
+    });
+  }
+
   async function initialiserBandeau() {
     const slot = document.getElementById("lcdp-bandeau-slot");
     if (!slot) return;
@@ -376,7 +483,7 @@
       return;
     }
 
-    const confirmation = window.confirm(
+    const confirmation = await demanderConfirmationPlanning(
       "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
     );
 
