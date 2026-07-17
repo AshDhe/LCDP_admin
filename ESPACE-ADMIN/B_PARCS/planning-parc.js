@@ -361,18 +361,83 @@
     });
   }
 
+  function normaliserMotDictee(value) {
+    return String(value || "")
+      .toLocaleLowerCase("fr-FR")
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .replace(
+        /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,
+        ""
+      );
+  }
+
+  function supprimerDoublonsConsecutifsDictee(value) {
+    const mots = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const resultat = [];
+
+    for (const mot of mots) {
+      resultat.push(mot);
+
+      let doublonSupprime = true;
+
+      while (doublonSupprime) {
+        doublonSupprime = false;
+
+        const longueurMax = Math.min(
+          8,
+          Math.floor(resultat.length / 2)
+        );
+
+        for (
+          let longueur = longueurMax;
+          longueur >= 1;
+          longueur -= 1
+        ) {
+          const debutPremier =
+            resultat.length - 2 * longueur;
+          const debutSecond =
+            resultat.length - longueur;
+          let identiques = true;
+
+          for (let index = 0; index < longueur; index += 1) {
+            if (
+              normaliserMotDictee(
+                resultat[debutPremier + index]
+              ) !==
+              normaliserMotDictee(
+                resultat[debutSecond + index]
+              )
+            ) {
+              identiques = false;
+              break;
+            }
+          }
+
+          if (!identiques) continue;
+
+          resultat.splice(debutSecond, longueur);
+          doublonSupprime = true;
+          break;
+        }
+      }
+    }
+
+    return resultat.join(" ");
+  }
+
   function fusionnerTexteDictee(texteInitial, texteReconnu) {
-    return [texteInitial, texteReconnu]
+    const texte = [texteInitial, texteReconnu]
       .map((item) => String(item || "").trim())
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
-      .replace(
-        /\b(\d{1,2})\s*h(?:\s*(\d{1,2}))?\s+\1\s*h(?:\s*\2)?\s*$/i,
-        (_, heure, minutes) =>
-          heure + " h" + (minutes ? " " + minutes : "")
-      )
       .trim();
+
+    return supprimerDoublonsConsecutifsDictee(texte);
   }
 
   function restaurerBoutonDictee(bouton) {
