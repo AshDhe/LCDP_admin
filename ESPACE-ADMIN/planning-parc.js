@@ -10,6 +10,7 @@
   let boutonDicteeActif = null;
   let cibleDicteeActive = null;
   let minuterieRelanceDictee = null;
+  let sessionDictee = 0;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -440,8 +441,18 @@
     bouton.textContent = "Dicter";
   }
 
+  function joindreSegmentsDictee(...segments) {
+    return segments
+      .map((segment) => String(segment || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function arreterDictee() {
     dicteeActive = false;
+    sessionDictee += 1;
 
     if (minuterieRelanceDictee) {
       window.clearTimeout(minuterieRelanceDictee);
@@ -497,40 +508,68 @@
           arreterDictee();
         }
 
+        const sessionCourante = ++sessionDictee;
+        let texteValideSession = String(cible.value || "").trim();
+
         dicteeActive = true;
         boutonDicteeActif = bouton;
         cibleDicteeActive = cible;
         bouton.disabled = false;
         bouton.textContent = "Arrêter";
 
-        const lancerCycle = () => {
-          if (
-            !dicteeActive ||
-            boutonDicteeActif !== bouton ||
-            cibleDicteeActive !== cible
-          ) {
-            return;
+        const sessionToujoursActive = () => {
+          return (
+            dicteeActive &&
+            sessionDictee === sessionCourante &&
+            boutonDicteeActif === bouton &&
+            cibleDicteeActive === cible
+          );
+        };
+
+        const planifierRelance = (delai = 40) => {
+          if (!sessionToujoursActive()) return;
+
+          if (minuterieRelanceDictee) {
+            window.clearTimeout(minuterieRelanceDictee);
           }
 
+          minuterieRelanceDictee = window.setTimeout(() => {
+            minuterieRelanceDictee = null;
+            lancerCycle();
+          }, delai);
+        };
+
+        const lancerCycle = () => {
+          if (!sessionToujoursActive()) return;
+
           const instance = new SpeechRecognition();
-          const texteAvantCycle = cible.value.trim();
           let texteFinalCycle = "";
-          let dernierIntermediaireCycle = "";
+          let texteIntermediaireCycle = "";
+          let cycleCloture = false;
 
           reconnaissance = instance;
           instance.lang = "fr-FR";
           instance.interimResults = true;
-          instance.continuous = false;
+          instance.continuous = true;
+          instance.maxAlternatives = 1;
+
+          const afficherCycle = () => {
+            if (!sessionToujoursActive()) return;
+
+            cible.value = joindreSegmentsDictee(
+              texteValideSession,
+              texteFinalCycle,
+              texteIntermediaireCycle
+            );
+          };
 
           instance.addEventListener("result", (event) => {
-            let finalAjoute = "";
-            let intermediaire = "";
+            if (!sessionToujoursActive()) return;
 
-            for (
-              let index = event.resultIndex || 0;
-              index < event.results.length;
-              index += 1
-            ) {
+            const finaux = [];
+            const intermediaires = [];
+
+            for (let index = 0; index < event.results.length; index += 1) {
               const resultat = event.results[index];
               const texte = String(
                 resultat?.[0]?.transcript || ""
@@ -539,39 +578,27 @@
               if (!texte) continue;
 
               if (resultat.isFinal) {
-                finalAjoute = [finalAjoute, texte]
-                  .filter(Boolean)
-                  .join(" ");
+                finaux.push(texte);
               } else {
-                intermediaire = [intermediaire, texte]
-                  .filter(Boolean)
-                  .join(" ");
-                dernierIntermediaireCycle = intermediaire;
+                intermediaires.push(texte);
               }
             }
 
-            if (finalAjoute) {
-              texteFinalCycle = [texteFinalCycle, finalAjoute]
-                .filter(Boolean)
-                .join(" ");
-            }
-
-            cible.value = [
-              texteAvantCycle,
-              texteFinalCycle,
-              intermediaire
-            ]
-              .filter(Boolean)
-              .join(" ");
+            texteFinalCycle = finaux.join(" ").trim();
+            texteIntermediaireCycle = intermediaires.join(" ").trim();
+            afficherCycle();
           });
 
           instance.addEventListener("error", (event) => {
             const code = String(event?.error || "");
 
+            if (!sessionToujoursActive()) return;
+
             if (
               code === "no-speech" ||
               code === "aborted"
             ) {
+              planifierRelance(40);
               return;
             }
 
@@ -588,40 +615,38 @@
           });
 
           instance.addEventListener("end", () => {
+            if (cycleCloture) return;
+            cycleCloture = true;
+
             if (reconnaissance === instance) {
               reconnaissance = null;
             }
 
-            const texteCycleConserve =
-              texteFinalCycle || dernierIntermediaireCycle;
+            if (!sessionToujoursActive()) return;
 
-            cible.value = [texteAvantCycle, texteCycleConserve]
-              .filter(Boolean)
-              .join(" ");
+            const texteCycleConserve = joindreSegmentsDictee(
+              texteFinalCycle,
+              texteIntermediaireCycle
+            );
 
-            if (
-              !dicteeActive ||
-              boutonDicteeActif !== bouton ||
-              cibleDicteeActive !== cible
-            ) {
-              restaurerBoutonDictee(bouton);
-              return;
+            if (texteCycleConserve) {
+              texteValideSession = joindreSegmentsDictee(
+                texteValideSession,
+                texteCycleConserve
+              );
+              cible.value = texteValideSession;
             }
 
-            minuterieRelanceDictee = window.setTimeout(() => {
-              minuterieRelanceDictee = null;
-              lancerCycle();
-            }, 220);
+            planifierRelance(40);
           });
 
           try {
             instance.start();
           } catch {
-            reconnaissance = null;
-            minuterieRelanceDictee = window.setTimeout(() => {
-              minuterieRelanceDictee = null;
-              lancerCycle();
-            }, 450);
+            if (reconnaissance === instance) {
+              reconnaissance = null;
+            }
+            planifierRelance(120);
           }
         };
 
