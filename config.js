@@ -36,7 +36,7 @@
     adminData: "https://admin-data-api.lacleduparc.fr",
     parcAdmin: "https://parc-admin-api.lacleduparc.fr",
     parcPlanning: "https://parc-planning-api.lacleduparc.fr",
-    parcPlanningAdmin: "https://w-planning-parc-admin.hugues-pavret.workers.dev",
+    parcPlanningAdmin: "https://parc-planning-api.lacleduparc.fr",
     insertFamilleAdmin: "https://w-insert-famille.hugues-pavret.workers.dev",
     ajustFamilleAdmin: "https://w-ajust-famille.hugues-pavret.workers.dev",
     ajustCoachAdmin: "https://w-ajust-coach.hugues-pavret.workers.dev",
