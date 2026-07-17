@@ -547,17 +547,29 @@ function construireRegleOuverture(libelle, prefix, precisionId) {
 function construireBrief() {
   const dateDebut = valeur("lcdp-planning-parc-date-debut");
   const horizon = valeur("lcdp-planning-parc-horizon");
-  const capacite = Number.parseInt(
-    valeur("lcdp-planning-parc-capacite"),
-    10
+  const capaciteSaisie = valeur("lcdp-planning-parc-capacite");
+  const capacite = capaciteSaisie === ""
+    ? null
+    : Number(capaciteSaisie);
+  const fermeturesSaisies = valeur(
+    "lcdp-planning-parc-fermetures"
   );
 
   if (!dateDebut || !horizon || dateDebut > horizon) {
     throw new Error("La période globale du PlanningParc est invalide.");
   }
 
-  if (!Number.isInteger(capacite) || capacite < 1) {
+  if (
+    capacite !== null &&
+    (!Number.isInteger(capacite) || capacite < 1)
+  ) {
     throw new Error("La capacité PlanningParc est invalide.");
+  }
+
+  if (capacite === null && !fermeturesSaisies) {
+    throw new Error(
+      "Renseigne une fermeture explicite lorsque la capacité est laissée vide."
+    );
   }
 
   const ouvertureSemaine = construireRegleOuverture(
@@ -570,7 +582,7 @@ function construireBrief() {
     "lcdp-planning-parc-weekend",
     "lcdp-planning-parc-weekend-precision"
   );
-  const fermetures = valeur("lcdp-planning-parc-fermetures") ||
+  const fermetures = fermeturesSaisies ||
     "Aucune fermeture explicite.";
 
   return {
