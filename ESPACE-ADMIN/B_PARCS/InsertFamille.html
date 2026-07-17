@@ -2,21 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-
   <title>InsertFamille - La Clé du Parc</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="Insertion du planning FAMILLE d’un parc dans l’espace admin."
-  >
+  <meta name="description" content="Ouverture ou fermeture du planning FAMILLE.">
 
   <script src="../../config.js"></script>
-
   <script>
     (() => {
       "use strict";
-
       const config = window.SITE_CONFIG || {};
 
       function nettoyerBaseUrl(value) {
@@ -34,13 +27,11 @@
         config.siteBase ||
         ""
       );
-
       const publicBase = nettoyerBaseUrl(
         config.publicBaseUrl ||
         config.PUBLIC_BASE ||
         ""
       );
-
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
@@ -52,23 +43,20 @@
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
 
-      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
-        return typeof config.adminUrl === "function"
+      window.LCDP_urlAdmin = (path) =>
+        typeof config.adminUrl === "function"
           ? config.adminUrl(path)
           : construireUrl(adminBase, path);
-      };
 
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        return typeof config.publicUrl === "function"
+      window.LCDP_urlPublic = (path) =>
+        typeof config.publicUrl === "function"
           ? config.publicUrl(path)
           : construireUrl(publicBase, path);
-      };
 
-      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
-        return typeof config.objetUrl === "function"
+      window.LCDP_urlObjet = (path) =>
+        typeof config.objetUrl === "function"
           ? config.objetUrl(path)
           : construireUrl(objetBase, path);
-      };
 
       [
         "/CSSBASE/cssbase.css",
@@ -97,10 +85,14 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./InsertFamille.js?v=20260717-0610" defer></script>
+  <script src="./InsertFamille.js?v=20260717-1500" defer></script>
 
   <style>
-    .lcdp-page-insert-famille .lcdp-box-formulaire__actions {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire {
+      margin-bottom: 22px;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions {
       display: flex;
       align-items: stretch;
       justify-content: center;
@@ -109,11 +101,11 @@
       padding: 22px 0 12px;
     }
 
-    .lcdp-page-insert-famille .lcdp-box-formulaire__actions .lcdp-button {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: min(100%, 270px);
+      width: min(100%, 280px);
       min-height: 50px;
       margin: 0;
       padding: 10px 18px;
@@ -121,44 +113,114 @@
       text-align: center;
     }
 
-
-    .lcdp-page-insert-famille .lcdp-box-formulaire {
-      margin-bottom: 22px;
+    .lcdp-workflow-intro,
+    .lcdp-workflow-disabled {
+      margin: 0 0 20px;
+      padding: 14px 16px;
+      border: 1px solid #cfd5c6;
+      border-radius: 14px;
+      background: #f8f9f5;
+      line-height: 1.5;
     }
 
-    .lcdp-page-insert-famille .lcdp-box-champ-formulaire {
+    .lcdp-workflow-disabled {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
       margin-bottom: 18px;
     }
 
-    .lcdp-page-insert-famille textarea.lcdp-box-champ-formulaire__input {
-      min-height: 96px;
+    .lcdp-form-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lcdp-schedule-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 16px;
+      background: #fbfbf8;
+    }
+
+    .lcdp-schedule-card__title {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+    }
+
+    .lcdp-time-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .lcdp-time-range__arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      font-size: 1.35rem;
+      color: #596351;
+    }
+
+    .lcdp-day-selector {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .lcdp-day-selector label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 6px;
+      border: 1px solid #d8ddd0;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .lcdp-day-selector input {
+      margin: 0;
+    }
+
+    .lcdp-page-planning-workflow textarea.lcdp-box-champ-formulaire__input {
+      min-height: 92px;
       resize: vertical;
     }
 
-    .lcdp-page-insert-famille .lcdp-button-secondary[data-dictee-cible] {
+    .lcdp-page-planning-workflow .lcdp-button-secondary[data-dictee-cible] {
       margin-top: 10px;
       min-width: 140px;
     }
 
-    .lcdp-page-insert-famille #lcdp-insert-famille-status {
+    .lcdp-page-planning-workflow [role="status"] {
       margin-top: 14px;
       padding: 12px 14px;
+      border: 1px solid #d9dccf;
       border-radius: 12px;
       background: #f4f4ef;
-      border: 1px solid #d9dccf;
     }
 
-    .lcdp-page-insert-famille #lcdp-insert-famille-status[data-etat="erreur"] {
-      background: #fff1ef;
+    .lcdp-page-planning-workflow [role="status"][data-etat="erreur"] {
       border-color: #e2b7b0;
+      background: #fff1ef;
     }
 
-    .lcdp-page-insert-famille #lcdp-insert-famille-status[data-etat="succes"] {
-      background: #f3f7ec;
+    .lcdp-page-planning-workflow [role="status"][data-etat="succes"] {
       border-color: #cbd8b6;
+      background: #f3f7ec;
     }
 
-    .lcdp-page-insert-famille .lcdp-validation-bloc {
+    .lcdp-validation-bloc {
       margin-top: 12px;
       padding: 16px 18px;
       border: 1px solid #d8ddd0;
@@ -166,28 +228,28 @@
       background: #fafaf7;
     }
 
-    .lcdp-page-insert-famille .lcdp-validation-bloc h3 {
+    .lcdp-validation-bloc h3 {
       margin: 0 0 10px;
       font-size: 1rem;
     }
 
-    .lcdp-page-insert-famille .lcdp-validation-liste {
+    .lcdp-validation-liste {
       margin: 0;
       padding-left: 22px;
     }
 
-    .lcdp-page-insert-famille #lcdp-insert-famille-alertes {
+    .lcdp-validation-alertes {
       border-color: #efd4a2;
       background: #fff7e8;
     }
 
-    .lcdp-page-insert-famille .lcdp-validation-note {
+    .lcdp-validation-note {
       margin: 12px 0 0;
       font-size: 0.95rem;
       color: #505a3d;
     }
 
-    .lcdp-page-insert-famille details {
+    .lcdp-page-planning-workflow details {
       margin-top: 16px;
       padding: 12px 14px;
       border: 1px solid #d8ddd0;
@@ -195,7 +257,7 @@
       background: #fbfbf9;
     }
 
-    .lcdp-page-insert-famille #lcdp-insert-famille-json {
+    .lcdp-page-planning-workflow pre {
       margin: 12px 0 0;
       padding: 14px;
       max-height: 340px;
@@ -208,230 +270,172 @@
       word-break: break-word;
     }
 
-    .lcdp-page-insert-famille .lcdp-box-dialogue-bouton__actions {
+    .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
       grid-template-columns: repeat(2, minmax(0, 200px));
       justify-content: center;
     }
 
-    @media (max-width: 768px) {
-      .lcdp-page-insert-famille .lcdp-box-dialogue-bouton__actions {
+    [data-capacite-zone][hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .lcdp-form-grid,
+      .lcdp-form-grid--three {
         grid-template-columns: 1fr;
       }
 
-      .lcdp-page-insert-famille textarea.lcdp-box-champ-formulaire__input {
-        min-height: 84px;
+      .lcdp-day-selector {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .lcdp-time-range {
+        grid-template-columns: 1fr;
       }
 
-      .lcdp-page-insert-famille .lcdp-box-formulaire__actions .lcdp-button {
+      .lcdp-time-range__arrow {
+        min-height: auto;
+        transform: rotate(90deg);
+      }
+
+      .lcdp-day-selector {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
         width: 100%;
       }
     }
-
-    .lcdp-insert-famille-regle-fermeture {
-      padding: 12px 14px;
-      border: 1px solid currentColor;
-      border-radius: 12px;
-    }
   </style>
+
 </head>
-
-<body class="lcdp-page-admin-interieure lcdp-page-insert-famille">
+<body class="lcdp-page-admin-interieure lcdp-page-planning-workflow lcdp-page-insert-famille">
   <div class="lcdp-site-page">
-
     <div id="lcdp-bandeau-slot"></div>
-
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section
-        class="lcdp-page-section"
-        aria-label="Insertion du planning FAMILLE"
-      >
+      <section class="lcdp-page-section" aria-label="InsertFamille">
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
-
             <div id="lcdp-menu-gauche-admin-slot"></div>
-
             <div class="lcdp-admin-page-content">
+
               <section class="lcdp-box-formulaire">
                 <header class="lcdp-box-formulaire__header">
-                  <h1 class="lcdp-box-formulaire__title">
-                    InsertFamille
-                  </h1>
-
-                  <p id="lcdp-insert-famille-identite">
-                    Chargement du parc…
-                  </p>
+                  <h1 class="lcdp-box-formulaire__title">InsertFamille</h1>
+                  <p id="lcdp-insert-famille-identite">Chargement du parc…</p>
                 </header>
-
+                <p class="lcdp-workflow-intro">
+                  Chaque zone peut ouvrir FAMILLE ou fermer explicitement FAMILLE. Une fermeture met l’état FAMILLE à false et conserve sa capacité.
+                </p>
                 <form id="lcdp-insert-famille-form">
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-insert-famille-date-debut"
-                    >
-                      À partir de
-                    </label>
-                    <input
-                      id="lcdp-insert-famille-date-debut"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="date"
-                      required
-                    >
+                  <div class="lcdp-form-grid">
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-date-debut">Début de la période globale</label>
+                      <input id="lcdp-insert-famille-date-debut" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-horizon">Fin de la période globale</label>
+                      <input id="lcdp-insert-famille-horizon" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
                   </div>
 
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-insert-famille-horizon"
-                    >
-                      Horizon
-                    </label>
-                    <input
-                      id="lcdp-insert-famille-horizon"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="date"
-                      required
-                    >
-                  </div>
+                  <section class="lcdp-schedule-card">
+                    <h2 class="lcdp-schedule-card__title">Semaine</h2>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-semaine-action">Action</label>
+                      <select id="lcdp-insert-famille-semaine-action" class="lcdp-box-champ-formulaire__input">
+                        <option value="ouverture">Ouvrir FAMILLE</option>
+                        <option value="fermeture">Fermer FAMILLE</option>
+                      </select>
+                    </div>
+                    
+                    <div class="lcdp-time-range">
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-semaine-debut">Début</label>
+                        <input id="lcdp-insert-famille-semaine-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="13:00" required>
+                      </div>
+                      <div class="lcdp-time-range__arrow" aria-hidden="true">→</div>
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-semaine-fin">Fin</label>
+                        <input id="lcdp-insert-famille-semaine-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="18:00" required>
+                      </div>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-semaine-precision">Jours et précisions</label>
+                      <textarea id="lcdp-insert-famille-semaine-precision" class="lcdp-box-champ-formulaire__input" rows="3" placeholder="Ex. Tous les mercredis et vendredis."></textarea>
+                      <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-insert-famille-semaine-precision">Dicter</button>
+                    </div>
+                  </section>
 
-                  <div class="lcdp-box-champ-formulaire">
-                    <span class="lcdp-box-champ-formulaire__label">
-                      Date de fermeture
-                    </span>
-                    <p class="lcdp-insert-famille-regle-fermeture">
-                      Il n’y en a pas à saisir : le parc est fermé à
-                      FAMILLE par défaut. Il est ouvert à FAMILLE
-                      uniquement aux jours et horaires indiqués ci-dessous.
-                    </p>
-                  </div>
+                  <section class="lcdp-schedule-card">
+                    <h2 class="lcdp-schedule-card__title">Week-end</h2>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-weekend-action">Action</label>
+                      <select id="lcdp-insert-famille-weekend-action" class="lcdp-box-champ-formulaire__input">
+                        <option value="ouverture">Ouvrir FAMILLE</option>
+                        <option value="fermeture">Fermer FAMILLE</option>
+                      </select>
+                    </div>
+                    
+                    <div class="lcdp-time-range">
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-weekend-debut">Début</label>
+                        <input id="lcdp-insert-famille-weekend-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="10:00" required>
+                      </div>
+                      <div class="lcdp-time-range__arrow" aria-hidden="true">→</div>
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-weekend-fin">Fin</label>
+                        <input id="lcdp-insert-famille-weekend-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="18:00" required>
+                      </div>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-weekend-precision">Jours et précisions</label>
+                      <textarea id="lcdp-insert-famille-weekend-precision" class="lcdp-box-champ-formulaire__input" rows="3" placeholder="Ex. Le samedi et le dimanche."></textarea>
+                      <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-insert-famille-weekend-precision">Dicter</button>
+                    </div>
+                  </section>
 
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-insert-famille-semaine"
-                    >
-                      Ouverture semaine
-                    </label>
-                    <textarea
-                      id="lcdp-insert-famille-semaine"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="4"
-                      placeholder="Ex. Tous les mercredis de 13 h à 18 h jusqu’au 30 septembre 2026, puis tous les mercredis de 13 h à 16 h à partir du 1er octobre 2026, et tous les vendredis de 16 h à 18 h jusqu’au 30 septembre 2026."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-insert-famille-semaine"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-insert-famille-weekend"
-                    >
-                      Ouverture week-end
-                    </label>
-                    <textarea
-                      id="lcdp-insert-famille-weekend"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="3"
-                      placeholder="Ex. De 10 h à 18 h le samedi et de 10 h à 18 h le dimanche."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-insert-famille-weekend"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-insert-famille-capacite"
-                    >
-                      Capacité d’accueil du parc pour FAMILLE
-                    </label>
-                    <input
-                      id="lcdp-insert-famille-capacite"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                    >
+                  <div class="lcdp-box-champ-formulaire" data-capacite-zone>
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-insert-famille-capacite">Capacité FAMILLE pour les ouvertures</label>
+                    <input id="lcdp-insert-famille-capacite" class="lcdp-box-champ-formulaire__input" type="number" min="1" step="1">
                   </div>
 
                   <div class="lcdp-box-formulaire__actions">
-                    <button
-                      id="lcdp-insert-famille-analyser"
-                      class="lcdp-button lcdp-button-orange"
-                      type="submit"
-                    >
-                      Analyser le brief IA
-                    </button>
+                    <button id="lcdp-insert-famille-analyser" class="lcdp-button lcdp-button-orange" type="submit">Analyser le brief IA</button>
                   </div>
                 </form>
               </section>
-
-              <section
-                id="lcdp-insert-famille-validation"
-                class="lcdp-box-formulaire"
-                hidden
-              >
+              
+              <section id="lcdp-insert-famille-validation" class="lcdp-box-formulaire" hidden>
                 <header class="lcdp-box-formulaire__header">
-                  <h2 class="lcdp-box-formulaire__title">
-                    Validation du brief IA FAMILLE
-                  </h2>
+                  <h2 class="lcdp-box-formulaire__title">Validation du brief FAMILLE</h2>
                 </header>
-
                 <div id="lcdp-insert-famille-resume"></div>
-                <div id="lcdp-insert-famille-alertes" hidden></div>
-
+                <div id="lcdp-insert-famille-alertes" class="lcdp-validation-bloc lcdp-validation-alertes" hidden></div>
                 <details>
                   <summary>Voir le JSON proposé</summary>
                   <pre id="lcdp-insert-famille-json"></pre>
                 </details>
-
                 <div class="lcdp-box-formulaire__actions">
-                  <button
-                    id="lcdp-insert-famille-corriger"
-                    class="lcdp-button lcdp-button-secondary"
-                    type="button"
-                  >
-                    Corriger le brief
-                  </button>
-
-                  <button
-                    id="lcdp-insert-famille-valider"
-                    class="lcdp-button lcdp-button-orange"
-                    type="button"
-                  >
-                    Valider et écrire FAMILLE dans hparcs
-                  </button>
+                  <button id="lcdp-insert-famille-corriger" class="lcdp-button lcdp-button-secondary" type="button">Corriger</button>
+                  <button id="lcdp-insert-famille-valider" class="lcdp-button lcdp-button-orange" type="button">Valider et écrire FAMILLE</button>
                 </div>
               </section>
+              <p id="lcdp-insert-famille-status" role="status" aria-live="polite" hidden></p>
 
-              <p
-                id="lcdp-insert-famille-status"
-                role="status"
-                aria-live="polite"
-                hidden
-              ></p>
+
             </div>
-
           </div>
         </div>
       </section>
     </main>
-
     <div id="lcdp-lightbox-slot"></div>
-
   </div>
 </body>
 </html>

@@ -2,21 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-
   <title>PlanningParc - La Clé du Parc</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="Paramétrage IA du planning d’un parc dans l’espace admin."
-  >
+  <meta name="description" content="Définition du planning général d’un parc.">
 
   <script src="../../config.js"></script>
-
   <script>
     (() => {
       "use strict";
-
       const config = window.SITE_CONFIG || {};
 
       function nettoyerBaseUrl(value) {
@@ -34,13 +27,11 @@
         config.siteBase ||
         ""
       );
-
       const publicBase = nettoyerBaseUrl(
         config.publicBaseUrl ||
         config.PUBLIC_BASE ||
         ""
       );
-
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
@@ -52,23 +43,20 @@
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
 
-      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
-        return typeof config.adminUrl === "function"
+      window.LCDP_urlAdmin = (path) =>
+        typeof config.adminUrl === "function"
           ? config.adminUrl(path)
           : construireUrl(adminBase, path);
-      };
 
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        return typeof config.publicUrl === "function"
+      window.LCDP_urlPublic = (path) =>
+        typeof config.publicUrl === "function"
           ? config.publicUrl(path)
           : construireUrl(publicBase, path);
-      };
 
-      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
-        return typeof config.objetUrl === "function"
+      window.LCDP_urlObjet = (path) =>
+        typeof config.objetUrl === "function"
           ? config.objetUrl(path)
           : construireUrl(objetBase, path);
-      };
 
       [
         "/CSSBASE/cssbase.css",
@@ -97,73 +85,142 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./planning-parc.js?v=20260717-0525" defer></script>
+  <script src="./planning-parc.js?v=20260717-1500" defer></script>
 
   <style>
-    .lcdp-page-planning-parc .lcdp-box-formulaire {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire {
       margin-bottom: 22px;
     }
 
-    .lcdp-page-planning-parc .lcdp-box-champ-formulaire {
-      margin-bottom: 18px;
-    }
-
-    .lcdp-page-planning-parc .lcdp-box-champ-formulaire__input[type="number"] {
-      width: min(100%, 220px);
-    }
-
-    .lcdp-page-planning-parc textarea.lcdp-box-champ-formulaire__input {
-      min-height: 96px;
-      resize: vertical;
-    }
-
-    .lcdp-page-planning-parc .lcdp-button-secondary[data-dictee-cible] {
-      margin-top: 10px;
-      min-width: 140px;
-    }
-
-    .lcdp-page-planning-parc .lcdp-box-formulaire__actions {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions {
       display: flex;
       align-items: stretch;
       justify-content: center;
       gap: 18px;
       flex-wrap: wrap;
-      padding: 18px 0 8px;
-      margin-top: 8px;
+      padding: 22px 0 12px;
     }
 
-    .lcdp-page-planning-parc .lcdp-box-formulaire__actions .lcdp-button {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       width: min(100%, 280px);
-      min-height: 52px;
+      min-height: 50px;
       margin: 0;
-      padding: 12px 18px;
-      line-height: 1.25;
+      padding: 10px 18px;
+      line-height: 1.2;
       text-align: center;
-      border-radius: 14px;
     }
 
-    .lcdp-page-planning-parc #lcdp-planning-status {
+    .lcdp-workflow-intro,
+    .lcdp-workflow-disabled {
+      margin: 0 0 20px;
+      padding: 14px 16px;
+      border: 1px solid #cfd5c6;
+      border-radius: 14px;
+      background: #f8f9f5;
+      line-height: 1.5;
+    }
+
+    .lcdp-workflow-disabled {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .lcdp-form-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lcdp-schedule-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 16px;
+      background: #fbfbf8;
+    }
+
+    .lcdp-schedule-card__title {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+    }
+
+    .lcdp-time-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .lcdp-time-range__arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      font-size: 1.35rem;
+      color: #596351;
+    }
+
+    .lcdp-day-selector {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .lcdp-day-selector label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 6px;
+      border: 1px solid #d8ddd0;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .lcdp-day-selector input {
+      margin: 0;
+    }
+
+    .lcdp-page-planning-workflow textarea.lcdp-box-champ-formulaire__input {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-button-secondary[data-dictee-cible] {
+      margin-top: 10px;
+      min-width: 140px;
+    }
+
+    .lcdp-page-planning-workflow [role="status"] {
       margin-top: 14px;
       padding: 12px 14px;
+      border: 1px solid #d9dccf;
       border-radius: 12px;
       background: #f4f4ef;
-      border: 1px solid #d9dccf;
     }
 
-    .lcdp-page-planning-parc #lcdp-planning-status[data-etat="erreur"] {
-      background: #fff1ef;
+    .lcdp-page-planning-workflow [role="status"][data-etat="erreur"] {
       border-color: #e2b7b0;
+      background: #fff1ef;
     }
 
-    .lcdp-page-planning-parc #lcdp-planning-status[data-etat="succes"] {
-      background: #f3f7ec;
+    .lcdp-page-planning-workflow [role="status"][data-etat="succes"] {
       border-color: #cbd8b6;
+      background: #f3f7ec;
     }
 
-    .lcdp-page-planning-parc .lcdp-validation-bloc {
+    .lcdp-validation-bloc {
       margin-top: 12px;
       padding: 16px 18px;
       border: 1px solid #d8ddd0;
@@ -171,32 +228,28 @@
       background: #fafaf7;
     }
 
-    .lcdp-page-planning-parc .lcdp-validation-bloc h3 {
+    .lcdp-validation-bloc h3 {
       margin: 0 0 10px;
       font-size: 1rem;
     }
 
-    .lcdp-page-planning-parc .lcdp-validation-liste {
+    .lcdp-validation-liste {
       margin: 0;
       padding-left: 22px;
     }
 
-    .lcdp-page-planning-parc .lcdp-validation-liste li + li {
-      margin-top: 6px;
-    }
-
-    .lcdp-page-planning-parc #lcdp-planning-alertes {
+    .lcdp-validation-alertes {
       border-color: #efd4a2;
       background: #fff7e8;
     }
 
-    .lcdp-page-planning-parc .lcdp-validation-note {
+    .lcdp-validation-note {
       margin: 12px 0 0;
       font-size: 0.95rem;
       color: #505a3d;
     }
 
-    .lcdp-page-planning-parc details {
+    .lcdp-page-planning-workflow details {
       margin-top: 16px;
       padding: 12px 14px;
       border: 1px solid #d8ddd0;
@@ -204,12 +257,7 @@
       background: #fbfbf9;
     }
 
-    .lcdp-page-planning-parc details summary {
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .lcdp-page-planning-parc #lcdp-planning-json {
+    .lcdp-page-planning-workflow pre {
       margin: 12px 0 0;
       padding: 14px;
       max-height: 340px;
@@ -222,241 +270,164 @@
       word-break: break-word;
     }
 
-    .lcdp-page-planning-parc .lcdp-box-dialogue-bouton__actions {
+    .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
       grid-template-columns: repeat(2, minmax(0, 200px));
       justify-content: center;
     }
 
-    @media (max-width: 768px) {
-      .lcdp-page-planning-parc .lcdp-box-dialogue-bouton__actions {
+    [data-capacite-zone][hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .lcdp-form-grid,
+      .lcdp-form-grid--three {
         grid-template-columns: 1fr;
       }
 
-      .lcdp-page-planning-parc textarea.lcdp-box-champ-formulaire__input {
-        min-height: 84px;
+      .lcdp-day-selector {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .lcdp-time-range {
+        grid-template-columns: 1fr;
       }
 
-      .lcdp-page-planning-parc .lcdp-box-formulaire__actions {
-        gap: 12px;
+      .lcdp-time-range__arrow {
+        min-height: auto;
+        transform: rotate(90deg);
       }
 
-      .lcdp-page-planning-parc .lcdp-box-formulaire__actions .lcdp-button {
+      .lcdp-day-selector {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
         width: 100%;
       }
     }
   </style>
 
 </head>
-
-<body class="lcdp-page-admin-interieure lcdp-page-planning-parc">
+<body class="lcdp-page-admin-interieure lcdp-page-planning-workflow lcdp-page-planning-parc">
   <div class="lcdp-site-page">
-
     <div id="lcdp-bandeau-slot"></div>
-
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section
-        class="lcdp-page-section"
-        aria-label="Paramétrage du planning du parc"
-      >
+      <section class="lcdp-page-section" aria-label="PlanningParc">
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
-
             <div id="lcdp-menu-gauche-admin-slot"></div>
-
             <div class="lcdp-admin-page-content">
+
               <section class="lcdp-box-formulaire">
                 <header class="lcdp-box-formulaire__header">
-                  <h1 class="lcdp-box-formulaire__title">
-                    PlanningParc
-                  </h1>
-
-                  <p id="lcdp-planning-parc-identite">
-                    Chargement du parc…
-                  </p>
+                  <h1 class="lcdp-box-formulaire__title">PlanningParc</h1>
+                  <p id="lcdp-planning-parc-identite">Chargement du parc…</p>
                 </header>
-
+                <p class="lcdp-workflow-intro">
+                  PlanningParc définit l’ouverture générale de DUO et COACH. Une fermeture explicite active l’état de fermeture du segment sans supprimer les capacités.
+                </p>
                 <form id="lcdp-planning-parc-form">
+                  <div class="lcdp-form-grid">
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-date-debut">Début de la période globale</label>
+                      <input id="lcdp-planning-parc-date-debut" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-horizon">Fin de la période globale</label>
+                      <input id="lcdp-planning-parc-horizon" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
+                  </div>
+
+                  <section class="lcdp-schedule-card">
+                    <h2 class="lcdp-schedule-card__title">Ouverture du lundi au vendredi</h2>
+                    
+                    <div class="lcdp-time-range">
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-semaine-debut">Début</label>
+                        <input id="lcdp-planning-parc-semaine-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="08:00" required>
+                      </div>
+                      <div class="lcdp-time-range__arrow" aria-hidden="true">→</div>
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-semaine-fin">Fin</label>
+                        <input id="lcdp-planning-parc-semaine-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="20:00" required>
+                      </div>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-semaine-precision">Précisions éventuelles</label>
+                      <textarea id="lcdp-planning-parc-semaine-precision" class="lcdp-box-champ-formulaire__input" rows="3" placeholder="Ex. Le mercredi, ouverture seulement de 13 h à 18 h."></textarea>
+                      <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-planning-parc-semaine-precision">Dicter</button>
+                    </div>
+                  </section>
+
+                  <section class="lcdp-schedule-card">
+                    <h2 class="lcdp-schedule-card__title">Ouverture du samedi et du dimanche</h2>
+                    
+                    <div class="lcdp-time-range">
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-weekend-debut">Début</label>
+                        <input id="lcdp-planning-parc-weekend-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="10:00" required>
+                      </div>
+                      <div class="lcdp-time-range__arrow" aria-hidden="true">→</div>
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-weekend-fin">Fin</label>
+                        <input id="lcdp-planning-parc-weekend-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="18:00" required>
+                      </div>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-weekend-precision">Précisions éventuelles</label>
+                      <textarea id="lcdp-planning-parc-weekend-precision" class="lcdp-box-champ-formulaire__input" rows="3" placeholder="Ex. Le dimanche, fermeture à 17 h."></textarea>
+                      <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-planning-parc-weekend-precision">Dicter</button>
+                    </div>
+                  </section>
+
                   <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-date-debut"
-                    >
-                      À partir de
-                    </label>
-                    <input
-                      id="lcdp-planning-date-debut"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="date"
-                      required
-                    >
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-fermetures">Fermetures explicites</label>
+                    <textarea id="lcdp-planning-parc-fermetures" class="lcdp-box-champ-formulaire__input" rows="4" placeholder="Ex. Fermé le 15 août 2026. Fermé tous les jeudis de 13 h à 16 h."></textarea>
+                    <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-planning-parc-fermetures">Dicter</button>
                   </div>
 
                   <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-horizon"
-                    >
-                      Horizon
-                    </label>
-                    <input
-                      id="lcdp-planning-horizon"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="date"
-                      required
-                    >
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-fermetures"
-                    >
-                      Dates de fermeture
-                    </label>
-                    <textarea
-                      id="lcdp-planning-fermetures"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="2"
-                      placeholder="Ex. Tous les lundis, le vendredi 11 septembre 2026 et le jeudi 26 novembre 2026."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-planning-fermetures"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-semaine"
-                    >
-                      Ouverture semaine
-                    </label>
-                    <textarea
-                      id="lcdp-planning-semaine"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="2"
-                      placeholder="Ex. De 6 h à 22 h du lundi au vendredi jusqu’au 30 septembre 2026, puis de 6 h à 18 h."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-planning-semaine"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-weekend"
-                    >
-                      Ouverture week-end
-                    </label>
-                    <textarea
-                      id="lcdp-planning-weekend"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="2"
-                      placeholder="Ex. De 6 h à 22 h le samedi et de 6 h à 21 h le dimanche."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-planning-weekend"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-planning-capacite"
-                    >
-                      Capacité d’accueil du parc
-                    </label>
-                    <input
-                      id="lcdp-planning-capacite"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                    >
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-planning-parc-capacite">Capacité PlanningParc</label>
+                    <input id="lcdp-planning-parc-capacite" class="lcdp-box-champ-formulaire__input" type="number" min="1" step="1" required>
                   </div>
 
                   <div class="lcdp-box-formulaire__actions">
-                    <button
-                      id="lcdp-planning-analyser"
-                      class="lcdp-button lcdp-button-orange"
-                      type="submit"
-                    >
-                      Analyser le brief IA
-                    </button>
+                    <button id="lcdp-planning-parc-analyser" class="lcdp-button lcdp-button-orange" type="submit">Analyser le planning IA</button>
                   </div>
                 </form>
               </section>
-
-              <section
-                id="lcdp-planning-validation"
-                class="lcdp-box-formulaire"
-                hidden
-              >
+              
+              <section id="lcdp-planning-parc-validation" class="lcdp-box-formulaire" hidden>
                 <header class="lcdp-box-formulaire__header">
-                  <h2 class="lcdp-box-formulaire__title">
-                    Validation du brief IA
-                  </h2>
+                  <h2 class="lcdp-box-formulaire__title">Validation du PlanningParc</h2>
                 </header>
-
-                <div id="lcdp-planning-resume"></div>
-                <div id="lcdp-planning-alertes" hidden></div>
-
+                <div id="lcdp-planning-parc-resume"></div>
+                <div id="lcdp-planning-parc-alertes" class="lcdp-validation-bloc lcdp-validation-alertes" hidden></div>
                 <details>
                   <summary>Voir le JSON proposé</summary>
-                  <pre id="lcdp-planning-json"></pre>
+                  <pre id="lcdp-planning-parc-json"></pre>
                 </details>
-
                 <div class="lcdp-box-formulaire__actions">
-                  <button
-                    id="lcdp-planning-corriger"
-                    class="lcdp-button lcdp-button-secondary"
-                    type="button"
-                  >
-                    Corriger le brief
-                  </button>
-
-                  <button
-                    id="lcdp-planning-valider"
-                    class="lcdp-button lcdp-button-orange"
-                    type="button"
-                  >
-                    Valider et écrire dans hparcs
-                  </button>
+                  <button id="lcdp-planning-parc-corriger" class="lcdp-button lcdp-button-secondary" type="button">Corriger</button>
+                  <button id="lcdp-planning-parc-valider" class="lcdp-button lcdp-button-orange" type="button">Valider et écrire le PlanningParc</button>
                 </div>
               </section>
+              <p id="lcdp-planning-parc-status" role="status" aria-live="polite" hidden></p>
 
-              <p
-                id="lcdp-planning-status"
-                role="status"
-                aria-live="polite"
-                hidden
-              ></p>
+
             </div>
-
           </div>
         </div>
       </section>
     </main>
-
     <div id="lcdp-lightbox-slot"></div>
-
   </div>
 </body>
 </html>

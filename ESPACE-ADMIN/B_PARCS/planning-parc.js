@@ -1,17 +1,28 @@
+
 (() => {
   "use strict";
 
   const config = window.SITE_CONFIG || {};
+  const PAGE = {
+  "title": "PlanningParc",
+  "prefix": "lcdp-planning-parc",
+  "identiteId": "lcdp-planning-parc-identite",
+  "briefRoute": "/brief",
+  "validateRoute": "/valider",
+  "resumeTitle": "Résumé du PlanningParc",
+  "readyMessage": "Le PlanningParc est prêt à être validé.",
+  "confirmTitle": "Validation PlanningParc",
+  "confirmMessage": "Valider ce PlanningParc et écrire DUO, COACH et les fermetures ?",
+  "analysisMessage": "Analyse IA du PlanningParc en cours…",
+  "analysisReadyMessage": "PlanningParc IA prêt à être vérifié.",
+  "validationMessage": "Écriture du PlanningParc en cours. Ne ferme pas cette page.",
+  "successMessage": "PlanningParc enregistré.",
+  "focusId": "lcdp-planning-parc-date-debut"
+};
 
   let parcCourant = null;
   let briefCourant = null;
-  let reconnaissance = null;
-  let dicteeActive = false;
-  let boutonDicteeActif = null;
-  let cibleDicteeActive = null;
-  let minuterieRelanceDictee = null;
-  let sessionDictee = 0;
-  let fluxMicroDictee = null;
+  let dicteeCourante = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -31,22 +42,19 @@
       : path;
   }
 
-  function endpointParcPlanning() {
+  function endpointWorker() {
     return String(
       config.workerParcPlanningUrl ||
       config.WORKER_PARC_PLANNING_URL ||
-      config.endpointParcPlanning ||
       window.ADMIN_CONFIG?.API_PARC_PLANNING ||
       ""
     ).replace(/\/+$/, "");
   }
 
-
   function appliquerRoutes(racine = document) {
     racine.querySelectorAll("[data-site-href]").forEach((element) => {
       const path = element.dataset.siteHref || "";
       const space = element.dataset.space || "public";
-
       element.setAttribute(
         "href",
         space === "admin" ? urlAdmin(path) : urlPublic(path)
@@ -76,122 +84,13 @@
     return template.content.cloneNode(true);
   }
 
-  async function demanderConfirmationPlanning(message) {
-    const slot = document.getElementById("lcdp-lightbox-slot");
-
-    if (!slot) {
-      throw new Error("Slot de dialogue PlanningParc absent.");
-    }
-
-    slot.innerHTML = "";
-
-    const fragment = await chargerFragment(
-      urlObjet("/BOX/02-box-dialogue-bouton.html"),
-      "Boîte de dialogue"
-    );
-
-    slot.appendChild(fragment);
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector(
-      "[data-lcdp-dialogue-title]"
-    );
-    const texte = slot.querySelector(
-      "[data-lcdp-dialogue-text]"
-    );
-    const actions = slot.querySelector(
-      "[data-lcdp-dialogue-actions]"
-    );
-    const boutonFermer = slot.querySelector(
-      "[data-lcdp-dialogue-close]"
-    );
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
-      throw new Error("Structure de la boîte de dialogue incomplète.");
-    }
-
-    if (boutonFermer) {
-      boutonFermer.remove();
-    }
-
-    titre.textContent = "Validation du planning";
-    texte.textContent = String(message || "").trim();
-
-    const boutonAnnuler = document.createElement("button");
-    boutonAnnuler.type = "button";
-    boutonAnnuler.className =
-      "lcdp-button lcdp-button-secondary";
-    boutonAnnuler.textContent = "Annuler";
-
-    const boutonOk = document.createElement("button");
-    boutonOk.type = "button";
-    boutonOk.className =
-      "lcdp-button lcdp-button-orange";
-    boutonOk.textContent = "OK";
-
-    actions.append(boutonAnnuler, boutonOk);
-
-    return new Promise((resolve) => {
-      let resolu = false;
-
-      function terminer(valeur) {
-        if (resolu) return;
-
-        resolu = true;
-        document.removeEventListener(
-          "keydown",
-          gererToucheDialogue
-        );
-        slot.innerHTML = "";
-        resolve(valeur);
-      }
-
-      function gererToucheDialogue(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
-        }
-      }
-
-      boutonAnnuler.addEventListener(
-        "click",
-        () => terminer(false)
-      );
-
-      boutonOk.addEventListener(
-        "click",
-        () => terminer(true)
-      );
-
-      dialogue.addEventListener("click", (event) => {
-        if (event.target === dialogue) {
-          terminer(false);
-        }
-      });
-
-      document.addEventListener(
-        "keydown",
-        gererToucheDialogue
-      );
-
-      window.setTimeout(() => {
-        boutonOk.focus();
-      }, 0);
-    });
-  }
-
   async function initialiserBandeau() {
     const slot = document.getElementById("lcdp-bandeau-slot");
     if (!slot) return;
 
     slot.innerHTML = "";
     const fragment = await chargerFragment(
-      urlAdmin(
-        "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
-      ),
+      urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"),
       "Bandeau admin"
     );
     slot.appendChild(fragment);
@@ -213,7 +112,6 @@
 
   function lireSelectionUrl() {
     const params = new URLSearchParams(window.location.search);
-
     return {
       dptmt: String(params.get("dptmt") || "").trim(),
       idparc: String(params.get("idparc") || "").trim()
@@ -225,22 +123,22 @@
 
     try {
       response = await fetch(url, {
-      method: options.method || "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        ...(options.body !== undefined
-          ? { "Content-Type": "application/json" }
-          : {})
-      },
-      body: options.body !== undefined
-        ? JSON.stringify(options.body)
-        : undefined
+        method: options.method || "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          ...(options.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {})
+        },
+        body: options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined
       });
     } catch (error) {
       throw new Error(
-        "Connexion impossible avec le worker Parc Planning. " +
+        "Connexion impossible avec le worker. " +
         String(error?.message || error || "")
       );
     }
@@ -250,14 +148,13 @@
     if (!response.ok || !data || data.success !== true) {
       const message = String(data?.message || "").trim();
       const detail = String(data?.detail || "").trim();
-      const texteErreur = [message, detail]
-        .filter((item, index, liste) => {
-          return item && liste.indexOf(item) === index;
-        })
-        .join(" — ");
-
       throw new Error(
-        texteErreur || "Réponse serveur inexploitable."
+        [message, detail]
+          .filter((item, index, liste) =>
+            item && liste.indexOf(item) === index
+          )
+          .join(" — ") ||
+        "Réponse serveur inexploitable."
       );
     }
 
@@ -265,7 +162,7 @@
   }
 
   async function chargerParc() {
-    const endpoint = endpointParcPlanning();
+    const endpoint = endpointWorker();
     const selection = lireSelectionUrl();
 
     if (!endpoint) {
@@ -276,17 +173,13 @@
       throw new Error("Département ou parc absent de l’URL.");
     }
 
-    const params = new URLSearchParams(selection);
     const data = await appelerJson(
-      endpoint + "/parc?" + params.toString()
+      endpoint + "/parc?" + new URLSearchParams(selection).toString()
     );
 
     parcCourant = data.parc;
 
-    const identite = document.getElementById(
-      "lcdp-planning-parc-identite"
-    );
-
+    const identite = document.getElementById(PAGE.identiteId);
     if (identite) {
       identite.textContent =
         "Parc : " + parcCourant.nom +
@@ -294,34 +187,8 @@
     }
   }
 
-  function construireBriefDepuisFormulaire() {
-    return {
-      dateDebut: document.getElementById(
-        "lcdp-planning-date-debut"
-      )?.value || "",
-      horizon: document.getElementById(
-        "lcdp-planning-horizon"
-      )?.value || "",
-      fermetures: document.getElementById(
-        "lcdp-planning-fermetures"
-      )?.value.trim() || "",
-      ouvertureSemaine: document.getElementById(
-        "lcdp-planning-semaine"
-      )?.value.trim() || "",
-      ouvertureWeekend: document.getElementById(
-        "lcdp-planning-weekend"
-      )?.value.trim() || "",
-      capacite: Number.parseInt(
-        document.getElementById(
-          "lcdp-planning-capacite"
-        )?.value || "",
-        10
-      )
-    };
-  }
-
   function afficherStatus(message, erreur = false) {
-    const status = document.getElementById("lcdp-planning-status");
+    const status = document.getElementById(PAGE.prefix + "-status");
     if (!status) return;
 
     status.textContent = String(message || "");
@@ -332,50 +199,69 @@
   function afficherValidation(data) {
     briefCourant = data;
 
-    const section = document.getElementById(
-      "lcdp-planning-validation"
-    );
-    const resume = document.getElementById("lcdp-planning-resume");
-    const alertes = document.getElementById("lcdp-planning-alertes");
-    const json = document.getElementById("lcdp-planning-json");
-    const boutonValider = document.getElementById(
-      "lcdp-planning-valider"
-    );
+    const section = document.getElementById(PAGE.prefix + "-validation");
+    const resume = document.getElementById(PAGE.prefix + "-resume");
+    const alertes = document.getElementById(PAGE.prefix + "-alertes");
+    const json = document.getElementById(PAGE.prefix + "-json");
+    const boutonValider = document.getElementById(PAGE.prefix + "-valider");
 
     if (!section || !resume || !alertes || !json || !boutonValider) {
-      throw new Error("Bloc de validation PlanningParc incomplet.");
+      throw new Error("Bloc de validation incomplet.");
     }
 
     const jsonbrief = data?.jsonbrief || {};
-    const resumeOral = String(jsonbrief.resume_oral || "").trim();
     const listeAlertes = Array.isArray(jsonbrief.alertes)
       ? jsonbrief.alertes
       : [];
+    const resumeOral = String(jsonbrief.resume_oral || "").trim();
+    const resumeLisible = Array.isArray(jsonbrief.resume_lisible)
+      ? jsonbrief.resume_lisible
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+      : [];
 
     resume.innerHTML = "";
-    alertes.innerHTML = "";
-    alertes.hidden = true;
-
     const blocResume = document.createElement("div");
     blocResume.className = "lcdp-validation-bloc";
 
     const titreResume = document.createElement("h3");
-    titreResume.textContent = "Résumé du planning";
+    titreResume.textContent = PAGE.resumeTitle;
     blocResume.appendChild(titreResume);
 
-    const texteResume = document.createElement("p");
-    texteResume.textContent = resumeOral ||
-      "Aucun résumé du planning n’a été produit.";
-    blocResume.appendChild(texteResume);
+    if (resumeOral) {
+      const paragraphe = document.createElement("p");
+      paragraphe.textContent = resumeOral;
+      blocResume.appendChild(paragraphe);
+    }
+
+    if (resumeLisible.length > 0) {
+      const liste = document.createElement("ul");
+      liste.className = "lcdp-validation-liste";
+
+      for (const ligne of resumeLisible) {
+        const item = document.createElement("li");
+        item.textContent = ligne;
+        liste.appendChild(item);
+      }
+
+      blocResume.appendChild(liste);
+    }
+
+    if (!resumeOral && resumeLisible.length === 0) {
+      const paragraphe = document.createElement("p");
+      paragraphe.textContent = "Aucun résumé n’a été produit.";
+      blocResume.appendChild(paragraphe);
+    }
+
     resume.appendChild(blocResume);
 
-    if (listeAlertes.length > 0) {
-      alertes.hidden = false;
-      alertes.className = "lcdp-validation-bloc";
+    alertes.innerHTML = "";
+    alertes.hidden = listeAlertes.length === 0;
 
-      const titreAlertes = document.createElement("h3");
-      titreAlertes.textContent = "Points à corriger";
-      alertes.appendChild(titreAlertes);
+    if (listeAlertes.length > 0) {
+      const titre = document.createElement("h3");
+      titre.textContent = "Points à corriger";
+      alertes.appendChild(titre);
 
       const liste = document.createElement("ul");
       liste.className = "lcdp-validation-liste";
@@ -392,8 +278,8 @@
     const note = document.createElement("p");
     note.className = "lcdp-validation-note";
     note.textContent = listeAlertes.length > 0
-      ? "Le brief doit être corrigé avant son écriture dans hparcs."
-      : "Le brief est prêt à être validé et envoyé dans hparcs.";
+      ? "Le brief doit être corrigé avant validation."
+      : PAGE.readyMessage;
     resume.appendChild(note);
 
     boutonValider.disabled = listeAlertes.length > 0;
@@ -402,231 +288,116 @@
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  async function demanderConfirmation(message) {
+    const slot = document.getElementById("lcdp-lightbox-slot");
 
-  async function analyserBrief(event) {
-    event.preventDefault();
-
-    if (!parcCourant) {
-      afficherStatus("Parc non chargé.", true);
-      return;
+    if (!slot) {
+      throw new Error("Slot de dialogue absent.");
     }
 
-    const endpoint = endpointParcPlanning();
-    const bouton = document.getElementById("lcdp-planning-analyser");
+    slot.innerHTML = "";
+    const fragment = await chargerFragment(
+      urlObjet("/BOX/02-box-dialogue-bouton.html"),
+      "Boîte de dialogue"
+    );
+    slot.appendChild(fragment);
 
-    if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
-      return;
+    const dialogue = slot.querySelector(
+      "[data-lcdp-box-dialogue-bouton]"
+    );
+    const titre = slot.querySelector("[data-lcdp-dialogue-title]");
+    const texte = slot.querySelector("[data-lcdp-dialogue-text]");
+    const actions = slot.querySelector("[data-lcdp-dialogue-actions]");
+    const boutonFermer = slot.querySelector("[data-lcdp-dialogue-close]");
+
+    if (!dialogue || !titre || !texte || !actions) {
+      slot.innerHTML = "";
+      throw new Error("Structure de la boîte de dialogue incomplète.");
     }
 
-    const brief = construireBriefDepuisFormulaire();
+    if (boutonFermer) boutonFermer.remove();
 
-    if (
-      !brief.dateDebut ||
-      !brief.horizon ||
-      brief.dateDebut > brief.horizon ||
-      !brief.fermetures ||
-      !brief.ouvertureSemaine ||
-      !brief.ouvertureWeekend ||
-      !Number.isInteger(brief.capacite) ||
-      brief.capacite < 1
-    ) {
-      afficherStatus("Le brief est incomplet. Vérifie les dates, les textes et la capacité.", true);
-      return;
-    }
+    titre.textContent = PAGE.confirmTitle;
+    texte.textContent = String(message || "").trim();
 
-    if (bouton) bouton.disabled = true;
-    afficherStatus("Analyse IA du brief en cours…");
+    const boutonAnnuler = document.createElement("button");
+    boutonAnnuler.type = "button";
+    boutonAnnuler.className = "lcdp-button lcdp-button-secondary";
+    boutonAnnuler.textContent = "Annuler";
 
-    try {
-      const data = await appelerJson(
-        endpoint + "/brief",
-        {
-          method: "POST",
-          body: {
-            idparc: parcCourant.idparc,
-            dptmt: parcCourant.dptmt,
-            brief
-          }
+    const boutonOk = document.createElement("button");
+    boutonOk.type = "button";
+    boutonOk.className = "lcdp-button lcdp-button-orange";
+    boutonOk.textContent = "Valider";
+
+    actions.append(boutonAnnuler, boutonOk);
+
+    return new Promise((resolve) => {
+      let resolu = false;
+
+      function terminer(valeur) {
+        if (resolu) return;
+        resolu = true;
+        document.removeEventListener("keydown", gererTouche);
+        slot.innerHTML = "";
+        resolve(valeur);
+      }
+
+      function gererTouche(event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          terminer(false);
         }
-      );
+      }
 
-      afficherValidation(data);
-      afficherStatus("Brief IA prêt à être vérifié.");
-    } catch (error) {
-      afficherStatus(String(error?.message || error || ""), true);
-    } finally {
-      if (bouton) bouton.disabled = false;
-    }
+      boutonAnnuler.addEventListener("click", () => terminer(false));
+      boutonOk.addEventListener("click", () => terminer(true));
+      dialogue.addEventListener("click", (event) => {
+        if (event.target === dialogue) terminer(false);
+      });
+      document.addEventListener("keydown", gererTouche);
+
+      window.setTimeout(() => boutonOk.focus(), 0);
+    });
   }
 
-  async function validerBrief() {
-    if (!briefCourant || !parcCourant) return;
-
-    const alertes = Array.isArray(briefCourant?.jsonbrief?.alertes)
-      ? briefCourant.jsonbrief.alertes
-      : [];
-
-    if (alertes.length > 0) {
-      afficherStatus(
-        "Le brief contient encore des points à corriger.",
-        true
-      );
-      return;
-    }
-
-    const endpoint = endpointParcPlanning();
-    const bouton = document.getElementById("lcdp-planning-valider");
-
-    if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
-      return;
-    }
-
-    const confirmation = await demanderConfirmationPlanning(
-      "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
-    );
-
-    if (!confirmation) return;
-
-    if (bouton) bouton.disabled = true;
-    afficherStatus(
-      "Validation et écriture du planning en cours. Ne ferme pas cette page."
-    );
-
-    try {
-      const data = await appelerJson(
-        endpoint + "/valider",
-        {
-          method: "POST",
-          body: {
-            idbrief: briefCourant.idbrief,
-            idparc: parcCourant.idparc,
-            dptmt: parcCourant.dptmt
-          }
-        }
-      );
-
-      const avertissements = Array.isArray(
-        data.writeResult?.avertissements
+  function fusionnerTexteDictee(texteInitial, texteReconnu) {
+    return [texteInitial, texteReconnu]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .replace(
+        /\b(\d{1,2})\s*h(?:\s*(\d{1,2}))?\s+\1\s*h(?:\s*\2)?\s*$/i,
+        (_, heure, minutes) =>
+          heure + " h" + (minutes ? " " + minutes : "")
       )
-        ? data.writeResult.avertissements
-            .map((item) => String(item || "").trim())
-            .filter(Boolean)
-        : [];
-
-      const messageSucces =
-        "Planning DUO et COACH enregistré dans hparcs jusqu’au " +
-        String(data.jsonfinal?.horizon || "") + ".";
-
-      afficherStatus(
-        avertissements.length > 0
-          ? messageSucces + " " + avertissements.join(" ")
-          : messageSucces
-      );
-    } catch (error) {
-      afficherStatus(String(error?.message || error || ""), true);
-    } finally {
-      if (bouton) bouton.disabled = false;
-    }
-  }
-
-  function corrigerBrief() {
-    const section = document.getElementById(
-      "lcdp-planning-validation"
-    );
-
-    if (section) section.hidden = true;
-    briefCourant = null;
-
-    document.getElementById("lcdp-planning-fermetures")?.focus();
+      .trim();
   }
 
   function restaurerBoutonDictee(bouton) {
     if (!bouton) return;
-
     bouton.disabled = false;
     bouton.textContent = "Dicter";
   }
 
-  function joindreSegmentsDictee(...segments) {
-    return segments
-      .map((segment) => String(segment || "").trim())
-      .filter(Boolean)
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function terminerPhraseDictee(value) {
-    const texte = String(value || "").trim();
-
-    if (!texte) {
-      return "";
-    }
-
-    if (/[.!?…]$/.test(texte)) {
-      return texte;
-    }
-
-    return texte.replace(/[,:;]+$/, "") + ".";
-  }
-
-  function fermerFluxMicroDictee() {
-    if (!fluxMicroDictee) return;
-
-    for (const piste of fluxMicroDictee.getTracks()) {
-      piste.stop();
-    }
-
-    fluxMicroDictee = null;
-  }
-
-  async function ouvrirFluxMicroDictee() {
-    fermerFluxMicroDictee();
-
-    if (
-      !navigator.mediaDevices ||
-      typeof navigator.mediaDevices.getUserMedia !== "function"
-    ) {
-      return;
-    }
-
-    fluxMicroDictee = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-  }
-
   function arreterDictee() {
-    dicteeActive = false;
-    sessionDictee += 1;
+    const etat = dicteeCourante;
+    dicteeCourante = null;
 
-    if (minuterieRelanceDictee) {
-      window.clearTimeout(minuterieRelanceDictee);
-      minuterieRelanceDictee = null;
-    }
+    if (!etat) return;
 
-    const instance = reconnaissance;
-    const bouton = boutonDicteeActif;
-
-    reconnaissance = null;
-    boutonDicteeActif = null;
-    cibleDicteeActive = null;
-
-    if (instance) {
+    try {
+      etat.reconnaissance.stop();
+    } catch {
       try {
-        instance.abort();
+        etat.reconnaissance.abort();
       } catch {
-        // La reconnaissance peut déjà être terminée.
+        // La reconnaissance est déjà terminée.
       }
     }
 
-    fermerFluxMicroDictee();
-    restaurerBoutonDictee(bouton);
+    restaurerBoutonDictee(etat.bouton);
   }
 
   function initialiserDictee() {
@@ -641,204 +412,288 @@
         return;
       }
 
-      bouton.addEventListener("click", async () => {
+      bouton.addEventListener("click", () => {
         const cible = document.getElementById(
           bouton.dataset.dicteeCible || ""
         );
 
         if (!cible) return;
 
-        if (
-          dicteeActive &&
-          boutonDicteeActif === bouton
-        ) {
+        if (dicteeCourante?.bouton === bouton) {
           arreterDictee();
           return;
         }
 
-        if (dicteeActive || reconnaissance) {
-          arreterDictee();
-        }
+        if (dicteeCourante) arreterDictee();
 
-        const sessionCourante = ++sessionDictee;
-        let texteValideSession = String(cible.value || "").trim();
-        let resultatsCycle = new Map();
-        let delaiRelanceCycle = 0;
-        let tentativeDemarrage = 0;
+        const reconnaissance = new SpeechRecognition();
+        const texteInitial = String(cible.value || "").trim();
+        const resultats = new Map();
 
-        dicteeActive = true;
-        boutonDicteeActif = bouton;
-        cibleDicteeActive = cible;
-        bouton.disabled = false;
+        dicteeCourante = {
+          reconnaissance,
+          bouton,
+          cible
+        };
+
         bouton.textContent = "Arrêter";
+        bouton.disabled = false;
 
-        const sessionToujoursActive = () => {
-          return (
-            dicteeActive &&
-            sessionDictee === sessionCourante &&
-            boutonDicteeActif === bouton &&
-            cibleDicteeActive === cible
-          );
-        };
+        reconnaissance.lang = "fr-FR";
+        reconnaissance.interimResults = true;
+        reconnaissance.continuous = true;
+        reconnaissance.maxAlternatives = 1;
 
-        const texteResultatsCycle = () => {
-          return Array.from(resultatsCycle.entries())
-            .sort(([indexA], [indexB]) => indexA - indexB)
-            .map(([, resultat]) => resultat.texte)
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-        };
-
-        const afficherCycle = () => {
-          if (!sessionToujoursActive()) return;
-
-          cible.value = joindreSegmentsDictee(
-            texteValideSession,
-            texteResultatsCycle()
-          );
-        };
-
-        const instance = new SpeechRecognition();
-        reconnaissance = instance;
-
-        instance.lang = "fr-FR";
-        instance.interimResults = true;
-        instance.continuous = true;
-        instance.maxAlternatives = 1;
-
-        const planifierRelance = (delai = 0) => {
-          if (!sessionToujoursActive()) return;
-
-          if (minuterieRelanceDictee) {
-            window.clearTimeout(minuterieRelanceDictee);
-          }
-
-          minuterieRelanceDictee = window.setTimeout(() => {
-            minuterieRelanceDictee = null;
-
-            if (!sessionToujoursActive()) return;
-
-            try {
-              instance.start();
-              tentativeDemarrage = 0;
-            } catch {
-              tentativeDemarrage += 1;
-
-              planifierRelance(
-                Math.min(25 * tentativeDemarrage, 150)
-              );
-            }
-          }, Math.max(0, delai));
-        };
-
-        instance.addEventListener("result", (event) => {
-          if (!sessionToujoursActive()) return;
+        reconnaissance.addEventListener("result", (event) => {
+          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
 
           for (
             let index = event.resultIndex || 0;
             index < event.results.length;
             index += 1
           ) {
-            const resultat = event.results[index];
             const texte = String(
-              resultat?.[0]?.transcript || ""
+              event.results[index]?.[0]?.transcript || ""
             ).trim();
 
-            if (!texte) {
-              resultatsCycle.delete(index);
-              continue;
+            if (texte) {
+              resultats.set(index, texte);
+            } else {
+              resultats.delete(index);
             }
-
-            resultatsCycle.set(index, {
-              texte,
-              final: Boolean(resultat.isFinal)
-            });
           }
 
-          afficherCycle();
+          const texteReconnu = Array.from(resultats.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([, texte]) => texte)
+            .join(" ");
+
+          cible.value = fusionnerTexteDictee(
+            texteInitial,
+            texteReconnu
+          );
         });
 
-        instance.addEventListener("error", (event) => {
-          const code = String(event?.error || "");
+        reconnaissance.addEventListener("error", (event) => {
+          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
 
-          if (!sessionToujoursActive()) return;
+          const code = String(event?.error || "");
 
           if (
             code === "not-allowed" ||
             code === "service-not-allowed"
           ) {
-            arreterDictee();
             afficherStatus("Autorisation du microphone refusée.", true);
-            return;
-          }
-
-          if (code === "audio-capture") {
-            // Certains navigateurs refusent le partage entre le flux
-            // permanent et SpeechRecognition. On libère alors uniquement
-            // le flux de maintien ; la dictée continue de se relancer.
-            fermerFluxMicroDictee();
-            delaiRelanceCycle = 120;
-            return;
-          }
-
-          if (code === "network") {
-            delaiRelanceCycle = 300;
-            return;
-          }
-
-          if (
-            code === "no-speech" ||
-            code === "aborted"
+          } else if (
+            code !== "no-speech" &&
+            code !== "aborted"
           ) {
-            delaiRelanceCycle = 0;
-            return;
+            afficherStatus(
+              "La dictée a été interrompue : " + code + ".",
+              true
+            );
           }
-
-          delaiRelanceCycle = 100;
         });
 
-        instance.addEventListener("end", () => {
-          if (!sessionToujoursActive()) return;
-
-          const texteCycle = texteResultatsCycle();
-
-          if (texteCycle) {
-            texteValideSession = joindreSegmentsDictee(
-              texteValideSession,
-              terminerPhraseDictee(texteCycle)
-            );
-            cible.value = texteValideSession;
-          }
-
-          resultatsCycle = new Map();
-
-          const delai = delaiRelanceCycle;
-          delaiRelanceCycle = 0;
-
-          // Relance immédiate après un silence : le bouton reste actif
-          // et la session de dictée ne s’arrête qu’au clic sur « Arrêter ».
-          planifierRelance(delai);
+        reconnaissance.addEventListener("end", () => {
+          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
+          dicteeCourante = null;
+          restaurerBoutonDictee(bouton);
         });
 
         try {
-          await ouvrirFluxMicroDictee();
-        } catch {
-          // SpeechRecognition peut fonctionner même si le navigateur
-          // refuse le flux de maintien séparé.
-          fermerFluxMicroDictee();
+          reconnaissance.start();
+        } catch (error) {
+          dicteeCourante = null;
+          restaurerBoutonDictee(bouton);
+          afficherStatus(
+            "Impossible de démarrer la dictée : " +
+            String(error?.message || error || ""),
+            true
+          );
         }
-
-        if (!sessionToujoursActive()) {
-          fermerFluxMicroDictee();
-          return;
-        }
-
-        planifierRelance(0);
       });
     });
 
-    window.addEventListener("beforeunload", fermerFluxMicroDictee);
+    window.addEventListener("beforeunload", arreterDictee);
+  }
+
+  
+function valeur(id) {
+  return String(document.getElementById(id)?.value || "").trim();
+}
+
+function formaterHeure(heure) {
+  const [h, m] = String(heure || "").split(":");
+  return m === "00" ? String(Number(h)) + " h" : String(Number(h)) + " h " + m;
+}
+
+function construireRegleOuverture(libelle, prefix, precisionId) {
+  const debut = valeur(prefix + "-debut");
+  const fin = valeur(prefix + "-fin");
+  const precision = valeur(precisionId);
+
+  if (!debut || !fin) {
+    throw new Error("Les heures d’ouverture " + libelle + " sont incomplètes.");
+  }
+
+  return (
+    "OUVERTURE " + libelle + " de " +
+    formaterHeure(debut) + " à " + formaterHeure(fin) +
+    (precision ? ". " + precision : ".")
+  );
+}
+
+function construireBrief() {
+  const dateDebut = valeur("lcdp-planning-parc-date-debut");
+  const horizon = valeur("lcdp-planning-parc-horizon");
+  const capacite = Number.parseInt(
+    valeur("lcdp-planning-parc-capacite"),
+    10
+  );
+
+  if (!dateDebut || !horizon || dateDebut > horizon) {
+    throw new Error("La période globale du PlanningParc est invalide.");
+  }
+
+  if (!Number.isInteger(capacite) || capacite < 1) {
+    throw new Error("La capacité PlanningParc est invalide.");
+  }
+
+  const ouvertureSemaine = construireRegleOuverture(
+    "du lundi au vendredi",
+    "lcdp-planning-parc-semaine",
+    "lcdp-planning-parc-semaine-precision"
+  );
+  const ouvertureWeekend = construireRegleOuverture(
+    "du samedi et du dimanche",
+    "lcdp-planning-parc-weekend",
+    "lcdp-planning-parc-weekend-precision"
+  );
+  const fermetures = valeur("lcdp-planning-parc-fermetures") ||
+    "Aucune fermeture explicite.";
+
+  return {
+    dateDebut,
+    horizon,
+    fermetures,
+    ouvertureSemaine,
+    ouvertureWeekend,
+    capacite,
+    etatOuverture: true,
+    etatFermeture: "FERMETURE"
+  };
+}
+
+function initialiserComportementsFormulaire() {}
+
+
+  async function analyser(event) {
+    event.preventDefault();
+
+    if (!parcCourant) {
+      afficherStatus("Parc non chargé.", true);
+      return;
+    }
+
+    const endpoint = endpointWorker();
+    const bouton = document.getElementById(PAGE.prefix + "-analyser");
+
+    if (!endpoint) {
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      return;
+    }
+
+    let brief;
+
+    try {
+      brief = construireBrief();
+    } catch (error) {
+      afficherStatus(String(error?.message || error || ""), true);
+      return;
+    }
+
+    if (bouton) bouton.disabled = true;
+    afficherStatus(PAGE.analysisMessage);
+
+    try {
+      const data = await appelerJson(
+        endpoint + PAGE.briefRoute,
+        {
+          method: "POST",
+          body: {
+            idparc: parcCourant.idparc,
+            dptmt: parcCourant.dptmt,
+            brief
+          }
+        }
+      );
+
+      afficherValidation(data);
+      afficherStatus(PAGE.analysisReadyMessage);
+    } catch (error) {
+      afficherStatus(String(error?.message || error || ""), true);
+    } finally {
+      if (bouton) bouton.disabled = false;
+    }
+  }
+
+  async function valider() {
+    if (!briefCourant || !parcCourant) return;
+
+    const endpoint = endpointWorker();
+    const bouton = document.getElementById(PAGE.prefix + "-valider");
+
+    if (!endpoint) {
+      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      return;
+    }
+
+    try {
+      const confirmation = await demanderConfirmation(
+        PAGE.confirmMessage
+      );
+
+      if (!confirmation) return;
+
+      if (bouton) bouton.disabled = true;
+      afficherStatus(PAGE.validationMessage);
+
+      const data = await appelerJson(
+        endpoint + PAGE.validateRoute,
+        {
+          method: "POST",
+          body: {
+            idbrief: briefCourant.idbrief,
+            idparc: parcCourant.idparc,
+            dptmt: parcCourant.dptmt
+          }
+        }
+      );
+
+      afficherStatus(
+        PAGE.successMessage +
+        (
+          Number.isInteger(Number(data.joursModifies))
+            ? " " + String(data.joursModifies) + " journée(s)."
+            : ""
+        )
+      );
+    } catch (error) {
+      afficherStatus(String(error?.message || error || ""), true);
+    } finally {
+      if (bouton) bouton.disabled = false;
+    }
+  }
+
+  function corriger() {
+    const section = document.getElementById(
+      PAGE.prefix + "-validation"
+    );
+
+    if (section) section.hidden = true;
+    briefCourant = null;
+    document.getElementById(PAGE.focusId)?.focus();
   }
 
   async function verifierAcces() {
@@ -864,26 +719,25 @@
     const main = document.getElementById("lcdp-main-admin");
     if (main) main.hidden = false;
 
-    document.getElementById("lcdp-planning-parc-form")
-      ?.addEventListener("submit", analyserBrief);
+    document.getElementById(PAGE.prefix + "-form")
+      ?.addEventListener("submit", analyser);
 
-    document.getElementById("lcdp-planning-valider")
-      ?.addEventListener("click", validerBrief);
+    document.getElementById(PAGE.prefix + "-valider")
+      ?.addEventListener("click", valider);
 
-    document.getElementById("lcdp-planning-corriger")
-      ?.addEventListener("click", corrigerBrief);
+    document.getElementById(PAGE.prefix + "-corriger")
+      ?.addEventListener("click", corriger);
 
+    initialiserComportementsFormulaire();
     initialiserDictee();
   }
 
   initialiserPage().catch((error) => {
     console.error(error);
-
     const main = document.getElementById("lcdp-main-admin");
     if (main) main.hidden = false;
-
     afficherStatus(
-      "PlanningParc indisponible : " +
+      PAGE.title + " indisponible : " +
       String(error?.message || error || ""),
       true
     );

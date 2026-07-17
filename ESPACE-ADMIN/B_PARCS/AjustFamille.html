@@ -2,21 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-
   <title>AjustFamille - La Clé du Parc</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="Ajustement ponctuel du planning FAMILLE d’un parc dans l’espace admin."
-  >
+  <meta name="description" content="Ajustement exclusif du planning FAMILLE.">
 
   <script src="../../config.js"></script>
-
   <script>
     (() => {
       "use strict";
-
       const config = window.SITE_CONFIG || {};
 
       function nettoyerBaseUrl(value) {
@@ -34,13 +27,11 @@
         config.siteBase ||
         ""
       );
-
       const publicBase = nettoyerBaseUrl(
         config.publicBaseUrl ||
         config.PUBLIC_BASE ||
         ""
       );
-
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
@@ -52,23 +43,20 @@
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
 
-      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
-        return typeof config.adminUrl === "function"
+      window.LCDP_urlAdmin = (path) =>
+        typeof config.adminUrl === "function"
           ? config.adminUrl(path)
           : construireUrl(adminBase, path);
-      };
 
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        return typeof config.publicUrl === "function"
+      window.LCDP_urlPublic = (path) =>
+        typeof config.publicUrl === "function"
           ? config.publicUrl(path)
           : construireUrl(publicBase, path);
-      };
 
-      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
-        return typeof config.objetUrl === "function"
+      window.LCDP_urlObjet = (path) =>
+        typeof config.objetUrl === "function"
           ? config.objetUrl(path)
           : construireUrl(objetBase, path);
-      };
 
       [
         "/CSSBASE/cssbase.css",
@@ -97,10 +85,14 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./AjustFamille.js?v=20260717-1318" defer></script>
+  <script src="./AjustFamille.js?v=20260717-1500" defer></script>
 
   <style>
-    .lcdp-page-ajust-famille .lcdp-box-formulaire__actions {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire {
+      margin-bottom: 22px;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions {
       display: flex;
       align-items: stretch;
       justify-content: center;
@@ -109,11 +101,11 @@
       padding: 22px 0 12px;
     }
 
-    .lcdp-page-ajust-famille .lcdp-box-formulaire__actions .lcdp-button {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: min(100%, 270px);
+      width: min(100%, 280px);
       min-height: 50px;
       margin: 0;
       padding: 10px 18px;
@@ -121,56 +113,114 @@
       text-align: center;
     }
 
-    .lcdp-ajust-famille-information {
-      padding: 12px 14px;
-      border: 1px solid currentColor;
-      border-radius: 12px;
+    .lcdp-workflow-intro,
+    .lcdp-workflow-disabled {
+      margin: 0 0 20px;
+      padding: 14px 16px;
+      border: 1px solid #cfd5c6;
+      border-radius: 14px;
+      background: #f8f9f5;
+      line-height: 1.5;
     }
 
-
-    .lcdp-page-ajust-famille .lcdp-box-formulaire {
-      margin-bottom: 22px;
+    .lcdp-workflow-disabled {
+      border-color: #efd4a2;
+      background: #fff7e8;
     }
 
-    .lcdp-page-ajust-famille .lcdp-box-champ-formulaire {
+    .lcdp-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
       margin-bottom: 18px;
     }
 
-    .lcdp-page-ajust-famille .lcdp-box-champ-formulaire__input[type="number"] {
-      width: min(100%, 220px);
+    .lcdp-form-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .lcdp-page-ajust-famille textarea.lcdp-box-champ-formulaire__input {
-      min-height: 96px;
+    .lcdp-schedule-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 16px;
+      background: #fbfbf8;
+    }
+
+    .lcdp-schedule-card__title {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+    }
+
+    .lcdp-time-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .lcdp-time-range__arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      font-size: 1.35rem;
+      color: #596351;
+    }
+
+    .lcdp-day-selector {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .lcdp-day-selector label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 6px;
+      border: 1px solid #d8ddd0;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .lcdp-day-selector input {
+      margin: 0;
+    }
+
+    .lcdp-page-planning-workflow textarea.lcdp-box-champ-formulaire__input {
+      min-height: 92px;
       resize: vertical;
     }
 
-    .lcdp-page-ajust-famille .lcdp-button-secondary[data-dictee-cible] {
+    .lcdp-page-planning-workflow .lcdp-button-secondary[data-dictee-cible] {
       margin-top: 10px;
       min-width: 140px;
     }
 
-
-
-    .lcdp-page-ajust-famille #lcdp-ajust-famille-status {
+    .lcdp-page-planning-workflow [role="status"] {
       margin-top: 14px;
       padding: 12px 14px;
+      border: 1px solid #d9dccf;
       border-radius: 12px;
       background: #f4f4ef;
-      border: 1px solid #d9dccf;
     }
 
-    .lcdp-page-ajust-famille #lcdp-ajust-famille-status[data-etat="erreur"] {
-      background: #fff1ef;
+    .lcdp-page-planning-workflow [role="status"][data-etat="erreur"] {
       border-color: #e2b7b0;
+      background: #fff1ef;
     }
 
-    .lcdp-page-ajust-famille #lcdp-ajust-famille-status[data-etat="succes"] {
-      background: #f3f7ec;
+    .lcdp-page-planning-workflow [role="status"][data-etat="succes"] {
       border-color: #cbd8b6;
+      background: #f3f7ec;
     }
 
-    .lcdp-page-ajust-famille .lcdp-validation-bloc {
+    .lcdp-validation-bloc {
       margin-top: 12px;
       padding: 16px 18px;
       border: 1px solid #d8ddd0;
@@ -178,28 +228,28 @@
       background: #fafaf7;
     }
 
-    .lcdp-page-ajust-famille .lcdp-validation-bloc h3 {
+    .lcdp-validation-bloc h3 {
       margin: 0 0 10px;
       font-size: 1rem;
     }
 
-    .lcdp-page-ajust-famille .lcdp-validation-liste {
+    .lcdp-validation-liste {
       margin: 0;
       padding-left: 22px;
     }
 
-    .lcdp-page-ajust-famille #lcdp-ajust-famille-alertes {
+    .lcdp-validation-alertes {
       border-color: #efd4a2;
       background: #fff7e8;
     }
 
-    .lcdp-page-ajust-famille .lcdp-validation-note {
+    .lcdp-validation-note {
       margin: 12px 0 0;
       font-size: 0.95rem;
       color: #505a3d;
     }
 
-    .lcdp-page-ajust-famille details {
+    .lcdp-page-planning-workflow details {
       margin-top: 16px;
       padding: 12px 14px;
       border: 1px solid #d8ddd0;
@@ -207,7 +257,7 @@
       background: #fbfbf9;
     }
 
-    .lcdp-page-ajust-famille #lcdp-ajust-famille-json {
+    .lcdp-page-planning-workflow pre {
       margin: 12px 0 0;
       padding: 14px;
       max-height: 340px;
@@ -220,166 +270,157 @@
       word-break: break-word;
     }
 
-    .lcdp-page-ajust-famille .lcdp-box-dialogue-bouton__actions {
+    .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
       grid-template-columns: repeat(2, minmax(0, 200px));
       justify-content: center;
     }
 
-    @media (max-width: 768px) {
-      .lcdp-page-ajust-famille .lcdp-box-dialogue-bouton__actions {
+    [data-capacite-zone][hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .lcdp-form-grid,
+      .lcdp-form-grid--three {
         grid-template-columns: 1fr;
       }
-      .lcdp-page-ajust-famille textarea.lcdp-box-champ-formulaire__input {
-        min-height: 84px;
+
+      .lcdp-day-selector {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .lcdp-time-range {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-time-range__arrow {
+        min-height: auto;
+        transform: rotate(90deg);
+      }
+
+      .lcdp-day-selector {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
+        width: 100%;
       }
     }
   </style>
+
 </head>
-
-<body class="lcdp-page-admin-interieure lcdp-page-ajust-famille">
+<body class="lcdp-page-admin-interieure lcdp-page-planning-workflow lcdp-page-ajust-famille">
   <div class="lcdp-site-page">
-
     <div id="lcdp-bandeau-slot"></div>
-
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section
-        class="lcdp-page-section"
-        aria-label="Ajustement du planning FAMILLE"
-      >
+      <section class="lcdp-page-section" aria-label="AjustFamille">
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
-
             <div id="lcdp-menu-gauche-admin-slot"></div>
-
             <div class="lcdp-admin-page-content">
+
               <section class="lcdp-box-formulaire">
                 <header class="lcdp-box-formulaire__header">
-                  <h1 class="lcdp-box-formulaire__title">
-                    AjustFamille
-                  </h1>
-
-                  <p id="lcdp-ajust-famille-identite">
-                    Chargement du parc…
-                  </p>
+                  <h1 class="lcdp-box-formulaire__title">AjustFamille</h1>
+                  <p id="lcdp-ajust-famille-identite">Chargement du parc…</p>
                 </header>
-
-                <p class="lcdp-ajust-famille-information">
-                  L’ajustement peut ouvrir, fermer ou modifier la capacité
-                  d’une plage FAMILLE. Seules les dates et les plages déclarées
-                  sont modifiées. Le reste du planning demeure strictement inchangé.
+                <p class="lcdp-workflow-intro">
+                  L’ouverture réserve exclusivement FAMILLE. La fermeture annule cet ajustement exclusif et restaure DUO, COACH ou FAMILLE uniquement lorsque leur capacité historique existe.
                 </p>
-
                 <form id="lcdp-ajust-famille-form">
                   <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-ajust-famille-ajustement"
-                    >
-                      Ajustement
-                    </label>
-                    <textarea
-                      id="lcdp-ajust-famille-ajustement"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="5"
-                      placeholder="Ex. Le parc est ouvert exceptionnellement aux familles de 18 h à 22 h le vendredi 12, puis fermé aux familles de 8 h à 12 h le samedi 13."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-ajust-famille-ajustement"
-                    >
-                      Dicter
-                    </button>
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-action">Action</label>
+                    <select id="lcdp-ajust-famille-action" class="lcdp-box-champ-formulaire__input">
+                      <option value="ouvrir">Réserver exclusivement FAMILLE</option>
+                      <option value="fermer">Annuler l’AjustFamille</option>
+                    </select>
+                  </div>
+
+                  <div class="lcdp-form-grid">
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-date-debut">Début de la période</label>
+                      <input id="lcdp-ajust-famille-date-debut" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
+                    <div class="lcdp-box-champ-formulaire">
+                      <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-date-fin">Fin de la période</label>
+                      <input id="lcdp-ajust-famille-date-fin" class="lcdp-box-champ-formulaire__input" type="date" required>
+                    </div>
+                  </div>
+
+                  <section class="lcdp-schedule-card">
+                    <h2 class="lcdp-schedule-card__title">Jours et plage horaire</h2>
+                    
+                    <div class="lcdp-day-selector" aria-label="Jours concernés">
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="lundi" checked> Lun</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="mardi" checked> Mar</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="mercredi" checked> Mer</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="jeudi" checked> Jeu</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="vendredi" checked> Ven</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="samedi" checked> Sam</label>
+                      <label><input type="checkbox" name="lcdp-ajust-famille-jour" value="dimanche" checked> Dim</label>
+                    </div>
+
+                    <div style="margin-top:16px">
+                    <div class="lcdp-time-range">
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-debut">Début</label>
+                        <input id="lcdp-ajust-famille-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="13:00" required>
+                      </div>
+                      <div class="lcdp-time-range__arrow" aria-hidden="true">→</div>
+                      <div class="lcdp-box-champ-formulaire">
+                        <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-fin">Fin</label>
+                        <input id="lcdp-ajust-famille-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="18:00" required>
+                      </div>
+                    </div></div>
+                  </section>
+
+                  <div class="lcdp-box-champ-formulaire" data-capacite-zone>
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-capacite">Capacité FAMILLE</label>
+                    <input id="lcdp-ajust-famille-capacite" class="lcdp-box-champ-formulaire__input" type="number" min="1" step="1">
                   </div>
 
                   <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-ajust-famille-capacite"
-                    >
-                      Capacité d’accueil du parc, si elle change
-                    </label>
-                    <textarea
-                      id="lcdp-ajust-famille-capacite"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="4"
-                      placeholder="Facultatif. Ex. La capacité d’accueil FAMILLE est portée à 15 personnes le 12 novembre 2026 de 18 h à 22 h."
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-ajust-famille-capacite"
-                    >
-                      Dicter
-                    </button>
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-famille-precision">Précision complémentaire facultative</label>
+                    <textarea id="lcdp-ajust-famille-precision" class="lcdp-box-champ-formulaire__input" rows="3" placeholder="Ex. Cette règle ne concerne que les vacances scolaires."></textarea>
+                    <button class="lcdp-button lcdp-button-secondary" type="button" data-dictee-cible="lcdp-ajust-famille-precision">Dicter</button>
                   </div>
 
                   <div class="lcdp-box-formulaire__actions">
-                    <button
-                      id="lcdp-ajust-famille-analyser"
-                      class="lcdp-button lcdp-button-orange"
-                      type="submit"
-                    >
-                      Analyser l’ajustement IA
-                    </button>
+                    <button id="lcdp-ajust-famille-analyser" class="lcdp-button lcdp-button-orange" type="submit">Analyser l’ajustement IA</button>
                   </div>
                 </form>
               </section>
-
-              <section
-                id="lcdp-ajust-famille-validation"
-                class="lcdp-box-formulaire"
-                hidden
-              >
+              
+              <section id="lcdp-ajust-famille-validation" class="lcdp-box-formulaire" hidden>
                 <header class="lcdp-box-formulaire__header">
-                  <h2 class="lcdp-box-formulaire__title">
-                    Validation de l’ajustement FAMILLE
-                  </h2>
+                  <h2 class="lcdp-box-formulaire__title">Validation de l’ajustement FAMILLE</h2>
                 </header>
-
                 <div id="lcdp-ajust-famille-resume"></div>
-                <div id="lcdp-ajust-famille-alertes" hidden></div>
-
+                <div id="lcdp-ajust-famille-alertes" class="lcdp-validation-bloc lcdp-validation-alertes" hidden></div>
                 <details>
                   <summary>Voir le JSON proposé</summary>
                   <pre id="lcdp-ajust-famille-json"></pre>
                 </details>
-
                 <div class="lcdp-box-formulaire__actions">
-                  <button
-                    id="lcdp-ajust-famille-corriger"
-                    class="lcdp-button lcdp-button-secondary"
-                    type="button"
-                  >
-                    Corriger l’ajustement
-                  </button>
-
-                  <button
-                    id="lcdp-ajust-famille-valider"
-                    class="lcdp-button lcdp-button-orange"
-                    type="button"
-                  >
-                    Valider et ajuster hparcs
-                  </button>
+                  <button id="lcdp-ajust-famille-corriger" class="lcdp-button lcdp-button-secondary" type="button">Corriger</button>
+                  <button id="lcdp-ajust-famille-valider" class="lcdp-button lcdp-button-orange" type="button">Valider et écrire l’ajustement</button>
                 </div>
               </section>
+              <p id="lcdp-ajust-famille-status" role="status" aria-live="polite" hidden></p>
 
-              <p
-                id="lcdp-ajust-famille-status"
-                role="status"
-                aria-live="polite"
-                hidden
-              ></p>
+
             </div>
-
           </div>
         </div>
       </section>
     </main>
-
     <div id="lcdp-lightbox-slot"></div>
-
   </div>
 </body>
 </html>

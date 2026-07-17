@@ -2,21 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-
-  <title>privatisation - La Clé du Parc</title>
-
+  <title>Privatisation - La Clé du Parc</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta
-    name="description"
-    content="Privatisation ponctuelle d’un parc dans l’espace admin."
-  >
+  <meta name="description" content="Workflow de privatisation temporairement désactivé.">
 
   <script src="../../config.js"></script>
-
   <script>
     (() => {
       "use strict";
-
       const config = window.SITE_CONFIG || {};
 
       function nettoyerBaseUrl(value) {
@@ -34,13 +27,11 @@
         config.siteBase ||
         ""
       );
-
       const publicBase = nettoyerBaseUrl(
         config.publicBaseUrl ||
         config.PUBLIC_BASE ||
         ""
       );
-
       const objetBase = nettoyerBaseUrl(
         config.objetBaseUrl ||
         config.OBJET_BASE ||
@@ -52,28 +43,26 @@
       window.LCDP_PUBLIC_BASE = publicBase;
       window.LCDP_OBJET_BASE = objetBase;
 
-      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
-        return typeof config.adminUrl === "function"
+      window.LCDP_urlAdmin = (path) =>
+        typeof config.adminUrl === "function"
           ? config.adminUrl(path)
           : construireUrl(adminBase, path);
-      };
 
-      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
-        return typeof config.publicUrl === "function"
+      window.LCDP_urlPublic = (path) =>
+        typeof config.publicUrl === "function"
           ? config.publicUrl(path)
           : construireUrl(publicBase, path);
-      };
 
-      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
-        return typeof config.objetUrl === "function"
+      window.LCDP_urlObjet = (path) =>
+        typeof config.objetUrl === "function"
           ? config.objetUrl(path)
           : construireUrl(objetBase, path);
-      };
 
       [
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
@@ -96,10 +85,14 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./privatisation.js" defer></script>
+  <script src="./privatisation.js?v=20260717-1500" defer></script>
 
   <style>
-    .lcdp-page-privatisation .lcdp-box-formulaire__actions {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire {
+      margin-bottom: 22px;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions {
       display: flex;
       align-items: stretch;
       justify-content: center;
@@ -108,11 +101,11 @@
       padding: 22px 0 12px;
     }
 
-    .lcdp-page-privatisation .lcdp-box-formulaire__actions .lcdp-button {
+    .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: min(100%, 270px);
+      width: min(100%, 280px);
       min-height: 50px;
       margin: 0;
       padding: 10px 18px;
@@ -120,203 +113,235 @@
       text-align: center;
     }
 
-    .lcdp-privatisation-information {
-      padding: 12px 14px;
-      border: 1px solid currentColor;
-      border-radius: 12px;
+    .lcdp-workflow-intro,
+    .lcdp-workflow-disabled {
+      margin: 0 0 20px;
+      padding: 14px 16px;
+      border: 1px solid #cfd5c6;
+      border-radius: 14px;
+      background: #f8f9f5;
+      line-height: 1.5;
     }
 
-    .lcdp-privatisation-categories {
+    .lcdp-workflow-disabled {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-form-grid {
       display: grid;
-      gap: 10px;
-      margin-top: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
     }
 
-    .lcdp-privatisation-categorie {
+    .lcdp-form-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lcdp-schedule-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 16px;
+      background: #fbfbf8;
+    }
+
+    .lcdp-schedule-card__title {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+    }
+
+    .lcdp-time-range {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .lcdp-time-range__arrow {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      min-height: 48px;
+      font-size: 1.35rem;
+      color: #596351;
+    }
+
+    .lcdp-day-selector {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .lcdp-day-selector label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 6px;
+      border: 1px solid #d8ddd0;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .lcdp-day-selector input {
+      margin: 0;
+    }
+
+    .lcdp-page-planning-workflow textarea.lcdp-box-champ-formulaire__input {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-button-secondary[data-dictee-cible] {
+      margin-top: 10px;
+      min-width: 140px;
+    }
+
+    .lcdp-page-planning-workflow [role="status"] {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid #d9dccf;
+      border-radius: 12px;
+      background: #f4f4ef;
+    }
+
+    .lcdp-page-planning-workflow [role="status"][data-etat="erreur"] {
+      border-color: #e2b7b0;
+      background: #fff1ef;
+    }
+
+    .lcdp-page-planning-workflow [role="status"][data-etat="succes"] {
+      border-color: #cbd8b6;
+      background: #f3f7ec;
+    }
+
+    .lcdp-validation-bloc {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 14px;
+      background: #fafaf7;
+    }
+
+    .lcdp-validation-bloc h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .lcdp-validation-liste {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .lcdp-validation-alertes {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-validation-note {
+      margin: 12px 0 0;
+      font-size: 0.95rem;
+      color: #505a3d;
+    }
+
+    .lcdp-page-planning-workflow details {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px solid #d8ddd0;
+      border-radius: 12px;
+      background: #fbfbf9;
+    }
+
+    .lcdp-page-planning-workflow pre {
+      margin: 12px 0 0;
+      padding: 14px;
+      max-height: 340px;
+      overflow: auto;
+      border-radius: 10px;
+      background: #f2f4ef;
+      font-size: 0.92rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
+      grid-template-columns: repeat(2, minmax(0, 200px));
+      justify-content: center;
+    }
+
+    [data-capacite-zone][hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .lcdp-form-grid,
+      .lcdp-form-grid--three {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-day-selector {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .lcdp-time-range {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-time-range__arrow {
+        min-height: auto;
+        transform: rotate(90deg);
+      }
+
+      .lcdp-day-selector {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
+
+      .lcdp-page-planning-workflow .lcdp-box-formulaire__actions .lcdp-button {
+        width: 100%;
+      }
     }
   </style>
+
 </head>
-
-<body class="lcdp-page-admin-interieure lcdp-page-privatisation">
+<body class="lcdp-page-admin-interieure lcdp-page-planning-workflow lcdp-page-privatisation">
   <div class="lcdp-site-page">
-
     <div id="lcdp-bandeau-slot"></div>
-
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
-      <section
-        class="lcdp-page-section"
-        aria-label="Privatisation du parc"
-      >
+      <section class="lcdp-page-section" aria-label="Privatisation">
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
-
             <div id="lcdp-menu-gauche-admin-slot"></div>
-
             <div class="lcdp-admin-page-content">
+
               <section class="lcdp-box-formulaire">
                 <header class="lcdp-box-formulaire__header">
-                  <h1 class="lcdp-box-formulaire__title">
-                    privatisation
-                  </h1>
-
-                  <p id="lcdp-privatisation-identite">
-                    Chargement du parc…
-                  </p>
+                  <h1 class="lcdp-box-formulaire__title">Privatisation</h1>
+                  <p id="lcdp-privatisation-identite">Chargement du parc…</p>
                 </header>
-
-                <p class="lcdp-privatisation-information">
-                  Pendant la période déclarée, le parc est fermé à tous
-                  les membres par défaut. Les catégories cochées sont les
-                  seules autorisées. La capacité saisie s’impose exactement,
-                  à la hausse comme à la baisse.
+                <p class="lcdp-workflow-disabled">
+                  Le workflow Privatisation est volontairement mis de côté. Aucune analyse et aucune écriture ne sont proposées dans cette version.
                 </p>
-
-                <form id="lcdp-privatisation-form">
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-privatisation-texte"
-                    >
-                      Privatisation
-                    </label>
-                    <textarea
-                      id="lcdp-privatisation-texte"
-                      class="lcdp-box-champ-formulaire__input"
-                      rows="5"
-                      placeholder="Ex. Le parc est privatisé du lundi 17 octobre à 10 h au jeudi 20 octobre à 20 h."
-                      required
-                    ></textarea>
-                    <button
-                      class="lcdp-button lcdp-button-secondary"
-                      type="button"
-                      data-dictee-cible="lcdp-privatisation-texte"
-                    >
-                      Dicter
-                    </button>
-                  </div>
-
-                  <fieldset class="lcdp-box-champ-formulaire">
-                    <legend class="lcdp-box-champ-formulaire__label">
-                      Ouvert aux membres
-                    </legend>
-
-                    <p>
-                      Ne rien cocher signifie : fermé à tous les membres.
-                    </p>
-
-                    <div class="lcdp-privatisation-categories">
-                      <label class="lcdp-privatisation-categorie">
-                        <input
-                          type="checkbox"
-                          name="lcdp-privatisation-categorie"
-                          value="DUO"
-                        >
-                        DUO
-                      </label>
-
-                      <label class="lcdp-privatisation-categorie">
-                        <input
-                          type="checkbox"
-                          name="lcdp-privatisation-categorie"
-                          value="COACH"
-                        >
-                        COACH
-                      </label>
-
-                      <label class="lcdp-privatisation-categorie">
-                        <input
-                          type="checkbox"
-                          name="lcdp-privatisation-categorie"
-                          value="FAMILLE"
-                        >
-                        FAMILLE
-                      </label>
-                    </div>
-                  </fieldset>
-
-                  <div class="lcdp-box-champ-formulaire">
-                    <label
-                      class="lcdp-box-champ-formulaire__label"
-                      for="lcdp-privatisation-capacite"
-                    >
-                      Capacité pendant la privatisation
-                    </label>
-                    <input
-                      id="lcdp-privatisation-capacite"
-                      class="lcdp-box-champ-formulaire__input"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Ex. 35"
-                    >
-                  </div>
-
-                  <div class="lcdp-box-formulaire__actions">
-                    <button
-                      id="lcdp-privatisation-analyser"
-                      class="lcdp-button lcdp-button-orange"
-                      type="submit"
-                    >
-                      Analyser la privatisation IA
-                    </button>
-                  </div>
-                </form>
               </section>
+              <p id="lcdp-privatisation-status" role="status" aria-live="polite" hidden></p>
 
-              <section
-                id="lcdp-privatisation-validation"
-                class="lcdp-box-formulaire"
-                hidden
-              >
-                <header class="lcdp-box-formulaire__header">
-                  <h2 class="lcdp-box-formulaire__title">
-                    Validation de la privatisation
-                  </h2>
-                </header>
-
-                <div id="lcdp-privatisation-resume"></div>
-                <div id="lcdp-privatisation-alertes" hidden></div>
-
-                <details>
-                  <summary>Voir le JSON proposé</summary>
-                  <pre id="lcdp-privatisation-json"></pre>
-                </details>
-
-                <div class="lcdp-box-formulaire__actions">
-                  <button
-                    id="lcdp-privatisation-corriger"
-                    class="lcdp-button lcdp-button-secondary"
-                    type="button"
-                  >
-                    Corriger la privatisation
-                  </button>
-
-                  <button
-                    id="lcdp-privatisation-valider"
-                    class="lcdp-button lcdp-button-orange"
-                    type="button"
-                  >
-                    Valider et modifier hparcs
-                  </button>
-                </div>
-              </section>
-
-              <p
-                id="lcdp-privatisation-status"
-                role="status"
-                aria-live="polite"
-                hidden
-              ></p>
             </div>
-
           </div>
         </div>
       </section>
     </main>
-
+    <div id="lcdp-lightbox-slot"></div>
   </div>
 </body>
 </html>
