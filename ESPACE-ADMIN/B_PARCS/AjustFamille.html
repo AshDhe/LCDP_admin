@@ -96,7 +96,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./AjustFamille.js" defer></script>
+  <script src="./AjustFamille.js?v=20260717-1205" defer></script>
 
   <style>
     .lcdp-page-ajust-famille .lcdp-box-formulaire__actions {
@@ -124,6 +124,35 @@
       padding: 12px 14px;
       border: 1px solid currentColor;
       border-radius: 12px;
+    }
+
+
+    .lcdp-page-ajust-famille .lcdp-box-formulaire {
+      margin-bottom: 22px;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-box-champ-formulaire {
+      margin-bottom: 18px;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-box-champ-formulaire__input[type="number"] {
+      width: min(100%, 220px);
+    }
+
+    .lcdp-page-ajust-famille textarea.lcdp-box-champ-formulaire__input {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-button-secondary[data-dictee-cible] {
+      margin-top: 10px;
+      min-width: 140px;
+    }
+
+    @media (max-width: 768px) {
+      .lcdp-page-ajust-famille textarea.lcdp-box-champ-formulaire__input {
+        min-height: 84px;
+      }
     }
   </style>
 </head>
