@@ -720,6 +720,12 @@ function initialiserComportementsFormulaire() {
     }
   }
 
+  function retourAdminParc() {
+    window.location.assign(
+      urlAdmin("/ESPACE-ADMIN/accueil-admin.html?categorie=parcs")
+    );
+  }
+
   function corriger() {
     const section = document.getElementById(
       PAGE.prefix + "-validation"
@@ -761,6 +767,9 @@ function initialiserComportementsFormulaire() {
 
     document.getElementById(PAGE.prefix + "-corriger")
       ?.addEventListener("click", corriger);
+
+    document.getElementById(PAGE.prefix + "-retour-admin-parc")
+      ?.addEventListener("click", retourAdminParc);
 
     initialiserComportementsFormulaire();
     initialiserDictee();

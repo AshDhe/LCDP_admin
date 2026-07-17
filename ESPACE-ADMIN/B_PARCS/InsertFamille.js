@@ -624,13 +624,12 @@ function ouvertureDemandee() {
 function actualiserCapacite() {
   const zone = document.querySelector("[data-capacite-zone]");
   const input = document.getElementById("lcdp-insert-famille-capacite");
+  const active = ouvertureDemandee();
 
-  if (zone) zone.hidden = false;
-
+  if (zone) zone.hidden = !active;
   if (input) {
-    input.required = false;
-    input.placeholder =
-      "Laisser vide pour une fermeture FAMILLE uniquement";
+    input.required = active;
+    if (!active) input.value = "";
   }
 }
 
@@ -661,10 +660,10 @@ function construireBrief() {
     : null;
 
   if (
-    capacite !== null &&
+    ouvertureDemandee() &&
     (!Number.isInteger(capacite) || capacite < 1)
   ) {
-    throw new Error("La capacité FAMILLE est invalide.");
+    throw new Error("La capacité FAMILLE est obligatoire pour une ouverture.");
   }
 
   const actionSemaine = valeur(
@@ -693,7 +692,7 @@ function construireBrief() {
         "lcdp-insert-famille-weekend-precision"
       )
     },
-    capacite
+    capacite: ouvertureDemandee() ? capacite : null
   };
 }
 
@@ -810,6 +809,12 @@ function initialiserComportementsFormulaire() {
     }
   }
 
+  function retourAdminParc() {
+    window.location.assign(
+      urlAdmin("/ESPACE-ADMIN/accueil-admin.html?categorie=parcs")
+    );
+  }
+
   function corriger() {
     const section = document.getElementById(
       PAGE.prefix + "-validation"
@@ -851,6 +856,9 @@ function initialiserComportementsFormulaire() {
 
     document.getElementById(PAGE.prefix + "-corriger")
       ?.addEventListener("click", corriger);
+
+    document.getElementById(PAGE.prefix + "-retour-admin-parc")
+      ?.addEventListener("click", retourAdminParc);
 
     initialiserComportementsFormulaire();
     initialiserDictee();

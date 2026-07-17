@@ -761,6 +761,12 @@ function initialiserComportementsFormulaire() {}
     }
   }
 
+  function retourAdminParc() {
+    window.location.assign(
+      urlAdmin("/ESPACE-ADMIN/accueil-admin.html?categorie=parcs")
+    );
+  }
+
   function corriger() {
     const section = document.getElementById(
       PAGE.prefix + "-validation"
@@ -769,33 +775,6 @@ function initialiserComportementsFormulaire() {}
     if (section) section.hidden = true;
     briefCourant = null;
     document.getElementById(PAGE.focusId)?.focus();
-  }
-
-  function initialiserBoutonRetourAdminParc() {
-    if (document.getElementById(PAGE.prefix + "-retour-admin-parc")) {
-      return;
-    }
-
-    const boutonValider = document.getElementById(
-      PAGE.prefix + "-valider"
-    );
-    const zoneActions = boutonValider?.closest(
-      ".lcdp-box-formulaire__actions"
-    );
-
-    if (!boutonValider || !zoneActions) {
-      throw new Error("Zone d’actions PlanningParc incomplète.");
-    }
-
-    const lienRetour = document.createElement("a");
-    lienRetour.id = PAGE.prefix + "-retour-admin-parc";
-    lienRetour.className = "lcdp-button lcdp-button-primary";
-    lienRetour.textContent = "Retour admin parc";
-    lienRetour.href = urlAdmin(
-      "/ESPACE-ADMIN/accueil-admin.html?categorie=parcs"
-    );
-
-    boutonValider.insertAdjacentElement("afterend", lienRetour);
   }
 
   async function verifierAcces() {
@@ -830,7 +809,9 @@ function initialiserComportementsFormulaire() {}
     document.getElementById(PAGE.prefix + "-corriger")
       ?.addEventListener("click", corriger);
 
-    initialiserBoutonRetourAdminParc();
+    document.getElementById(PAGE.prefix + "-retour-admin-parc")
+      ?.addEventListener("click", retourAdminParc);
+
     initialiserComportementsFormulaire();
     initialiserDictee();
   }
