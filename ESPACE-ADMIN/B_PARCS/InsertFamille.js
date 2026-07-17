@@ -556,6 +556,72 @@
       .trim();
   }
 
+  function motsComparablesDictee(value) {
+    return String(value || "")
+      .trim()
+      .split(/\s+/)
+      .map((mot) => {
+        return mot
+          .toLocaleLowerCase("fr-FR")
+          .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+      })
+      .filter(Boolean);
+  }
+
+  function retirerChevauchementDictee(texteExistant, texteAjoute) {
+    const ajout = String(texteAjoute || "").trim();
+
+    if (!ajout) {
+      return "";
+    }
+
+    const motsExistants = motsComparablesDictee(texteExistant);
+    const motsAjoutesBruts = ajout.split(/\s+/);
+    const motsAjoutes = motsComparablesDictee(ajout);
+    const limite = Math.min(
+      12,
+      motsExistants.length,
+      motsAjoutes.length
+    );
+
+    let nombreMotsCommuns = 0;
+
+    for (let taille = limite; taille >= 1; taille -= 1) {
+      const finExistante = motsExistants
+        .slice(-taille)
+        .join(" ");
+      const debutAjoute = motsAjoutes
+        .slice(0, taille)
+        .join(" ");
+
+      if (finExistante === debutAjoute) {
+        nombreMotsCommuns = taille;
+        break;
+      }
+    }
+
+    if (nombreMotsCommuns < 1) {
+      return ajout;
+    }
+
+    return motsAjoutesBruts
+      .slice(nombreMotsCommuns)
+      .join(" ")
+      .trim();
+  }
+
+  function ajouterSegmentDictee(texteExistant, texteAjoute) {
+    const ajoutSansDoublon = retirerChevauchementDictee(
+      texteExistant,
+      texteAjoute
+    );
+
+    return joindreSegmentsDictee(
+      texteExistant,
+      ajoutSansDoublon
+    );
+  }
+
   function terminerPhraseDictee(value) {
     const texte = String(value || "").trim();
 
@@ -660,7 +726,9 @@
 
         const sessionCourante = ++sessionDictee;
         let texteValideSession = String(cible.value || "").trim();
-        let resultatsCycle = new Map();
+        let texteFinalCycle = "";
+        let texteIntermediaireCycle = "";
+        let indicesFinalisesCycle = new Set();
         let delaiRelanceCycle = 0;
         let tentativeDemarrage = 0;
 
@@ -679,21 +747,19 @@
           );
         };
 
-        const texteResultatsCycle = () => {
-          return Array.from(resultatsCycle.entries())
-            .sort(([indexA], [indexB]) => indexA - indexB)
-            .map(([, resultat]) => resultat.texte)
-            .filter(Boolean)
-            .join(" ")
-            .trim();
+        const texteCycleCourant = () => {
+          return ajouterSegmentDictee(
+            texteFinalCycle,
+            texteIntermediaireCycle
+          );
         };
 
         const afficherCycle = () => {
           if (!sessionToujoursActive()) return;
 
-          cible.value = joindreSegmentsDictee(
+          cible.value = ajouterSegmentDictee(
             texteValideSession,
-            texteResultatsCycle()
+            texteCycleCourant()
           );
         };
 
@@ -733,6 +799,8 @@
         instance.addEventListener("result", (event) => {
           if (!sessionToujoursActive()) return;
 
+          let nouvelIntermediaire = "";
+
           for (
             let index = event.resultIndex || 0;
             index < event.results.length;
@@ -744,16 +812,28 @@
             ).trim();
 
             if (!texte) {
-              resultatsCycle.delete(index);
               continue;
             }
 
-            resultatsCycle.set(index, {
-              texte,
-              final: Boolean(resultat.isFinal)
-            });
+            if (resultat.isFinal) {
+              if (!indicesFinalisesCycle.has(index)) {
+                texteFinalCycle = ajouterSegmentDictee(
+                  texteFinalCycle,
+                  texte
+                );
+                indicesFinalisesCycle.add(index);
+              }
+
+              continue;
+            }
+
+            nouvelIntermediaire = ajouterSegmentDictee(
+              nouvelIntermediaire,
+              texte
+            );
           }
 
+          texteIntermediaireCycle = nouvelIntermediaire;
           afficherCycle();
         });
 
@@ -796,20 +876,23 @@
         instance.addEventListener("end", () => {
           if (!sessionToujoursActive()) return;
 
-          const texteCycle = texteResultatsCycle();
+          const texteCycle = texteCycleCourant();
 
           if (texteCycle) {
-            texteValideSession = joindreSegmentsDictee(
+            texteValideSession = ajouterSegmentDictee(
               texteValideSession,
               terminerPhraseDictee(texteCycle)
             );
             cible.value = texteValideSession;
           }
 
-          resultatsCycle = new Map();
+          texteFinalCycle = "";
+          texteIntermediaireCycle = "";
+          indicesFinalisesCycle = new Set();
 
           const delai = delaiRelanceCycle;
           delaiRelanceCycle = 0;
+
           planifierRelance(delai);
         });
 
