@@ -6,6 +6,12 @@
   let parcCourant = null;
   let briefCourant = null;
   let reconnaissance = null;
+  let dicteeActive = false;
+  let boutonDicteeActif = null;
+  let cibleDicteeActive = null;
+  let minuterieRelanceDictee = null;
+  let sessionDictee = 0;
+  let fluxMicroDictee = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -384,6 +390,93 @@
     )?.focus();
   }
 
+  function restaurerBoutonDictee(bouton) {
+    if (!bouton) return;
+
+    bouton.disabled = false;
+    bouton.textContent = "Dicter";
+  }
+
+  function joindreSegmentsDictee(...segments) {
+    return segments
+      .map((segment) => String(segment || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function terminerPhraseDictee(value) {
+    const texte = String(value || "").trim();
+
+    if (!texte) {
+      return "";
+    }
+
+    if (/[.!?…]$/.test(texte)) {
+      return texte;
+    }
+
+    return texte.replace(/[,:;]+$/, "") + ".";
+  }
+
+  function fermerFluxMicroDictee() {
+    if (!fluxMicroDictee) return;
+
+    for (const piste of fluxMicroDictee.getTracks()) {
+      piste.stop();
+    }
+
+    fluxMicroDictee = null;
+  }
+
+  async function ouvrirFluxMicroDictee() {
+    fermerFluxMicroDictee();
+
+    if (
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      return;
+    }
+
+    fluxMicroDictee = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+  }
+
+  function arreterDictee() {
+    dicteeActive = false;
+    sessionDictee += 1;
+
+    if (minuterieRelanceDictee) {
+      window.clearTimeout(minuterieRelanceDictee);
+      minuterieRelanceDictee = null;
+    }
+
+    const instance = reconnaissance;
+    const bouton = boutonDicteeActif;
+
+    reconnaissance = null;
+    boutonDicteeActif = null;
+    cibleDicteeActive = null;
+
+    if (instance) {
+      try {
+        instance.abort();
+      } catch {
+        // La reconnaissance peut déjà être terminée.
+      }
+    }
+
+    fermerFluxMicroDictee();
+    restaurerBoutonDictee(bouton);
+  }
+
   function initialiserDictee() {
     const SpeechRecognition =
       window.SpeechRecognition ||
@@ -396,46 +489,204 @@
         return;
       }
 
-      bouton.addEventListener("click", () => {
+      bouton.addEventListener("click", async () => {
         const cible = document.getElementById(
           bouton.dataset.dicteeCible || ""
         );
 
         if (!cible) return;
 
-        if (reconnaissance) {
-          reconnaissance.stop();
-          reconnaissance = null;
+        if (
+          dicteeActive &&
+          boutonDicteeActif === bouton
+        ) {
+          arreterDictee();
+          return;
         }
 
-        reconnaissance = new SpeechRecognition();
-        reconnaissance.lang = "fr-FR";
-        reconnaissance.interimResults = false;
-        reconnaissance.continuous = false;
+        if (dicteeActive || reconnaissance) {
+          arreterDictee();
+        }
 
-        bouton.disabled = true;
-        bouton.textContent = "Écoute…";
+        const sessionCourante = ++sessionDictee;
+        let texteValideSession = String(cible.value || "").trim();
+        let resultatsCycle = new Map();
+        let delaiRelanceCycle = 0;
+        let tentativeDemarrage = 0;
 
-        reconnaissance.addEventListener("result", (event) => {
-          const texte = event.results?.[0]?.[0]?.transcript || "";
-          cible.value = [cible.value.trim(), texte.trim()]
+        dicteeActive = true;
+        boutonDicteeActif = bouton;
+        cibleDicteeActive = cible;
+        bouton.disabled = false;
+        bouton.textContent = "Arrêter";
+
+        const sessionToujoursActive = () => {
+          return (
+            dicteeActive &&
+            sessionDictee === sessionCourante &&
+            boutonDicteeActif === bouton &&
+            cibleDicteeActive === cible
+          );
+        };
+
+        const texteResultatsCycle = () => {
+          return Array.from(resultatsCycle.entries())
+            .sort(([indexA], [indexB]) => indexA - indexB)
+            .map(([, resultat]) => resultat.texte)
             .filter(Boolean)
-            .join(" ");
+            .join(" ")
+            .trim();
+        };
+
+        const afficherCycle = () => {
+          if (!sessionToujoursActive()) return;
+
+          cible.value = joindreSegmentsDictee(
+            texteValideSession,
+            texteResultatsCycle()
+          );
+        };
+
+        const instance = new SpeechRecognition();
+        reconnaissance = instance;
+
+        instance.lang = "fr-FR";
+        instance.interimResults = true;
+        instance.continuous = true;
+        instance.maxAlternatives = 1;
+
+        const planifierRelance = (delai = 0) => {
+          if (!sessionToujoursActive()) return;
+
+          if (minuterieRelanceDictee) {
+            window.clearTimeout(minuterieRelanceDictee);
+          }
+
+          minuterieRelanceDictee = window.setTimeout(() => {
+            minuterieRelanceDictee = null;
+
+            if (!sessionToujoursActive()) return;
+
+            try {
+              instance.start();
+              tentativeDemarrage = 0;
+            } catch {
+              tentativeDemarrage += 1;
+
+              planifierRelance(
+                Math.min(25 * tentativeDemarrage, 150)
+              );
+            }
+          }, Math.max(0, delai));
+        };
+
+        instance.addEventListener("result", (event) => {
+          if (!sessionToujoursActive()) return;
+
+          for (
+            let index = event.resultIndex || 0;
+            index < event.results.length;
+            index += 1
+          ) {
+            const resultat = event.results[index];
+            const texte = String(
+              resultat?.[0]?.transcript || ""
+            ).trim();
+
+            if (!texte) {
+              resultatsCycle.delete(index);
+              continue;
+            }
+
+            resultatsCycle.set(index, {
+              texte,
+              final: Boolean(resultat.isFinal)
+            });
+          }
+
+          afficherCycle();
         });
 
-        reconnaissance.addEventListener("end", () => {
-          bouton.disabled = false;
-          bouton.textContent = "Dicter";
-          reconnaissance = null;
+        instance.addEventListener("error", (event) => {
+          const code = String(event?.error || "");
+
+          if (!sessionToujoursActive()) return;
+
+          if (
+            code === "not-allowed" ||
+            code === "service-not-allowed"
+          ) {
+            arreterDictee();
+            afficherStatus("Autorisation du microphone refusée.", true);
+            return;
+          }
+
+          if (code === "audio-capture") {
+            // Certains navigateurs refusent le partage entre le flux
+            // permanent et SpeechRecognition. On libère alors uniquement
+            // le flux de maintien ; la dictée continue de se relancer.
+            fermerFluxMicroDictee();
+            delaiRelanceCycle = 120;
+            return;
+          }
+
+          if (code === "network") {
+            delaiRelanceCycle = 300;
+            return;
+          }
+
+          if (
+            code === "no-speech" ||
+            code === "aborted"
+          ) {
+            delaiRelanceCycle = 0;
+            return;
+          }
+
+          delaiRelanceCycle = 100;
         });
 
-        reconnaissance.addEventListener("error", () => {
-          afficherStatus("Dictée interrompue.", true);
+        instance.addEventListener("end", () => {
+          if (!sessionToujoursActive()) return;
+
+          const texteCycle = texteResultatsCycle();
+
+          if (texteCycle) {
+            texteValideSession = joindreSegmentsDictee(
+              texteValideSession,
+              terminerPhraseDictee(texteCycle)
+            );
+            cible.value = texteValideSession;
+          }
+
+          resultatsCycle = new Map();
+
+          const delai = delaiRelanceCycle;
+          delaiRelanceCycle = 0;
+
+          // Relance immédiate après un silence : le bouton reste actif
+          // et la session de dictée ne s’arrête qu’au clic sur « Arrêter ».
+          planifierRelance(delai);
         });
 
-        reconnaissance.start();
+        try {
+          await ouvrirFluxMicroDictee();
+        } catch {
+          // SpeechRecognition peut fonctionner même si le navigateur
+          // refuse le flux de maintien séparé.
+          fermerFluxMicroDictee();
+        }
+
+        if (!sessionToujoursActive()) {
+          fermerFluxMicroDictee();
+          return;
+        }
+
+        planifierRelance(0);
       });
     });
+
+    window.addEventListener("beforeunload", fermerFluxMicroDictee);
   }
 
   async function verifierAcces() {
