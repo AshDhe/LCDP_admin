@@ -10,6 +10,8 @@
   let boutonDicteeActif = null;
   let cibleDicteeActive = null;
   let minuterieRelanceDictee = null;
+  let sessionDictee = 0;
+  let fluxMicroDictee = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -238,9 +240,6 @@
     }
 
     const jsonbrief = data?.jsonbrief || {};
-    const resumeLisible = Array.isArray(jsonbrief.resume_lisible)
-      ? jsonbrief.resume_lisible
-      : [];
     const resumeOral = String(jsonbrief.resume_oral || "").trim();
     const listeAlertes = Array.isArray(jsonbrief.alertes)
       ? jsonbrief.alertes
@@ -250,52 +249,25 @@
     alertes.innerHTML = "";
     alertes.hidden = true;
 
-    const blocStructure = document.createElement("div");
-    blocStructure.className = "lcdp-validation-bloc";
+    const blocResume = document.createElement("div");
+    blocResume.className = "lcdp-validation-bloc";
 
-    const titreStructure = document.createElement("h3");
-    titreStructure.textContent = "Résumé structuré";
-    blocStructure.appendChild(titreStructure);
+    const titreResume = document.createElement("h3");
+    titreResume.textContent = "Résumé du planning";
+    blocResume.appendChild(titreResume);
 
-    if (resumeLisible.length > 0) {
-      const listeResume = document.createElement("ul");
-      listeResume.className = "lcdp-validation-liste";
-
-      for (const ligne of resumeLisible) {
-        const item = document.createElement("li");
-        item.textContent = String(ligne || "");
-        listeResume.appendChild(item);
-      }
-
-      blocStructure.appendChild(listeResume);
-    } else {
-      const vide = document.createElement("p");
-      vide.textContent = "Aucun résumé structuré n’a été renvoyé.";
-      blocStructure.appendChild(vide);
-    }
-
-    resume.appendChild(blocStructure);
-
-    const blocOral = document.createElement("div");
-    blocOral.className = "lcdp-validation-bloc";
-
-    const titreOral = document.createElement("h3");
-    titreOral.textContent = "Lecture en langage courant";
-    blocOral.appendChild(titreOral);
-
-    const texteOral = document.createElement("p");
-    texteOral.textContent = resumeOral ||
-      "Aucun résumé oral n’a été renvoyé.";
-    blocOral.appendChild(texteOral);
-
-    resume.appendChild(blocOral);
+    const texteResume = document.createElement("p");
+    texteResume.textContent = resumeOral ||
+      "Aucun résumé du planning n’a été produit.";
+    blocResume.appendChild(texteResume);
+    resume.appendChild(blocResume);
 
     if (listeAlertes.length > 0) {
       alertes.hidden = false;
       alertes.className = "lcdp-validation-bloc";
 
       const titreAlertes = document.createElement("h3");
-      titreAlertes.textContent = "Points de vigilance";
+      titreAlertes.textContent = "Points à corriger";
       alertes.appendChild(titreAlertes);
 
       const liste = document.createElement("ul");
@@ -313,15 +285,16 @@
     const note = document.createElement("p");
     note.className = "lcdp-validation-note";
     note.textContent = listeAlertes.length > 0
-      ? "La validation reste possible après vérification des points de vigilance."
+      ? "Le brief doit être corrigé avant son écriture dans hparcs."
       : "Le brief est prêt à être validé et envoyé dans hparcs.";
     resume.appendChild(note);
 
-    boutonValider.disabled = false;
+    boutonValider.disabled = listeAlertes.length > 0;
     json.textContent = JSON.stringify(jsonbrief, null, 2);
     section.hidden = false;
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
 
   async function analyserBrief(event) {
     event.preventDefault();
@@ -383,6 +356,18 @@
   async function validerBrief() {
     if (!briefCourant || !parcCourant) return;
 
+    const alertes = Array.isArray(briefCourant?.jsonbrief?.alertes)
+      ? briefCourant.jsonbrief.alertes
+      : [];
+
+    if (alertes.length > 0) {
+      afficherStatus(
+        "Le brief contient encore des points à corriger.",
+        true
+      );
+      return;
+    }
+
     const endpoint = endpointParcPlanning();
     const bouton = document.getElementById("lcdp-planning-valider");
 
@@ -391,12 +376,8 @@
       return;
     }
 
-    const aDesAlertes = Array.isArray(briefCourant?.jsonbrief?.alertes) && briefCourant.jsonbrief.alertes.length > 0;
-
     const confirmation = window.confirm(
-      aDesAlertes
-        ? "Des points de vigilance sont encore affichés. Valider quand même ce brief et écrire le planning DUO et COACH dans hparcs ?"
-        : "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
+      "Valider ce brief et écrire le planning DUO et COACH dans hparcs ?"
     );
 
     if (!confirmation) return;
@@ -461,8 +442,47 @@
     bouton.textContent = "Dicter";
   }
 
+  function joindreSegmentsDictee(...segments) {
+    return segments
+      .map((segment) => String(segment || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function fermerFluxMicroDictee() {
+    if (!fluxMicroDictee) return;
+
+    for (const piste of fluxMicroDictee.getTracks()) {
+      piste.stop();
+    }
+
+    fluxMicroDictee = null;
+  }
+
+  async function ouvrirFluxMicroDictee() {
+    fermerFluxMicroDictee();
+
+    if (
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      return;
+    }
+
+    fluxMicroDictee = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+  }
+
   function arreterDictee() {
     dicteeActive = false;
+    sessionDictee += 1;
 
     if (minuterieRelanceDictee) {
       window.clearTimeout(minuterieRelanceDictee);
@@ -484,6 +504,7 @@
       }
     }
 
+    fermerFluxMicroDictee();
     restaurerBoutonDictee(bouton);
   }
 
@@ -499,7 +520,7 @@
         return;
       }
 
-      bouton.addEventListener("click", () => {
+      bouton.addEventListener("click", async () => {
         const cible = document.getElementById(
           bouton.dataset.dicteeCible || ""
         );
@@ -518,137 +539,185 @@
           arreterDictee();
         }
 
+        const sessionCourante = ++sessionDictee;
+        let texteValideSession = String(cible.value || "").trim();
+        let resultatsCycle = new Map();
+        let delaiRelanceCycle = 0;
+        let tentativeDemarrage = 0;
+
         dicteeActive = true;
         boutonDicteeActif = bouton;
         cibleDicteeActive = cible;
         bouton.disabled = false;
         bouton.textContent = "Arrêter";
 
-        const lancerCycle = () => {
-          if (
-            !dicteeActive ||
-            boutonDicteeActif !== bouton ||
-            cibleDicteeActive !== cible
+        const sessionToujoursActive = () => {
+          return (
+            dicteeActive &&
+            sessionDictee === sessionCourante &&
+            boutonDicteeActif === bouton &&
+            cibleDicteeActive === cible
+          );
+        };
+
+        const texteResultatsCycle = () => {
+          return Array.from(resultatsCycle.entries())
+            .sort(([indexA], [indexB]) => indexA - indexB)
+            .map(([, resultat]) => resultat.texte)
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+        };
+
+        const afficherCycle = () => {
+          if (!sessionToujoursActive()) return;
+
+          cible.value = joindreSegmentsDictee(
+            texteValideSession,
+            texteResultatsCycle()
+          );
+        };
+
+        const instance = new SpeechRecognition();
+        reconnaissance = instance;
+
+        instance.lang = "fr-FR";
+        instance.interimResults = true;
+        instance.continuous = true;
+        instance.maxAlternatives = 1;
+
+        const planifierRelance = (delai = 0) => {
+          if (!sessionToujoursActive()) return;
+
+          if (minuterieRelanceDictee) {
+            window.clearTimeout(minuterieRelanceDictee);
+          }
+
+          minuterieRelanceDictee = window.setTimeout(() => {
+            minuterieRelanceDictee = null;
+
+            if (!sessionToujoursActive()) return;
+
+            try {
+              instance.start();
+              tentativeDemarrage = 0;
+            } catch {
+              tentativeDemarrage += 1;
+
+              planifierRelance(
+                Math.min(25 * tentativeDemarrage, 150)
+              );
+            }
+          }, Math.max(0, delai));
+        };
+
+        instance.addEventListener("result", (event) => {
+          if (!sessionToujoursActive()) return;
+
+          for (
+            let index = event.resultIndex || 0;
+            index < event.results.length;
+            index += 1
           ) {
+            const resultat = event.results[index];
+            const texte = String(
+              resultat?.[0]?.transcript || ""
+            ).trim();
+
+            if (!texte) {
+              resultatsCycle.delete(index);
+              continue;
+            }
+
+            resultatsCycle.set(index, {
+              texte,
+              final: Boolean(resultat.isFinal)
+            });
+          }
+
+          afficherCycle();
+        });
+
+        instance.addEventListener("error", (event) => {
+          const code = String(event?.error || "");
+
+          if (!sessionToujoursActive()) return;
+
+          if (
+            code === "not-allowed" ||
+            code === "service-not-allowed"
+          ) {
+            arreterDictee();
+            afficherStatus("Autorisation du microphone refusée.", true);
             return;
           }
 
-          const instance = new SpeechRecognition();
-          const texteAvantCycle = cible.value.trim();
-          let texteFinalCycle = "";
-          let dernierIntermediaireCycle = "";
-
-          reconnaissance = instance;
-          instance.lang = "fr-FR";
-          instance.interimResults = true;
-          instance.continuous = false;
-
-          instance.addEventListener("result", (event) => {
-            let finalAjoute = "";
-            let intermediaire = "";
-
-            for (
-              let index = event.resultIndex || 0;
-              index < event.results.length;
-              index += 1
-            ) {
-              const resultat = event.results[index];
-              const texte = String(
-                resultat?.[0]?.transcript || ""
-              ).trim();
-
-              if (!texte) continue;
-
-              if (resultat.isFinal) {
-                finalAjoute = [finalAjoute, texte]
-                  .filter(Boolean)
-                  .join(" ");
-              } else {
-                intermediaire = [intermediaire, texte]
-                  .filter(Boolean)
-                  .join(" ");
-                dernierIntermediaireCycle = intermediaire;
-              }
-            }
-
-            if (finalAjoute) {
-              texteFinalCycle = [texteFinalCycle, finalAjoute]
-                .filter(Boolean)
-                .join(" ");
-            }
-
-            cible.value = [
-              texteAvantCycle,
-              texteFinalCycle,
-              intermediaire
-            ]
-              .filter(Boolean)
-              .join(" ");
-          });
-
-          instance.addEventListener("error", (event) => {
-            const code = String(event?.error || "");
-
-            if (
-              code === "no-speech" ||
-              code === "aborted"
-            ) {
-              return;
-            }
-
-            arreterDictee();
-            afficherStatus(
-              code === "not-allowed" ||
-              code === "service-not-allowed"
-                ? "Autorisation du microphone refusée."
-                : code === "audio-capture"
-                  ? "Microphone indisponible."
-                  : "Dictée interrompue.",
-              true
-            );
-          });
-
-          instance.addEventListener("end", () => {
-            if (reconnaissance === instance) {
-              reconnaissance = null;
-            }
-
-            const texteCycleConserve =
-              texteFinalCycle || dernierIntermediaireCycle;
-
-            cible.value = [texteAvantCycle, texteCycleConserve]
-              .filter(Boolean)
-              .join(" ");
-
-            if (
-              !dicteeActive ||
-              boutonDicteeActif !== bouton ||
-              cibleDicteeActive !== cible
-            ) {
-              restaurerBoutonDictee(bouton);
-              return;
-            }
-
-            minuterieRelanceDictee = window.setTimeout(() => {
-              minuterieRelanceDictee = null;
-              lancerCycle();
-            }, 220);
-          });
-
-          try {
-            instance.start();
-          } catch {
-            reconnaissance = null;
-            minuterieRelanceDictee = window.setTimeout(() => {
-              minuterieRelanceDictee = null;
-              lancerCycle();
-            }, 450);
+          if (code === "audio-capture") {
+            // Certains navigateurs refusent le partage entre le flux
+            // permanent et SpeechRecognition. On libère alors uniquement
+            // le flux de maintien ; la dictée continue de se relancer.
+            fermerFluxMicroDictee();
+            delaiRelanceCycle = 120;
+            return;
           }
-        };
 
-        lancerCycle();
+          if (code === "network") {
+            delaiRelanceCycle = 300;
+            return;
+          }
+
+          if (
+            code === "no-speech" ||
+            code === "aborted"
+          ) {
+            delaiRelanceCycle = 0;
+            return;
+          }
+
+          delaiRelanceCycle = 100;
+        });
+
+        instance.addEventListener("end", () => {
+          if (!sessionToujoursActive()) return;
+
+          const texteCycle = texteResultatsCycle();
+
+          if (texteCycle) {
+            texteValideSession = joindreSegmentsDictee(
+              texteValideSession,
+              texteCycle
+            );
+            cible.value = texteValideSession;
+          }
+
+          resultatsCycle = new Map();
+
+          const delai = delaiRelanceCycle;
+          delaiRelanceCycle = 0;
+
+          // Relance immédiate après un silence : le bouton reste actif
+          // et la session de dictée ne s’arrête qu’au clic sur « Arrêter ».
+          planifierRelance(delai);
+        });
+
+        try {
+          await ouvrirFluxMicroDictee();
+        } catch {
+          // SpeechRecognition peut fonctionner même si le navigateur
+          // refuse le flux de maintien séparé.
+          fermerFluxMicroDictee();
+        }
+
+        if (!sessionToujoursActive()) {
+          fermerFluxMicroDictee();
+          return;
+        }
+
+        planifierRelance(0);
       });
     });
+
+    window.addEventListener("beforeunload", fermerFluxMicroDictee);
   }
 
   async function verifierAcces() {
