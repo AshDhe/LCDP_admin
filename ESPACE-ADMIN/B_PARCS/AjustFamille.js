@@ -14,6 +14,8 @@
   let minuterieRelanceDictee = null;
   let sessionDictee = 0;
   let fluxMicroDictee = null;
+  let modeleDialogueAjustement = null;
+  let chargementModeleDialogueAjustement = null;
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -76,6 +78,46 @@
     return template.content.cloneNode(true);
   }
 
+  async function chargerModeleDialogueAjustement() {
+    if (modeleDialogueAjustement) {
+      return modeleDialogueAjustement;
+    }
+
+    if (chargementModeleDialogueAjustement) {
+      return chargementModeleDialogueAjustement;
+    }
+
+    chargementModeleDialogueAjustement = (async () => {
+      const response = await fetch(
+        urlObjet("/BOX/02-box-dialogue-bouton.html"),
+        {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-cache"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Boîte de dialogue introuvable.");
+      }
+
+      const html = (await response.text()).trim();
+
+      if (!html) {
+        throw new Error("Boîte de dialogue vide.");
+      }
+
+      modeleDialogueAjustement = html;
+      return modeleDialogueAjustement;
+    })();
+
+    try {
+      return await chargementModeleDialogueAjustement;
+    } finally {
+      chargementModeleDialogueAjustement = null;
+    }
+  }
+
   async function demanderConfirmationAjustement(message) {
     const slot = document.getElementById("lcdp-lightbox-slot");
 
@@ -83,14 +125,11 @@
       throw new Error("Slot de dialogue d’ajustement absent.");
     }
 
-    slot.innerHTML = "";
+    const html = await chargerModeleDialogueAjustement();
+    const template = document.createElement("template");
+    template.innerHTML = html;
 
-    const fragment = await chargerFragment(
-      urlObjet("/BOX/02-box-dialogue-bouton.html"),
-      "Boîte de dialogue"
-    );
-
-    slot.appendChild(fragment);
+    slot.replaceChildren(template.content.cloneNode(true));
 
     const dialogue = slot.querySelector(
       "[data-lcdp-box-dialogue-bouton]"
@@ -109,7 +148,7 @@
     );
 
     if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
+      slot.replaceChildren();
       throw new Error("Structure de la boîte de dialogue incomplète.");
     }
 
@@ -132,7 +171,7 @@
       "lcdp-button lcdp-button-orange";
     boutonOk.textContent = "OK";
 
-    actions.append(boutonAnnuler, boutonOk);
+    actions.replaceChildren(boutonAnnuler, boutonOk);
 
     return new Promise((resolve) => {
       let resolu = false;
@@ -145,7 +184,7 @@
           "keydown",
           gererToucheDialogue
         );
-        slot.innerHTML = "";
+        slot.replaceChildren();
         resolve(valeur);
       }
 
@@ -449,8 +488,17 @@
     }
   }
 
-  async function validerAjustement() {
-    if (!briefCourant || !parcCourant) return;
+  async function validerAjustement(event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (!briefCourant || !parcCourant) {
+      afficherStatus(
+        "Aucun ajustement prêt à être validé.",
+        true
+      );
+      return;
+    }
 
     const endpoint = endpointParcPlanning();
     const bouton = document.getElementById(
@@ -462,11 +510,27 @@
       return;
     }
 
-    const confirmation = await demanderConfirmationAjustement(
-      "Valider cet ajustement et modifier le planning FAMILLE dans hparcs ?"
-    );
+    afficherStatus("Ouverture de la confirmation…");
 
-    if (!confirmation) return;
+    let confirmation;
+
+    try {
+      confirmation = await demanderConfirmationAjustement(
+        "Valider cet ajustement et modifier le planning FAMILLE dans hparcs ?"
+      );
+    } catch (error) {
+      afficherStatus(
+        "Confirmation indisponible : " +
+        String(error?.message || error || ""),
+        true
+      );
+      return;
+    }
+
+    if (!confirmation) {
+      afficherStatus("Validation annulée.");
+      return;
+    }
 
     if (bouton) bouton.disabled = true;
     afficherStatus(
@@ -885,11 +949,24 @@
     document.getElementById("lcdp-ajust-famille-form")
       ?.addEventListener("submit", analyserAjustement);
 
-    document.getElementById("lcdp-ajust-famille-valider")
-      ?.addEventListener("click", validerAjustement);
+    const boutonValider = document.getElementById(
+      "lcdp-ajust-famille-valider"
+    );
+
+    if (!boutonValider) {
+      throw new Error("Bouton de validation FAMILLE absent.");
+    }
+
+    boutonValider.addEventListener("click", (event) => {
+      void validerAjustement(event);
+    });
 
     document.getElementById("lcdp-ajust-famille-corriger")
       ?.addEventListener("click", corrigerAjustement);
+
+    void chargerModeleDialogueAjustement().catch((error) => {
+      console.error("Préchargement dialogue ajustement :", error);
+    });
 
     initialiserDictee();
   }

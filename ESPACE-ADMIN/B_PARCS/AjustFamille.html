@@ -74,6 +74,7 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
@@ -96,7 +97,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./AjustFamille.js?v=20260717-1205" defer></script>
+  <script src="./AjustFamille.js?v=20260717-1318" defer></script>
 
   <style>
     .lcdp-page-ajust-famille .lcdp-box-formulaire__actions {
@@ -149,7 +150,85 @@
       min-width: 140px;
     }
 
+
+
+    .lcdp-page-ajust-famille #lcdp-ajust-famille-status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #f4f4ef;
+      border: 1px solid #d9dccf;
+    }
+
+    .lcdp-page-ajust-famille #lcdp-ajust-famille-status[data-etat="erreur"] {
+      background: #fff1ef;
+      border-color: #e2b7b0;
+    }
+
+    .lcdp-page-ajust-famille #lcdp-ajust-famille-status[data-etat="succes"] {
+      background: #f3f7ec;
+      border-color: #cbd8b6;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-validation-bloc {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border: 1px solid #d8ddd0;
+      border-radius: 14px;
+      background: #fafaf7;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-validation-bloc h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-validation-liste {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .lcdp-page-ajust-famille #lcdp-ajust-famille-alertes {
+      border-color: #efd4a2;
+      background: #fff7e8;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-validation-note {
+      margin: 12px 0 0;
+      font-size: 0.95rem;
+      color: #505a3d;
+    }
+
+    .lcdp-page-ajust-famille details {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px solid #d8ddd0;
+      border-radius: 12px;
+      background: #fbfbf9;
+    }
+
+    .lcdp-page-ajust-famille #lcdp-ajust-famille-json {
+      margin: 12px 0 0;
+      padding: 14px;
+      max-height: 340px;
+      overflow: auto;
+      border-radius: 10px;
+      background: #f2f4ef;
+      font-size: 0.92rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .lcdp-page-ajust-famille .lcdp-box-dialogue-bouton__actions {
+      grid-template-columns: repeat(2, minmax(0, 200px));
+      justify-content: center;
+    }
+
     @media (max-width: 768px) {
+      .lcdp-page-ajust-famille .lcdp-box-dialogue-bouton__actions {
+        grid-template-columns: 1fr;
+      }
       .lcdp-page-ajust-famille textarea.lcdp-box-champ-formulaire__input {
         min-height: 84px;
       }
@@ -298,6 +377,8 @@
         </div>
       </section>
     </main>
+
+    <div id="lcdp-lightbox-slot"></div>
 
   </div>
 </body>
