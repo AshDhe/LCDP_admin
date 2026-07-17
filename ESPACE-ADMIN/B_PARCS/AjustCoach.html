@@ -85,7 +85,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./AjustCoach.js?v=20260717-2319" defer></script>
+  <script src="./AjustCoach.js?v=20260718-0035" defer></script>
 
   <style>
     .lcdp-page-planning-workflow .lcdp-box-formulaire {
@@ -157,6 +157,10 @@
       grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
       gap: 10px;
       align-items: end;
+    }
+
+    .lcdp-time-range--spaced {
+      margin-top: 16px;
     }
 
     .lcdp-time-range__arrow {
@@ -331,7 +335,7 @@
                   <p id="lcdp-ajust-coach-identite">Chargement du parc…</p>
                 </header>
                 <p class="lcdp-workflow-intro">
-                  L’ouverture réserve exclusivement COACH. La fermeture annule cet ajustement exclusif et restaure DUO, COACH ou FAMILLE uniquement lorsque leur capacité historique existe.
+                  AjustCoach réserve exclusivement COACH sur les jours et horaires indiqués. L’annulation désactive COACH et restaure les états antérieurs de DUO et FAMILLE, avec leurs capacités conservées.
                 </p>
                 <form id="lcdp-ajust-coach-form">
                   <div class="lcdp-box-champ-formulaire">
@@ -366,8 +370,7 @@
                       <label><input type="checkbox" name="lcdp-ajust-coach-jour" value="dimanche" checked> Dim</label>
                     </div>
 
-                    <div style="margin-top:16px">
-                    <div class="lcdp-time-range">
+                    <div class="lcdp-time-range lcdp-time-range--spaced">
                       <div class="lcdp-box-champ-formulaire">
                         <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-coach-debut">Début</label>
                         <input id="lcdp-ajust-coach-debut" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="10:00" required>
@@ -377,11 +380,11 @@
                         <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-coach-fin">Fin</label>
                         <input id="lcdp-ajust-coach-fin" class="lcdp-box-champ-formulaire__input" type="time" step="900" value="18:00" required>
                       </div>
-                    </div></div>
+                    </div>
                   </section>
 
                   <div class="lcdp-box-champ-formulaire" data-capacite-zone>
-                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-coach-capacite">Capacité COACH</label>
+                    <label class="lcdp-box-champ-formulaire__label" for="lcdp-ajust-coach-capacite">Capacité COACH pour l’ouverture exclusive</label>
                     <input id="lcdp-ajust-coach-capacite" class="lcdp-box-champ-formulaire__input" type="number" min="1" step="1">
                   </div>
 
@@ -409,7 +412,7 @@
                 </details>
                 <div class="lcdp-box-formulaire__actions">
                   <button id="lcdp-ajust-coach-corriger" class="lcdp-button lcdp-button-secondary" type="button">Corriger</button>
-                  <button id="lcdp-ajust-coach-valider" class="lcdp-button lcdp-button-orange" type="button">Valider et écrire l’ajustement</button>
+                  <button id="lcdp-ajust-coach-valider" class="lcdp-button lcdp-button-orange" type="button">Valider et écrire COACH</button>
                   <button id="lcdp-ajust-coach-retour-admin-parc" class="lcdp-button lcdp-button-primary" type="button">Retour admin parc</button>
                 </div>
               </section>
