@@ -166,7 +166,7 @@
     const selection = lireSelectionUrl();
 
     if (!endpoint) {
-      throw new Error("Endpoint Parc Planning non configuré.");
+      throw new Error("Endpoint AjustDuo non configuré.");
     }
 
     if (!selection.dptmt || !selection.idparc) {
@@ -361,18 +361,83 @@
     });
   }
 
+  function normaliserMotDictee(value) {
+    return String(value || "")
+      .toLocaleLowerCase("fr-FR")
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .replace(
+        /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,
+        ""
+      );
+  }
+
+  function supprimerDoublonsConsecutifsDictee(value) {
+    const mots = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const resultat = [];
+
+    for (const mot of mots) {
+      resultat.push(mot);
+
+      let doublonSupprime = true;
+
+      while (doublonSupprime) {
+        doublonSupprime = false;
+
+        const longueurMax = Math.min(
+          8,
+          Math.floor(resultat.length / 2)
+        );
+
+        for (
+          let longueur = longueurMax;
+          longueur >= 1;
+          longueur -= 1
+        ) {
+          const debutPremier =
+            resultat.length - 2 * longueur;
+          const debutSecond =
+            resultat.length - longueur;
+          let identiques = true;
+
+          for (let index = 0; index < longueur; index += 1) {
+            if (
+              normaliserMotDictee(
+                resultat[debutPremier + index]
+              ) !==
+              normaliserMotDictee(
+                resultat[debutSecond + index]
+              )
+            ) {
+              identiques = false;
+              break;
+            }
+          }
+
+          if (!identiques) continue;
+
+          resultat.splice(debutSecond, longueur);
+          doublonSupprime = true;
+          break;
+        }
+      }
+    }
+
+    return resultat.join(" ");
+  }
+
   function fusionnerTexteDictee(texteInitial, texteReconnu) {
-    return [texteInitial, texteReconnu]
+    const texte = [texteInitial, texteReconnu]
       .map((item) => String(item || "").trim())
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
-      .replace(
-        /\b(\d{1,2})\s*h(?:\s*(\d{1,2}))?\s+\1\s*h(?:\s*\2)?\s*$/i,
-        (_, heure, minutes) =>
-          heure + " h" + (minutes ? " " + minutes : "")
-      )
       .trim();
+
+    return supprimerDoublonsConsecutifsDictee(texte);
   }
 
   function restaurerBoutonDictee(bouton) {
@@ -543,7 +608,10 @@ function actualiserCapacite() {
   const ouverture = action === "ouvrir";
 
   if (zone) zone.hidden = !ouverture;
-  if (input) input.required = ouverture;
+  if (input) {
+    input.required = ouverture;
+    if (!ouverture) input.value = "";
+  }
 }
 
 function construireBrief() {
@@ -582,24 +650,6 @@ function construireBrief() {
     throw new Error("La capacité DUO est obligatoire pour un ajustement exclusif.");
   }
 
-  const joursTexte = jours.join(", ");
-  const ajustement = action === "ouvrir"
-    ? (
-        "AJUST DUO : réserver exclusivement DUO du " +
-        dateDebut + " au " + dateFin + ", les " + joursTexte +
-        ", de " + formaterHeure(debut) + " à " +
-        formaterHeure(fin) + ". Écrire DUO à true et " +
-        "COACH et FAMILLE à false ou null selon leur état."
-      )
-    : (
-        "FERMETURE AJUST DUO : annuler l’ajustement exclusif du " +
-        dateDebut + " au " + dateFin + ", les " + joursTexte +
-        ", de " + formaterHeure(debut) + " à " +
-        formaterHeure(fin) + ". Écrire DUO à false et restaurer " +
-        "les états historiques des autres groupes uniquement lorsque " +
-        "leur capacité historique est supérieure à zéro."
-      );
-
   return {
     action,
     dateDebut,
@@ -607,7 +657,7 @@ function construireBrief() {
     jours,
     debut,
     fin,
-    ajustement: ajustement + (precision ? " " + precision : ""),
+    ajustement: precision,
     capacite: action === "ouvrir"
       ? String(capaciteNombre)
       : "",
@@ -634,7 +684,7 @@ function initialiserComportementsFormulaire() {
     const bouton = document.getElementById(PAGE.prefix + "-analyser");
 
     if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      afficherStatus("Endpoint AjustDuo non configuré.", true);
       return;
     }
 
@@ -679,7 +729,7 @@ function initialiserComportementsFormulaire() {
     const bouton = document.getElementById(PAGE.prefix + "-valider");
 
     if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
+      afficherStatus("Endpoint AjustDuo non configuré.", true);
       return;
     }
 
