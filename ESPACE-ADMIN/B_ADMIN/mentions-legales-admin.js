@@ -28,17 +28,13 @@
       : path;
   }
 
-  function endpointsEditingAdmin() {
-    return Array.from(new Set([
-      config.workerEditingAdminUrl,
-      config.WORKER_EDITING_ADMIN_URL,
-      window.ADMIN_CONFIG?.API_EDITING_ADMIN,
-      config.workerEditingAdminFallbackUrl,
-      config.WORKER_EDITING_ADMIN_FALLBACK_URL,
-      window.ADMIN_CONFIG?.API_EDITING_ADMIN_FALLBACK
-    ]
-      .map((value) => String(value || "").replace(/\/+$/, ""))
-      .filter(Boolean)));
+  function endpointEditingAdmin() {
+    return String(
+      config.workerEditingAdminUrl ||
+      config.WORKER_EDITING_ADMIN_URL ||
+      window.ADMIN_CONFIG?.API_EDITING_ADMIN ||
+      ""
+    ).replace(/\/+$/, "");
   }
 
   function appliquerRoutes(racine = document) {
@@ -163,68 +159,60 @@
   }
 
   async function appelerJson(path, options = {}) {
-    const endpoints = endpointsEditingAdmin();
+    const endpoint = endpointEditingAdmin();
 
-    if (endpoints.length < 1) {
+    if (!endpoint) {
       throw new Error(
         "Endpoint editing-admin-api non configuré."
       );
     }
 
-    let derniereErreurReseau = null;
+    let response;
 
-    for (let index = 0; index < endpoints.length; index += 1) {
-      const endpoint = endpoints[index];
-      let response;
-
-      try {
-        response = await fetch(endpoint + path, {
-          method: options.method || "GET",
-          credentials: "include",
-          cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            ...(options.body !== undefined
-              ? { "Content-Type": "application/json" }
-              : {})
-          },
-          body: options.body !== undefined
-            ? JSON.stringify(options.body)
-            : undefined
-        });
-      } catch (error) {
-        derniereErreurReseau = error;
-
-        if (index < endpoints.length - 1) {
-          continue;
-        }
-
-        throw new Error(
-          "Impossible de joindre le worker editing-admin."
-        );
-      }
-
-      const data = await response.json().catch(() => null);
-
-      if (response.status === 401 || response.status === 403) {
-        redirigerConnexion();
-        throw new Error("Accès administrateur refusé.");
-      }
-
-      if (!response.ok || !data || data.success !== true) {
-        throw new Error(
-          data?.message ||
-          data?.detail ||
-          "Réponse du worker editing-admin inexploitable."
-        );
-      }
-
-      return data;
+    try {
+      response = await fetch(endpoint + path, {
+        method: options.method || "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          ...(options.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {})
+        },
+        body: options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined
+      });
+    } catch (_) {
+      throw new Error(
+        "Impossible de joindre editing-admin-api.lacleduparc.fr."
+      );
     }
 
-    throw derniereErreurReseau || new Error(
-      "Impossible de joindre le worker editing-admin."
-    );
+    const data = await response.json().catch(() => null);
+
+    if (response.status === 401) {
+      redirigerConnexion();
+      throw new Error("Session administrateur expirée.");
+    }
+
+    if (response.status === 403) {
+      throw new Error(
+        data?.message ||
+        "Permission administrateur insuffisante."
+      );
+    }
+
+    if (!response.ok || !data || data.success !== true) {
+      throw new Error(
+        data?.message ||
+        data?.detail ||
+        "Réponse du worker editing-admin inexploitable."
+      );
+    }
+
+    return data;
   }
 
   async function chargerDocument() {
