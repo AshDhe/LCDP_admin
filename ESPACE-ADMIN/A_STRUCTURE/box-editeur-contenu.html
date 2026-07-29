@@ -1,0 +1,155 @@
+<section
+  class="lcdp-editeur-contenu"
+  data-lcdp-editeur-contenu
+  aria-label="Éditeur de contenu"
+>
+  <div class="lcdp-editeur-contenu__entete">
+    <p class="lcdp-editeur-contenu__aide">
+      Chaque section comprend un titre et un ou plusieurs paragraphes.
+    </p>
+
+    <button
+      type="button"
+      class="lcdp-button lcdp-button-orange"
+      data-lcdp-editeur-ajouter
+    >
+      Ajouter une section
+    </button>
+  </div>
+
+  <div
+    class="lcdp-editeur-contenu__blocs"
+    data-lcdp-editeur-blocs
+  ></div>
+
+  <template data-lcdp-editeur-template>
+    <article
+      class="lcdp-editeur-contenu__bloc"
+      data-lcdp-editeur-bloc
+    >
+      <div class="lcdp-editeur-contenu__bloc-entete">
+        <label class="lcdp-editeur-contenu__titre-zone">
+          <span class="lcdp-editeur-contenu__label">
+            Titre de la section
+          </span>
+
+          <input
+            type="text"
+            class="lcdp-editeur-contenu__titre"
+            maxlength="160"
+            autocomplete="off"
+            data-lcdp-editeur-titre
+          >
+        </label>
+
+        <div
+          class="lcdp-editeur-contenu__ordre"
+          aria-label="Organisation de la section"
+        >
+          <button
+            type="button"
+            class="lcdp-button lcdp-button-secondary lcdp-editeur-contenu__petit-bouton"
+            data-lcdp-editeur-monter
+          >
+            Monter
+          </button>
+
+          <button
+            type="button"
+            class="lcdp-button lcdp-button-secondary lcdp-editeur-contenu__petit-bouton"
+            data-lcdp-editeur-descendre
+          >
+            Descendre
+          </button>
+
+          <button
+            type="button"
+            class="lcdp-button lcdp-button-orange lcdp-editeur-contenu__petit-bouton"
+            data-lcdp-editeur-supprimer
+          >
+            Supprimer
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="lcdp-editeur-contenu__barre"
+        role="toolbar"
+        aria-label="Mise en forme du contenu"
+      >
+        <button type="button" data-lcdp-editeur-commande="bold" aria-label="Mettre en gras">
+          Gras
+        </button>
+        <button type="button" data-lcdp-editeur-commande="italic" aria-label="Mettre en italique">
+          Italique
+        </button>
+        <button type="button" data-lcdp-editeur-commande="insertUnorderedList" aria-label="Créer une liste à puces">
+          Liste à puces
+        </button>
+        <button type="button" data-lcdp-editeur-commande="insertOrderedList" aria-label="Créer une liste numérotée">
+          Liste numérotée
+        </button>
+        <button type="button" data-lcdp-editeur-lien aria-label="Ajouter un lien">
+          Lien
+        </button>
+        <button type="button" data-lcdp-editeur-commande="unlink" aria-label="Supprimer le lien">
+          Retirer le lien
+        </button>
+        <button type="button" data-lcdp-editeur-commande="removeFormat" aria-label="Supprimer la mise en forme">
+          Effacer la mise en forme
+        </button>
+      </div>
+
+      <div
+        class="lcdp-editeur-contenu__lien"
+        data-lcdp-editeur-lien-zone
+        hidden
+      >
+        <label>
+          <span>Adresse du lien</span>
+          <input
+            type="text"
+            inputmode="url"
+            placeholder="https://… ou /ESPACE-PUBLIC/…"
+            autocomplete="off"
+            data-lcdp-editeur-lien-url
+          >
+        </label>
+
+        <div class="lcdp-editeur-contenu__lien-actions">
+          <button
+            type="button"
+            class="lcdp-button lcdp-button-primary"
+            data-lcdp-editeur-lien-appliquer
+          >
+            Appliquer le lien
+          </button>
+
+          <button
+            type="button"
+            class="lcdp-button lcdp-button-secondary"
+            data-lcdp-editeur-lien-annuler
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="lcdp-editeur-contenu__zone"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        spellcheck="true"
+        data-lcdp-editeur-zone
+      ></div>
+
+      <p
+        class="lcdp-editeur-contenu__erreur"
+        data-lcdp-editeur-erreur
+        role="alert"
+        hidden
+      ></p>
+    </article>
+  </template>
+</section>
