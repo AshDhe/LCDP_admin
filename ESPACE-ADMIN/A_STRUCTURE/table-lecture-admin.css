@@ -295,3 +295,60 @@ select.lcdp-table-lecture-admin__filter-input {
   }
 }
 
+/* Correctif final : le nom du parc doit se comporter visuellement comme un lien
+   textuel, jamais comme un bouton générique. Cette règle est volontairement
+   placée en fin de fichier et fortement ciblée. */
+#lcdp-table-lecture-admin-slot
+.lcdp-table-lecture-admin__table
+tbody td > button.lcdp-table-lecture-admin__cell-action {
+  display: inline-block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--lcdp-color-text) !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+  line-height: inherit !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 3px !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+#lcdp-table-lecture-admin-slot
+.lcdp-table-lecture-admin__table
+tbody td > button.lcdp-table-lecture-admin__cell-action:hover {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--lcdp-color-primary) !important;
+}
+
+#lcdp-table-lecture-admin-slot
+.lcdp-table-lecture-admin__table
+tbody td > button.lcdp-table-lecture-admin__cell-action:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--lcdp-color-primary) !important;
+  outline: 2px solid var(--lcdp-color-primary) !important;
+  outline-offset: 3px !important;
+  border-radius: 2px !important;
+}
+
