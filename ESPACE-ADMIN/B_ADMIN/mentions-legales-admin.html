@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Mentions légales - Administration - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Édition et publication des mentions légales de La Clé du Parc."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/01-box-text.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
+        "/ESPACE-ADMIN/B_ADMIN/mentions-legales-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-mentions-legales-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Éditeur des mentions légales"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-mentions-admin__entete">
+                <h1 class="lcdp-mentions-admin__titre">
+                  Mentions légales
+                </h1>
+
+                <p class="lcdp-mentions-admin__explication">
+                  Modifie le brouillon, prévisualise le rendu, puis publie
+                  lorsque la version est prête à être affichée sur le site.
+                </p>
+
+                <p
+                  class="lcdp-mentions-admin__meta"
+                  data-lcdp-mentions-meta
+                ></p>
+
+                <p
+                  class="lcdp-mentions-admin__status"
+                  data-lcdp-mentions-status
+                  role="status"
+                ></p>
+              </header>
+
+              <p
+                class="lcdp-mentions-admin__loading"
+                data-lcdp-mentions-loading
+              >
+                Chargement des mentions légales…
+              </p>
+
+              <div
+                id="lcdp-editeur-mentions-slot"
+                data-lcdp-mentions-editeur-slot
+                hidden
+              ></div>
+
+              <div
+                class="lcdp-mentions-admin__actions"
+                data-lcdp-mentions-actions
+                hidden
+              >
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-primary"
+                  data-lcdp-mentions-previsualiser
+                >
+                  Prévisualiser
+                </button>
+
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-orange"
+                  data-lcdp-mentions-enregistrer
+                >
+                  Enregistrer le brouillon
+                </button>
+
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-orange"
+                  data-lcdp-mentions-publier
+                >
+                  Publier
+                </button>
+              </div>
+
+              <section
+                class="lcdp-mentions-admin__preview"
+                data-lcdp-mentions-preview
+                hidden
+                aria-label="Prévisualisation des mentions légales"
+              >
+                <h2 class="lcdp-mentions-admin__preview-title">
+                  Prévisualisation
+                </h2>
+
+                <div
+                  class="lcdp-mentions-admin__preview-content"
+                  data-lcdp-mentions-preview-content
+                ></div>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="./mentions-legales-admin.js"></script>
+</body>
+</html>
