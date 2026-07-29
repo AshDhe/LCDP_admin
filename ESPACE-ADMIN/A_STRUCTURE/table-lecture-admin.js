@@ -2,11 +2,23 @@
   "use strict";
 
   const DELAI_FILTRAGE_MS = 350;
+  const CONTROLEURS = new Map();
 
   async function initialiser(options = {}) {
     const slotId = String(options.slotId || "");
     const endpoint = nettoyerBaseUrl(options.endpoint);
     const resource = String(options.resource || "").trim();
+    const interactiveColumns = new Set(
+      Array.isArray(options.interactiveColumns)
+        ? options.interactiveColumns
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+        : []
+    );
+    const onCellActivate =
+      typeof options.onCellActivate === "function"
+        ? options.onCellActivate
+        : null;
 
     const slot = document.getElementById(slotId);
 
@@ -157,7 +169,13 @@
 
         actualiserEtatTris(sortsRow, etat);
 
-        rendreLignes(body, columns, rows);
+        rendreLignes(
+          body,
+          columns,
+          rows,
+          interactiveColumns,
+          onCellActivate
+        );
 
         errorBox.hidden = true;
         empty.hidden = rows.length > 0;
@@ -183,6 +201,10 @@
         return false;
       }
     }
+
+    CONTROLEURS.set(slotId, {
+      recharger: chargerDonnees
+    });
 
     return chargerDonnees();
   }
@@ -322,7 +344,13 @@
     });
   }
 
-  function rendreLignes(body, columns, rows) {
+  function rendreLignes(
+    body,
+    columns,
+    rows,
+    interactiveColumns,
+    onCellActivate
+  ) {
     body.innerHTML = "";
 
     rows.forEach((row) => {
@@ -331,8 +359,44 @@
       columns.forEach((column) => {
         const cellule = document.createElement("td");
         const valeur = row?.[column.key];
+        const texte = formaterValeur(column, valeur);
+        const interactive =
+          interactiveColumns.has(String(column.key || "")) &&
+          onCellActivate;
 
-        cellule.textContent = formaterValeur(column, valeur);
+        if (interactive) {
+          const bouton = document.createElement("button");
+
+          bouton.type = "button";
+          bouton.className =
+            "lcdp-table-lecture-admin__cell-action";
+          bouton.textContent = texte;
+          bouton.title = "Ouvrir la fiche du parc " + texte;
+          bouton.setAttribute(
+            "aria-label",
+            "Ouvrir la fiche du parc " + texte
+          );
+
+          bouton.addEventListener("click", () => {
+            Promise.resolve(
+              onCellActivate({
+                row,
+                column,
+                value: valeur
+              })
+            ).catch((error) => {
+              console.error(
+                "Erreur action cellule table admin :",
+                error
+              );
+            });
+          });
+
+          cellule.appendChild(bouton);
+        } else {
+          cellule.textContent = texte;
+        }
+
         ligne.appendChild(cellule);
       });
 
@@ -392,7 +456,18 @@
     return String(value || "").replace(/\/+$/, "");
   }
 
+  function recharger(slotId) {
+    const controleur = CONTROLEURS.get(String(slotId || ""));
+
+    if (!controleur || typeof controleur.recharger !== "function") {
+      return Promise.resolve(false);
+    }
+
+    return controleur.recharger();
+  }
+
   window.LCDP_TABLE_LECTURE_ADMIN = Object.freeze({
-    initialiser
+    initialiser,
+    recharger
   });
 })();

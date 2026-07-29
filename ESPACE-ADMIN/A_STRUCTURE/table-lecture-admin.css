@@ -125,3 +125,84 @@
   border: 0 !important;
   box-shadow: none !important;
 }
+
+/* Cellule interactive activée uniquement par les pages qui la demandent. */
+.lcdp-table-lecture-admin__cell-action {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lcdp-color-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.lcdp-table-lecture-admin__cell-action:hover,
+.lcdp-table-lecture-admin__cell-action:focus-visible {
+  color: var(--lcdp-color-primary);
+}
+
+.lcdp-table-lecture-admin__cell-action:focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Éditeur de la ligne parc, spécifique à la page StatutParc. */
+#lcdp-parc-edition-slot[hidden] {
+  display: none !important;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire-page {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire-page__inner {
+  max-width: 1120px;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--lcdp-space-3);
+}
+
+#lcdp-parc-edition-slot .lcdp-box-champ-formulaire--wide {
+  grid-column: 1 / -1;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note {
+  padding: 10px 12px;
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note[data-state="success"] {
+  border: 1px solid var(--lcdp-color-primary);
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note[data-state="error"] {
+  border: 1px solid var(--lcdp-color-orange);
+}
+
+.lcdp-parc-edition-loading {
+  margin: 0;
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-large);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  #lcdp-parc-edition-slot .lcdp-box-formulaire__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
