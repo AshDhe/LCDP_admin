@@ -2,6 +2,7 @@
   "use strict";
 
   const DELAI_FILTRAGE_MS = 350;
+  const TAILLE_PAGE_DEFAUT = 100;
   const CONTROLEURS = new Map();
 
   async function initialiser(options = {}) {
@@ -66,6 +67,26 @@
       "[data-lcdp-table-lecture-admin-error]"
     );
 
+    const pagination = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-pagination]"
+    );
+
+    const paginationInfo = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-pagination-info]"
+    );
+
+    const paginationPage = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-page]"
+    );
+
+    const boutonPrecedent = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-previous]"
+    );
+
+    const boutonSuivant = slot.querySelector(
+      "[data-lcdp-table-lecture-admin-next]"
+    );
+
     if (
       !scroll ||
       !head ||
@@ -73,7 +94,12 @@
       !filtersRow ||
       !body ||
       !empty ||
-      !errorBox
+      !errorBox ||
+      !pagination ||
+      !paginationInfo ||
+      !paginationPage ||
+      !boutonPrecedent ||
+      !boutonSuivant
     ) {
       throw new Error("Structure de table admin incomplète.");
     }
@@ -84,7 +110,11 @@
       sortKey: "",
       sortDirection: "asc",
       filtreTimer: null,
-      structureRendue: false
+      structureRendue: false,
+      limit: normaliserTaillePage(options.pageSize),
+      offset: 0,
+      total: 0,
+      chargement: false
     };
 
     if (loading) {
@@ -93,12 +123,22 @@
     }
 
     async function chargerDonnees() {
+      if (etat.chargement) {
+        return false;
+      }
+
+      etat.chargement = true;
+      boutonPrecedent.disabled = true;
+      boutonSuivant.disabled = true;
+
       try {
         errorBox.hidden = true;
 
         const requestUrl = new URL(endpoint + "/read");
 
         requestUrl.searchParams.set("resource", resource);
+        requestUrl.searchParams.set("limit", String(etat.limit));
+        requestUrl.searchParams.set("offset", String(etat.offset));
 
         if (etat.sortKey) {
           requestUrl.searchParams.set("sort", etat.sortKey);
@@ -149,6 +189,27 @@
           : [];
 
         etat.columns = columns;
+        etat.total = normaliserEntierPositif(data.total, rows.length);
+        etat.limit = normaliserEntierPositif(
+          data.limit,
+          etat.limit
+        );
+        etat.offset = normaliserEntierPositif(
+          data.offset,
+          etat.offset
+        );
+
+        if (
+          etat.total > 0 &&
+          rows.length === 0 &&
+          etat.offset >= etat.total
+        ) {
+          etat.offset =
+            Math.floor((etat.total - 1) / etat.limit) *
+            etat.limit;
+          etat.chargement = false;
+          return chargerDonnees();
+        }
 
         if (!etat.structureRendue) {
           rendreEntete(head, columns);
@@ -177,6 +238,16 @@
           onCellActivate
         );
 
+        actualiserPagination(
+          pagination,
+          paginationInfo,
+          paginationPage,
+          boutonPrecedent,
+          boutonSuivant,
+          etat,
+          rows.length
+        );
+
         errorBox.hidden = true;
         empty.hidden = rows.length > 0;
 
@@ -192,6 +263,7 @@
         console.error("Erreur table lecture admin :", error);
 
         scroll.hidden = true;
+        pagination.hidden = true;
         empty.hidden = true;
         errorBox.textContent = String(
           error?.message || error || "Erreur de chargement."
@@ -199,8 +271,31 @@
         errorBox.hidden = false;
 
         return false;
+      } finally {
+        etat.chargement = false;
       }
     }
+
+    boutonPrecedent.addEventListener("click", () => {
+      if (etat.offset <= 0 || etat.chargement) {
+        return;
+      }
+
+      etat.offset = Math.max(0, etat.offset - etat.limit);
+      chargerDonnees();
+    });
+
+    boutonSuivant.addEventListener("click", () => {
+      if (
+        etat.chargement ||
+        etat.offset + etat.limit >= etat.total
+      ) {
+        return;
+      }
+
+      etat.offset += etat.limit;
+      chargerDonnees();
+    });
 
     CONTROLEURS.set(slotId, {
       recharger: chargerDonnees
@@ -273,6 +368,7 @@
         bouton.addEventListener("click", () => {
           etat.sortKey = String(column.key || "");
           etat.sortDirection = action.direction;
+          etat.offset = 0;
           actualiserEtatTris(sortsRow, etat);
           chargerDonnees();
         });
@@ -317,31 +413,64 @@
         return;
       }
 
-      const input = document.createElement("input");
       const label = String(column.label || column.key || "");
+      const controle = estColonneBooleenne(column)
+        ? creerFiltreBooleen(label)
+        : creerFiltreStandard(column, label);
 
-      input.className =
-        "lcdp-table-lecture-admin__filter-input";
-      input.type = estColonneDate(column) ? "date" : "search";
-      input.placeholder = estColonneDate(column)
-        ? "AAAA-MM-JJ"
-        : "Filtrer";
-      input.setAttribute("aria-label", "Filtrer " + label);
-      input.autocomplete = "off";
+      controle.addEventListener(
+        estColonneBooleenne(column) ? "change" : "input",
+        () => {
+          etat.filters[column.key] = controle.value;
+          etat.offset = 0;
 
-      input.addEventListener("input", () => {
-        etat.filters[column.key] = input.value;
+          window.clearTimeout(etat.filtreTimer);
 
-        window.clearTimeout(etat.filtreTimer);
+          etat.filtreTimer = window.setTimeout(() => {
+            chargerDonnees();
+          }, DELAI_FILTRAGE_MS);
+        }
+      );
 
-        etat.filtreTimer = window.setTimeout(() => {
-          chargerDonnees();
-        }, DELAI_FILTRAGE_MS);
-      });
-
-      cellule.appendChild(input);
+      cellule.appendChild(controle);
       filtersRow.appendChild(cellule);
     });
+  }
+
+  function creerFiltreStandard(column, label) {
+    const input = document.createElement("input");
+
+    input.className =
+      "lcdp-table-lecture-admin__filter-input";
+    input.type = estColonneDate(column) ? "date" : "search";
+    input.placeholder = estColonneDate(column)
+      ? "AAAA-MM-JJ"
+      : "Filtrer";
+    input.setAttribute("aria-label", "Filtrer " + label);
+    input.autocomplete = "off";
+
+    return input;
+  }
+
+  function creerFiltreBooleen(label) {
+    const select = document.createElement("select");
+
+    select.className =
+      "lcdp-table-lecture-admin__filter-input";
+    select.setAttribute("aria-label", "Filtrer " + label);
+
+    [
+      { value: "", label: "Tous" },
+      { value: "true", label: "TRUE" },
+      { value: "false", label: "FALSE" }
+    ].forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.value;
+      option.textContent = item.label;
+      select.appendChild(option);
+    });
+
+    return select;
   }
 
   function rendreLignes(
@@ -438,6 +567,85 @@
       key.endsWith("_date") ||
       key.endsWith("date")
     );
+  }
+
+  function estColonneBooleenne(column) {
+    return String(column?.key || "").toLowerCase() === "tiktok";
+  }
+
+  function actualiserPagination(
+    pagination,
+    paginationInfo,
+    paginationPage,
+    boutonPrecedent,
+    boutonSuivant,
+    etat,
+    nombreLignes
+  ) {
+    if (etat.total < 1) {
+      pagination.hidden = true;
+      paginationInfo.textContent = "";
+      paginationPage.textContent = "";
+      boutonPrecedent.disabled = true;
+      boutonSuivant.disabled = true;
+      return;
+    }
+
+    const pageCourante =
+      Math.floor(etat.offset / etat.limit) + 1;
+    const totalPages = Math.max(
+      1,
+      Math.ceil(etat.total / etat.limit)
+    );
+    const debut = etat.offset + 1;
+    const fin = Math.min(
+      etat.offset + nombreLignes,
+      etat.total
+    );
+
+    paginationInfo.textContent =
+      "Résultats " +
+      formaterNombre(debut) +
+      " à " +
+      formaterNombre(fin) +
+      " sur " +
+      formaterNombre(etat.total);
+
+    paginationPage.textContent =
+      "Page " +
+      formaterNombre(pageCourante) +
+      " sur " +
+      formaterNombre(totalPages);
+
+    boutonPrecedent.disabled = pageCourante <= 1;
+    boutonSuivant.disabled = pageCourante >= totalPages;
+    pagination.hidden = false;
+  }
+
+  function formaterNombre(value) {
+    return new Intl.NumberFormat("fr-FR").format(
+      Number(value) || 0
+    );
+  }
+
+  function normaliserTaillePage(value) {
+    const nombre = Number(value);
+
+    if (!Number.isInteger(nombre)) {
+      return TAILLE_PAGE_DEFAUT;
+    }
+
+    return Math.min(200, Math.max(1, nombre));
+  }
+
+  function normaliserEntierPositif(value, fallback) {
+    const nombre = Number(value);
+
+    if (!Number.isInteger(nombre) || nombre < 0) {
+      return fallback;
+    }
+
+    return nombre;
   }
 
   function redirigerConnexion() {
