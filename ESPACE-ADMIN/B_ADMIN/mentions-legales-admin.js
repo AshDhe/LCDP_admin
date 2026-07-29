@@ -28,13 +28,17 @@
       : path;
   }
 
-  function endpointEditingAdmin() {
-    return String(
-      config.workerEditingAdminUrl ||
-      config.WORKER_EDITING_ADMIN_URL ||
-      window.ADMIN_CONFIG?.API_EDITING_ADMIN ||
-      ""
-    ).replace(/\/+$/, "");
+  function endpointsEditingAdmin() {
+    return Array.from(new Set([
+      config.workerEditingAdminUrl,
+      config.WORKER_EDITING_ADMIN_URL,
+      window.ADMIN_CONFIG?.API_EDITING_ADMIN,
+      config.workerEditingAdminFallbackUrl,
+      config.WORKER_EDITING_ADMIN_FALLBACK_URL,
+      window.ADMIN_CONFIG?.API_EDITING_ADMIN_FALLBACK
+    ]
+      .map((value) => String(value || "").replace(/\/+$/, ""))
+      .filter(Boolean)));
   }
 
   function appliquerRoutes(racine = document) {
@@ -159,45 +163,68 @@
   }
 
   async function appelerJson(path, options = {}) {
-    const endpoint = endpointEditingAdmin();
+    const endpoints = endpointsEditingAdmin();
 
-    if (!endpoint) {
+    if (endpoints.length < 1) {
       throw new Error(
         "Endpoint editing-admin-api non configuré."
       );
     }
 
-    const response = await fetch(endpoint + path, {
-      method: options.method || "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        ...(options.body !== undefined
-          ? { "Content-Type": "application/json" }
-          : {})
-      },
-      body: options.body !== undefined
-        ? JSON.stringify(options.body)
-        : undefined
-    });
+    let derniereErreurReseau = null;
 
-    const data = await response.json().catch(() => null);
+    for (let index = 0; index < endpoints.length; index += 1) {
+      const endpoint = endpoints[index];
+      let response;
 
-    if (response.status === 401 || response.status === 403) {
-      redirigerConnexion();
-      throw new Error("Accès administrateur refusé.");
+      try {
+        response = await fetch(endpoint + path, {
+          method: options.method || "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            ...(options.body !== undefined
+              ? { "Content-Type": "application/json" }
+              : {})
+          },
+          body: options.body !== undefined
+            ? JSON.stringify(options.body)
+            : undefined
+        });
+      } catch (error) {
+        derniereErreurReseau = error;
+
+        if (index < endpoints.length - 1) {
+          continue;
+        }
+
+        throw new Error(
+          "Impossible de joindre le worker editing-admin."
+        );
+      }
+
+      const data = await response.json().catch(() => null);
+
+      if (response.status === 401 || response.status === 403) {
+        redirigerConnexion();
+        throw new Error("Accès administrateur refusé.");
+      }
+
+      if (!response.ok || !data || data.success !== true) {
+        throw new Error(
+          data?.message ||
+          data?.detail ||
+          "Réponse du worker editing-admin inexploitable."
+        );
+      }
+
+      return data;
     }
 
-    if (!response.ok || !data || data.success !== true) {
-      throw new Error(
-        data?.message ||
-        data?.detail ||
-        "Réponse du worker editing-admin inexploitable."
-      );
-    }
-
-    return data;
+    throw derniereErreurReseau || new Error(
+      "Impossible de joindre le worker editing-admin."
+    );
   }
 
   async function chargerDocument() {
