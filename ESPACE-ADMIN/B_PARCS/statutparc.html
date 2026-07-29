@@ -76,6 +76,7 @@
       [
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
@@ -716,22 +717,32 @@
 
           parcEditionCourant = data.parc;
 
-          await window.LCDP_TABLE_LECTURE_ADMIN?.recharger(TABLE_SLOT_ID);
-          await rendreFormulaireEdition(
-            data.parc,
-            data.modifie === false
-              ? "Aucune modification à enregistrer."
-              : "Modifications enregistrées.",
-            "success"
+          if (data.modifie === false) {
+            boutonEnregistrer.disabled = false;
+            boutonRetour.disabled = false;
+            await afficherAlerteEditionParc(
+              "Aucune modification à enregistrer."
+            );
+            return;
+          }
+
+          await afficherAlerteEditionParc(
+            "Modification enregistrée."
           );
+
+          window.location.reload();
         } catch (error) {
           boutonEnregistrer.disabled = false;
           boutonRetour.disabled = false;
-          afficherNote(
-            note,
-            String(error?.message || error || "Erreur d’enregistrement."),
-            "error"
+
+          const messageErreur = String(
+            error?.message ||
+            error ||
+            "Erreur d’enregistrement."
           );
+
+          afficherNote(note, messageErreur, "error");
+          await afficherAlerteEditionParc(messageErreur);
         }
       }
 
@@ -803,6 +814,70 @@
         }
 
         return String(a) === String(b);
+      }
+
+      async function afficherAlerteEditionParc(message) {
+        const conteneur = document.createElement("div");
+        conteneur.className = "lcdp-parc-edition-alerte";
+        document.body.appendChild(conteneur);
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragment(
+            urlObjet("/BOX/02-box-alerte.html"),
+            "AlertBox"
+          );
+        } catch (error) {
+          console.error("AlertBox édition parc indisponible :", error);
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        conteneur.appendChild(fragment);
+
+        const alerte = conteneur.querySelector(
+          "[data-lcdp-box-alerte]"
+        );
+        const texte = conteneur.querySelector(
+          "[data-lcdp-alerte-message]"
+        );
+        const boutonFermer = conteneur.querySelector(
+          "[data-lcdp-alerte-close]"
+        );
+        const boutonOk = conteneur.querySelector(
+          "[data-lcdp-alerte-ok]"
+        );
+
+        if (!alerte || !texte || !boutonOk) {
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        texte.textContent = message || "";
+
+        if (boutonFermer) {
+          boutonFermer.hidden = true;
+        }
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function fermer() {
+            if (resolu) return;
+            resolu = true;
+            conteneur.remove();
+            resolve(true);
+          }
+
+          boutonOk.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            fermer();
+          });
+        });
       }
 
       function afficherNote(note, texte, etat) {
