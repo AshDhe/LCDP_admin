@@ -130,28 +130,40 @@ select.lcdp-table-lecture-admin__filter-input {
   box-shadow: none !important;
 }
 
-/* Cellule interactive activée uniquement par les pages qui la demandent. */
-.lcdp-table-lecture-admin__cell-action {
+/* Cellule interactive activée uniquement par les pages qui la demandent.
+   Sélecteur renforcé pour neutraliser les styles génériques de bouton. */
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
   padding: 0;
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--lcdp-color-text);
   font: inherit;
   font-weight: 700;
-  text-align: left;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  line-height: inherit;
+  text-align: left !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.lcdp-table-lecture-admin__cell-action:hover,
-.lcdp-table-lecture-admin__cell-action:focus-visible {
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:hover,
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--lcdp-color-primary);
 }
 
-.lcdp-table-lecture-admin__cell-action:focus-visible {
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:focus-visible {
   outline: 2px solid var(--lcdp-color-primary);
   outline-offset: 3px;
   border-radius: 2px;
