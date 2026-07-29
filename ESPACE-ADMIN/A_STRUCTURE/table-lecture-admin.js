@@ -570,7 +570,9 @@
   }
 
   function estColonneBooleenne(column) {
-    return String(column?.key || "").toLowerCase() === "tiktok";
+    const key = String(column?.key || "").toLowerCase();
+
+    return key === "tiktok" || key === "abbaye";
   }
 
   function actualiserPagination(
