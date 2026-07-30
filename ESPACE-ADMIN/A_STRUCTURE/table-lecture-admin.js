@@ -20,6 +20,10 @@
       typeof options.onCellActivate === "function"
         ? options.onCellActivate
         : null;
+    const interactiveLabel = String(
+      options.interactiveLabel ||
+      "Ouvrir la fiche du parc"
+    ).trim();
 
     const slot = document.getElementById(slotId);
 
@@ -167,9 +171,16 @@
 
         const data = await response.json().catch(() => null);
 
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
           redirigerConnexion();
           return false;
+        }
+
+        if (response.status === 403) {
+          throw new Error(
+            data?.message ||
+            "Permission administrateur insuffisante."
+          );
         }
 
         if (!response.ok || !data || data.success !== true) {
@@ -235,7 +246,8 @@
           columns,
           rows,
           interactiveColumns,
-          onCellActivate
+          onCellActivate,
+          interactiveLabel
         );
 
         actualiserPagination(
@@ -478,7 +490,8 @@
     columns,
     rows,
     interactiveColumns,
-    onCellActivate
+    onCellActivate,
+    interactiveLabel
   ) {
     body.innerHTML = "";
 
@@ -500,10 +513,13 @@
           bouton.className =
             "lcdp-table-lecture-admin__cell-action";
           bouton.textContent = texte;
-          bouton.title = "Ouvrir la fiche du parc " + texte;
+          const libelleAction =
+            interactiveLabel + " " + texte;
+
+          bouton.title = libelleAction;
           bouton.setAttribute(
             "aria-label",
-            "Ouvrir la fiche du parc " + texte
+            libelleAction
           );
 
           bouton.addEventListener("click", () => {
@@ -565,14 +581,22 @@
       key === "date" ||
       key.startsWith("date") ||
       key.endsWith("_date") ||
-      key.endsWith("date")
+      key.endsWith("date") ||
+      key === "created_at" ||
+      key === "updated_at" ||
+      key.endsWith("_at")
     );
   }
 
   function estColonneBooleenne(column) {
     const key = String(column?.key || "").toLowerCase();
 
-    return key === "tiktok" || key === "abbaye";
+    return (
+      key === "tiktok" ||
+      key === "abbaye" ||
+      key === "active" ||
+      key === "actif"
+    );
   }
 
   function actualiserPagination(
