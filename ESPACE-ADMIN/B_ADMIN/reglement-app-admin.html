@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Règlement application - Administration - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Édition et publication du règlement application de La Clé du Parc."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/01-box-text.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
+        "/ESPACE-ADMIN/B_ADMIN/reglement-app-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-reglement-app-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Éditeur du règlement application"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-reglement-app-admin__entete">
+                <h1 class="lcdp-reglement-app-admin__titre">
+                  Règlement application
+                </h1>
+
+                <p class="lcdp-reglement-app-admin__explication">
+                  Modifie le brouillon, prévisualise le rendu, puis publie
+                  lorsque la version est prête à être affichée sur le site.
+                </p>
+
+                <p
+                  class="lcdp-reglement-app-admin__meta"
+                  data-lcdp-reglement-app-meta
+                ></p>
+
+                <p
+                  class="lcdp-reglement-app-admin__status"
+                  data-lcdp-reglement-app-status
+                  role="status"
+                ></p>
+              </header>
+
+              <p
+                class="lcdp-reglement-app-admin__loading"
+                data-lcdp-reglement-app-loading
+              >
+                Chargement des règlement application…
+              </p>
+
+              <div
+                id="lcdp-editeur-reglement-app-slot"
+                data-lcdp-reglement-app-editeur-slot
+                hidden
+              ></div>
+
+              <div
+                class="lcdp-reglement-app-admin__actions"
+                data-lcdp-reglement-app-actions
+                hidden
+              >
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-primary"
+                  data-lcdp-reglement-app-previsualiser
+                >
+                  Prévisualiser
+                </button>
+
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-orange"
+                  data-lcdp-reglement-app-enregistrer
+                >
+                  Enregistrer le brouillon
+                </button>
+
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-orange"
+                  data-lcdp-reglement-app-publier
+                >
+                  Publier
+                </button>
+              </div>
+
+              <section
+                class="lcdp-reglement-app-admin__preview"
+                data-lcdp-reglement-app-preview
+                hidden
+                aria-label="Prévisualisation des règlement application"
+              >
+                <h2 class="lcdp-reglement-app-admin__preview-title">
+                  Prévisualisation
+                </h2>
+
+                <div
+                  class="lcdp-reglement-app-admin__preview-content"
+                  data-lcdp-reglement-app-preview-content
+                ></div>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="./reglement-app-admin.js"></script>
+</body>
+</html>

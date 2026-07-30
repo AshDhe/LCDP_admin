@@ -1,0 +1,97 @@
+/* PAGE ADMIN : ÉDITION DU RÈGLEMENT APPLICATION */
+
+.lcdp-page-reglement-app-admin .lcdp-admin-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-3);
+}
+
+.lcdp-reglement-app-admin__entete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-1);
+}
+
+.lcdp-reglement-app-admin__titre {
+  margin: 0;
+  color: var(--lcdp-color-text);
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+
+.lcdp-reglement-app-admin__explication,
+.lcdp-reglement-app-admin__meta,
+.lcdp-reglement-app-admin__status {
+  margin: 0;
+  color: var(--lcdp-color-text-muted);
+  line-height: 1.4;
+}
+
+.lcdp-reglement-app-admin__status {
+  min-height: 1.4em;
+  font-weight: 700;
+}
+
+.lcdp-reglement-app-admin__status[data-state="dirty"] {
+  color: var(--lcdp-color-orange);
+}
+
+.lcdp-reglement-app-admin__status[data-state="error"] {
+  color: var(--lcdp-color-orange);
+}
+
+.lcdp-reglement-app-admin__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--lcdp-space-2);
+  flex-wrap: wrap;
+}
+
+.lcdp-reglement-app-admin__actions .lcdp-button {
+  margin: 0;
+}
+
+.lcdp-reglement-app-admin__preview {
+  width: 100%;
+  padding-top: var(--lcdp-space-3);
+  border-top: 1px solid var(--lcdp-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-3);
+}
+
+.lcdp-reglement-app-admin__preview[hidden] {
+  display: none !important;
+}
+
+.lcdp-reglement-app-admin__preview-title {
+  margin: 0;
+  color: var(--lcdp-color-text);
+  font-size: 1.35rem;
+}
+
+.lcdp-reglement-app-admin__preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-3);
+}
+
+.lcdp-reglement-app-admin__loading {
+  margin: 0;
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-medium);
+  background: var(--lcdp-color-surface-soft);
+  text-align: center;
+}
+
+@media (max-width: 620px) {
+  .lcdp-reglement-app-admin__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lcdp-reglement-app-admin__actions .lcdp-button {
+    width: 100%;
+  }
+}
