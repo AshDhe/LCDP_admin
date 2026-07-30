@@ -1,0 +1,90 @@
+/* PAGE ADMIN : LISTPOINTS */
+
+.lcdp-page-listpoints .lcdp-admin-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-3);
+}
+
+.lcdp-listpoints__entete {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-listpoints__titre,
+.lcdp-listpoints__intro {
+  margin: 0;
+}
+
+.lcdp-listpoints__titre {
+  color: var(--lcdp-color-text);
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+
+.lcdp-listpoints__intro {
+  margin-top: var(--lcdp-space-1);
+  color: var(--lcdp-color-text-muted);
+  line-height: 1.4;
+}
+
+#lcdp-point-edition-slot[hidden] {
+  display: none !important;
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire-page {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire-page__inner {
+  max-width: 1000px;
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--lcdp-space-3);
+}
+
+#lcdp-point-edition-slot .lcdp-box-champ-formulaire--wide {
+  grid-column: 1 / -1;
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire__note {
+  padding: 10px 12px;
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire__note[data-state="success"] {
+  border: 1px solid var(--lcdp-color-primary);
+}
+
+#lcdp-point-edition-slot .lcdp-box-formulaire__note[data-state="error"] {
+  border: 1px solid var(--lcdp-color-orange);
+}
+
+.lcdp-listpoints__loading {
+  margin: 0;
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-large);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+@media (min-width: 760px) {
+  .lcdp-listpoints__entete {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #lcdp-point-edition-slot .lcdp-box-formulaire__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
