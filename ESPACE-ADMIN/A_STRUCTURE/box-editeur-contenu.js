@@ -13,6 +13,12 @@
     "A"
   ]);
 
+  const BALISES_BLOC_RACINE = new Set([
+    "P",
+    "UL",
+    "OL"
+  ]);
+
   function initialiser(options = {}) {
     const root = options.root;
 
@@ -179,6 +185,10 @@
       }
     });
 
+    zone.addEventListener("blur", () => {
+      normaliserZoneEdition(zone);
+    });
+
     bloc
       .querySelectorAll("[data-lcdp-editeur-commande]")
       .forEach((bouton) => {
@@ -302,6 +312,18 @@
     selection.addRange(range);
   }
 
+  function normaliserZoneEdition(zone) {
+    if (!(zone instanceof Element)) return;
+
+    const htmlNettoye = nettoyerHtmlClient(
+      String(zone.innerHTML || "")
+    );
+
+    if (zone.innerHTML !== htmlNettoye) {
+      zone.innerHTML = htmlNettoye;
+    }
+  }
+
   function lire(root) {
     return obtenirBlocs(root).map((bloc, index) => {
       const titre = bloc.querySelector(
@@ -310,6 +332,13 @@
       const zone = bloc.querySelector(
         "[data-lcdp-editeur-zone]"
       );
+      const html = nettoyerHtmlClient(
+        String(zone?.innerHTML || "")
+      );
+
+      if (zone && zone.innerHTML !== html) {
+        zone.innerHTML = html;
+      }
 
       return {
         id: normaliserIdentifiant(
@@ -317,7 +346,7 @@
           "bloc-" + (index + 1)
         ),
         titre: String(titre?.value || "").trim(),
-        html: nettoyerHtmlClient(String(zone?.innerHTML || ""))
+        html
       };
     });
   }
@@ -331,12 +360,17 @@
       const titre = String(
         bloc.querySelector("[data-lcdp-editeur-titre]")?.value || ""
       ).trim();
+      const zone = bloc.querySelector(
+        "[data-lcdp-editeur-zone]"
+      );
       const html = nettoyerHtmlClient(
-        String(
-          bloc.querySelector("[data-lcdp-editeur-zone]")?.innerHTML || ""
-        )
+        String(zone?.innerHTML || "")
       );
       const texte = extraireTexte(html);
+
+      if (zone && zone.innerHTML !== html) {
+        zone.innerHTML = html;
+      }
 
       if (!titre) {
         afficherErreur(bloc, "Le titre de la section est obligatoire.");
@@ -380,15 +414,27 @@
     template.content.querySelectorAll("script,style,iframe,object,embed,svg,math,form,input,button,textarea,select,template")
       .forEach((element) => element.remove());
 
-    template.content.querySelectorAll("div").forEach((element) => {
-      const p = document.createElement("p");
+    Array.from(template.content.querySelectorAll("div"))
+      .reverse()
+      .forEach((element) => {
+        const contientBloc = Array.from(element.children)
+          .some((enfant) => {
+            return BALISES_BLOC_RACINE.has(enfant.tagName);
+          });
 
-      while (element.firstChild) {
-        p.appendChild(element.firstChild);
-      }
+        if (contientBloc) {
+          element.replaceWith(...element.childNodes);
+          return;
+        }
 
-      element.replaceWith(p);
-    });
+        const p = document.createElement("p");
+
+        while (element.firstChild) {
+          p.appendChild(element.firstChild);
+        }
+
+        element.replaceWith(p);
+      });
 
     Array.from(template.content.querySelectorAll("*")).forEach((element) => {
       if (!BALISES_AUTORISEES.has(element.tagName)) {
@@ -431,7 +477,129 @@
       });
     });
 
+    normaliserBlocsRacine(template.content);
+
     return template.innerHTML.trim();
+  }
+
+  function normaliserBlocsRacine(fragment) {
+    const resultat = document.createDocumentFragment();
+    let paragraphe = null;
+
+    function ouvrirParagraphe() {
+      if (!paragraphe) {
+        paragraphe = document.createElement("p");
+      }
+
+      return paragraphe;
+    }
+
+    function fermerParagraphe() {
+      if (!paragraphe) return;
+
+      retirerBrFin(paragraphe);
+
+      if (!elementVide(paragraphe)) {
+        resultat.appendChild(paragraphe);
+      }
+
+      paragraphe = null;
+    }
+
+    Array.from(fragment.childNodes).forEach((noeud) => {
+      if (
+        noeud.nodeType === Node.ELEMENT_NODE &&
+        BALISES_BLOC_RACINE.has(noeud.tagName)
+      ) {
+        fermerParagraphe();
+
+        if (noeud.tagName === "P") {
+          retirerBrFin(noeud);
+
+          if (!elementVide(noeud)) {
+            resultat.appendChild(noeud);
+          }
+
+          return;
+        }
+
+        nettoyerListe(noeud);
+
+        if (!elementVide(noeud)) {
+          resultat.appendChild(noeud);
+        }
+
+        return;
+      }
+
+      if (
+        noeud.nodeType === Node.ELEMENT_NODE &&
+        noeud.tagName === "BR"
+      ) {
+        if (!paragraphe) return;
+
+        const dernier = paragraphe.lastChild;
+
+        if (
+          dernier?.nodeType === Node.ELEMENT_NODE &&
+          dernier.tagName === "BR"
+        ) {
+          dernier.remove();
+          fermerParagraphe();
+        } else {
+          paragraphe.appendChild(noeud);
+        }
+
+        return;
+      }
+
+      if (
+        noeud.nodeType === Node.TEXT_NODE &&
+        !String(noeud.textContent || "").trim() &&
+        !paragraphe
+      ) {
+        return;
+      }
+
+      ouvrirParagraphe().appendChild(noeud);
+    });
+
+    fermerParagraphe();
+    fragment.replaceChildren(resultat);
+  }
+
+  function nettoyerListe(liste) {
+    Array.from(liste.children).forEach((enfant) => {
+      if (enfant.tagName !== "LI") {
+        enfant.replaceWith(...enfant.childNodes);
+      }
+    });
+
+    liste.querySelectorAll("li").forEach((item) => {
+      retirerBrFin(item);
+
+      if (elementVide(item)) {
+        item.remove();
+      }
+    });
+  }
+
+  function retirerBrFin(element) {
+    while (
+      element.lastChild?.nodeType === Node.ELEMENT_NODE &&
+      element.lastChild.tagName === "BR"
+    ) {
+      element.lastChild.remove();
+    }
+  }
+
+  function elementVide(element) {
+    const copie = element.cloneNode(true);
+    copie.querySelectorAll("br").forEach((br) => br.remove());
+
+    return !String(copie.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .trim();
   }
 
   function normaliserUrlLien(value) {

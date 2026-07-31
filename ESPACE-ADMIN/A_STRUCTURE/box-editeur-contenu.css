@@ -168,7 +168,8 @@
   border-radius: var(--lcdp-radius-small);
   background: var(--lcdp-color-surface);
   color: var(--lcdp-color-text);
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.58;
   overflow-wrap: anywhere;
 }
 
@@ -178,23 +179,42 @@
   pointer-events: none;
 }
 
-.lcdp-editeur-contenu__zone p {
-  margin: 0 0 var(--lcdp-space-2);
+/* Rythme vertical unique : paragraphes et listes ont exactement le même
+   espacement, quel que soit leur ordre. */
+.lcdp-editeur-contenu__zone > p,
+.lcdp-editeur-contenu__zone > ul,
+.lcdp-editeur-contenu__zone > ol {
+  margin: 0;
 }
 
-.lcdp-editeur-contenu__zone p:last-child {
-  margin-bottom: 0;
+.lcdp-editeur-contenu__zone > p + p,
+.lcdp-editeur-contenu__zone > p + ul,
+.lcdp-editeur-contenu__zone > p + ol,
+.lcdp-editeur-contenu__zone > ul + p,
+.lcdp-editeur-contenu__zone > ol + p,
+.lcdp-editeur-contenu__zone > ul + ul,
+.lcdp-editeur-contenu__zone > ol + ol,
+.lcdp-editeur-contenu__zone > ul + ol,
+.lcdp-editeur-contenu__zone > ol + ul {
+  margin-top: 0.9rem;
 }
 
-.lcdp-editeur-contenu__zone ul,
-.lcdp-editeur-contenu__zone ol {
-  margin: 0 0 var(--lcdp-space-2);
-  padding-left: 1.5rem;
+.lcdp-editeur-contenu__zone > ul,
+.lcdp-editeur-contenu__zone > ol {
+  padding-left: 1.55rem;
 }
 
-.lcdp-editeur-contenu__zone ul:last-child,
-.lcdp-editeur-contenu__zone ol:last-child {
-  margin-bottom: 0;
+.lcdp-editeur-contenu__zone li {
+  margin: 0;
+  padding-left: 0.12rem;
+}
+
+.lcdp-editeur-contenu__zone li + li {
+  margin-top: 0.18rem;
+}
+
+.lcdp-editeur-contenu__zone > br {
+  display: none;
 }
 
 .lcdp-editeur-contenu__erreur {
