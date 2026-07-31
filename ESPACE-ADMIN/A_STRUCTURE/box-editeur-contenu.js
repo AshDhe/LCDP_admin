@@ -19,6 +19,9 @@
     "OL"
   ]);
 
+  const ATTR_SAUT_LIGNE =
+    "data-lcdp-soft-break";
+
   function initialiser(options = {}) {
     const root = options.root;
 
@@ -178,34 +181,23 @@
     });
 
     zone.addEventListener("focus", () => {
-      try {
-        document.execCommand("defaultParagraphSeparator", false, "p");
-      } catch (_) {
-        // Le navigateur peut ignorer cette commande sans bloquer l’éditeur.
-      }
+      definirSeparateurParagraphe();
     });
 
     zone.addEventListener("keydown", (event) => {
-      if (
-        event.key !== "Enter" ||
-        event.shiftKey ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        selectionDansListe(zone)
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      zone.focus();
-      document.execCommand("insertParagraph", false, null);
-      masquerErreur(bloc);
-      etat.onChange();
+      gererToucheEntreeEdition(
+        event,
+        zone,
+        etat
+      );
     });
 
-    zone.addEventListener("blur", () => {
-      normaliserZoneEdition(zone);
+    zone.addEventListener("paste", (event) => {
+      gererCollageEdition(
+        event,
+        zone,
+        etat
+      );
     });
 
     bloc
@@ -331,16 +323,341 @@
     selection.addRange(range);
   }
 
-  function normaliserZoneEdition(zone) {
-    if (!(zone instanceof Element)) return;
+  function definirSeparateurParagraphe() {
+    try {
+      document.execCommand(
+        "defaultParagraphSeparator",
+        false,
+        "p"
+      );
+    } catch (_) {
+      // Certains navigateurs ignorent cette commande.
+    }
+  }
 
-    const htmlNettoye = nettoyerHtmlClient(
+  function gererToucheEntreeEdition(
+    event,
+    zone,
+    etat
+  ) {
+    if (
+      event.key !== "Enter" ||
+      event.isComposing
+    ) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (
+      !selection ||
+      selection.rangeCount < 1 ||
+      !zone.contains(selection.anchorNode)
+    ) {
+      return;
+    }
+
+    const itemListe = trouverParentDansZone(
+      selection.anchorNode,
+      "LI",
+      zone
+    );
+
+    if (itemListe && !event.shiftKey) {
+      // Le comportement natif crée une nouvelle puce
+      // ou quitte proprement la liste si la puce est vide.
+      definirSeparateurParagraphe();
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      insererSautLigneSouple(zone);
+    } else {
+      insererNouveauParagraphe(zone);
+    }
+
+    masquerErreur(
+      zone.closest("[data-lcdp-editeur-bloc]")
+    );
+    etat.onChange();
+  }
+
+  function insererSautLigneSouple(zone) {
+    const selection = window.getSelection();
+
+    if (
+      !selection ||
+      selection.rangeCount < 1 ||
+      !zone.contains(selection.anchorNode)
+    ) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    const saut = creerSautLigneSouple();
+    range.insertNode(saut);
+    range.setStartAfter(saut);
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function insererNouveauParagraphe(zone) {
+    const selection = window.getSelection();
+
+    if (
+      !selection ||
+      selection.rangeCount < 1 ||
+      !zone.contains(selection.anchorNode)
+    ) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    let paragraphe = trouverParentDansZone(
+      range.startContainer,
+      "P",
+      zone
+    );
+
+    if (!paragraphe) {
+      definirSeparateurParagraphe();
+      document.execCommand("formatBlock", false, "p");
+      paragraphe = trouverParentDansZone(
+        selection.anchorNode,
+        "P",
+        zone
+      );
+    }
+
+    if (!paragraphe) {
+      const nouveau = document.createElement("p");
+      nouveau.appendChild(creerSautLigneSouple());
+      range.insertNode(nouveau);
+      placerCurseurDebut(nouveau);
+      return;
+    }
+
+    retirerSautsPlaceholders(paragraphe);
+
+    const finParagraphe = document.createRange();
+    finParagraphe.setStart(
+      range.startContainer,
+      range.startOffset
+    );
+    finParagraphe.setEnd(
+      paragraphe,
+      paragraphe.childNodes.length
+    );
+
+    const suite = finParagraphe.extractContents();
+    const nouveau = document.createElement("p");
+    nouveau.appendChild(suite);
+
+    assurerParagrapheEditable(paragraphe);
+    assurerParagrapheEditable(nouveau);
+
+    paragraphe.after(nouveau);
+    placerCurseurDebut(nouveau);
+  }
+
+  function gererCollageEdition(
+    event,
+    zone,
+    etat
+  ) {
+    const pressePapier = event.clipboardData;
+
+    if (!pressePapier) {
+      return;
+    }
+
+    const html = pressePapier.getData("text/html");
+    const texte = pressePapier.getData("text/plain");
+
+    if (!html && !texte) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const contenu = html
+      ? nettoyerHtmlClient(html)
+      : convertirTexteColleEnHtml(texte);
+
+    if (!contenu) {
+      return;
+    }
+
+    insererHtmlNormalise(zone, contenu);
+    masquerErreur(
+      zone.closest("[data-lcdp-editeur-bloc]")
+    );
+    etat.onChange();
+  }
+
+  function insererHtmlNormalise(zone, html) {
+    const marqueur =
+      "LCDP_CURSOR_" +
+      Date.now().toString(36) +
+      Math.random().toString(36).slice(2);
+
+    zone.focus();
+    document.execCommand(
+      "insertHTML",
+      false,
+      html + echapperHtmlTexte(marqueur)
+    );
+
+    const nettoye = nettoyerHtmlClient(
       String(zone.innerHTML || "")
     );
 
-    if (zone.innerHTML !== htmlNettoye) {
-      zone.innerHTML = htmlNettoye;
+    zone.innerHTML = nettoye;
+    placerCurseurSurMarqueur(zone, marqueur);
+  }
+
+  function placerCurseurSurMarqueur(
+    zone,
+    marqueur
+  ) {
+    const parcours = document.createTreeWalker(
+      zone,
+      NodeFilter.SHOW_TEXT
+    );
+    let noeud;
+
+    while ((noeud = parcours.nextNode())) {
+      const position = String(
+        noeud.textContent || ""
+      ).indexOf(marqueur);
+
+      if (position < 0) {
+        continue;
+      }
+
+      const avant = noeud.textContent.slice(
+        0,
+        position
+      );
+      const apres = noeud.textContent.slice(
+        position + marqueur.length
+      );
+      noeud.textContent = avant + apres;
+
+      const range = document.createRange();
+      range.setStart(noeud, avant.length);
+      range.collapse(true);
+
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
     }
+
+    placerCurseurFin(zone);
+  }
+
+  function convertirTexteColleEnHtml(value) {
+    const lignes = String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .map((ligne) => ligne.trim())
+      .filter(Boolean);
+
+    return lignes.map((ligne) => {
+      return "<p>" +
+        echapperHtmlTexte(ligne) +
+        "</p>";
+    }).join("");
+  }
+
+  function echapperHtmlTexte(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function trouverParentDansZone(
+    noeud,
+    nomBalise,
+    zone
+  ) {
+    let courant = noeud?.nodeType === Node.ELEMENT_NODE
+      ? noeud
+      : noeud?.parentElement;
+
+    while (courant && courant !== zone) {
+      if (courant.tagName === nomBalise) {
+        return courant;
+      }
+
+      courant = courant.parentElement;
+    }
+
+    return null;
+  }
+
+  function creerSautLigneSouple() {
+    const saut = document.createElement("br");
+    saut.setAttribute(ATTR_SAUT_LIGNE, "true");
+    return saut;
+  }
+
+  function estSautLigneSouple(element) {
+    return Boolean(
+      element?.nodeType === Node.ELEMENT_NODE &&
+      element.tagName === "BR" &&
+      element.getAttribute(ATTR_SAUT_LIGNE) === "true"
+    );
+  }
+
+  function retirerSautsPlaceholders(element) {
+    if (!element || !elementVide(element)) {
+      return;
+    }
+
+    element.querySelectorAll("br").forEach((br) => {
+      br.remove();
+    });
+  }
+
+  function assurerParagrapheEditable(paragraphe) {
+    if (!paragraphe || !elementVide(paragraphe)) {
+      return;
+    }
+
+    paragraphe.replaceChildren(
+      creerSautLigneSouple()
+    );
+  }
+
+  function placerCurseurDebut(element) {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function placerCurseurFin(element) {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 
   function lire(root) {
@@ -430,70 +747,93 @@
     const template = document.createElement("template");
     template.innerHTML = String(htmlBrut || "");
 
-    template.content.querySelectorAll("script,style,iframe,object,embed,svg,math,form,input,button,textarea,select,template")
-      .forEach((element) => element.remove());
+    template.content.querySelectorAll(
+      "script,style,iframe,object,embed,svg,math,form,input,button,textarea,select,template"
+    ).forEach((element) => element.remove());
 
-    Array.from(template.content.querySelectorAll("div"))
-      .reverse()
-      .forEach((element) => {
-        const contientBloc = Array.from(element.children)
-          .some((enfant) => {
-            return BALISES_BLOC_RACINE.has(enfant.tagName);
-          });
-
-        if (contientBloc) {
-          element.replaceWith(...element.childNodes);
-          return;
-        }
-
-        const p = document.createElement("p");
-
-        while (element.firstChild) {
-          p.appendChild(element.firstChild);
-        }
-
-        element.replaceWith(p);
+    Array.from(
+      template.content.querySelectorAll(
+        "div,section,article,blockquote,h1,h2,h3,h4,h5,h6"
+      )
+    ).reverse().forEach((element) => {
+      const contientBloc = Array.from(
+        element.children
+      ).some((enfant) => {
+        return BALISES_BLOC_RACINE.has(
+          enfant.tagName
+        );
       });
 
-    Array.from(template.content.querySelectorAll("*")).forEach((element) => {
+      if (contientBloc) {
+        element.replaceWith(...element.childNodes);
+        return;
+      }
+
+      const p = document.createElement("p");
+
+      while (element.firstChild) {
+        p.appendChild(element.firstChild);
+      }
+
+      element.replaceWith(p);
+    });
+
+    Array.from(
+      template.content.querySelectorAll("*")
+    ).forEach((element) => {
       if (!BALISES_AUTORISEES.has(element.tagName)) {
         element.replaceWith(...element.childNodes);
         return;
       }
 
-      Array.from(element.attributes).forEach((attribut) => {
-        const nom = attribut.name.toLowerCase();
+      Array.from(element.attributes).forEach(
+        (attribut) => {
+          const nom = attribut.name.toLowerCase();
 
-        if (element.tagName === "A" && nom === "href") {
-          const url = normaliserUrlLien(attribut.value);
-
-          if (url) {
-            element.setAttribute("href", url);
-          } else {
-            element.removeAttribute(attribut.name);
+          if (
+            element.tagName === "BR" &&
+            nom === ATTR_SAUT_LIGNE &&
+            attribut.value === "true"
+          ) {
+            return;
           }
 
-          return;
-        }
+          if (
+            element.tagName === "A" &&
+            nom === "href"
+          ) {
+            const url = normaliserUrlLien(
+              attribut.value
+            );
 
-        if (
-          element.tagName === "A" &&
-          nom === "class" &&
-          attribut.value === "lcdp-link-secondary"
-        ) {
-          return;
-        }
+            if (url) {
+              element.setAttribute("href", url);
+            } else {
+              element.removeAttribute(attribut.name);
+            }
 
-        if (
-          element.tagName === "A" &&
-          nom === "data-site-href" &&
-          normaliserUrlLien(attribut.value)
-        ) {
-          return;
-        }
+            return;
+          }
 
-        element.removeAttribute(attribut.name);
-      });
+          if (
+            element.tagName === "A" &&
+            nom === "class" &&
+            attribut.value === "lcdp-link-secondary"
+          ) {
+            return;
+          }
+
+          if (
+            element.tagName === "A" &&
+            nom === "data-site-href" &&
+            normaliserUrlLien(attribut.value)
+          ) {
+            return;
+          }
+
+          element.removeAttribute(attribut.name);
+        }
+      );
     });
 
     normaliserBlocsRacine(template.content);
@@ -504,38 +844,6 @@
   function normaliserBlocsRacine(fragment) {
     const resultat = document.createDocumentFragment();
     let paragraphe = null;
-
-    function ajouterParagraphe(paragrapheSource) {
-      if (!(paragrapheSource instanceof Element)) {
-        return;
-      }
-
-      let segment = document.createElement("p");
-
-      function fermerSegment() {
-        retirerBrFin(segment);
-
-        if (!elementVide(segment)) {
-          resultat.appendChild(segment);
-        }
-
-        segment = document.createElement("p");
-      }
-
-      Array.from(paragrapheSource.childNodes).forEach((noeud) => {
-        if (
-          noeud.nodeType === Node.ELEMENT_NODE &&
-          noeud.tagName === "BR"
-        ) {
-          fermerSegment();
-          return;
-        }
-
-        segment.appendChild(noeud);
-      });
-
-      fermerSegment();
-    }
 
     function ouvrirParagraphe() {
       if (!paragraphe) {
@@ -548,7 +856,12 @@
     function fermerParagraphe() {
       if (!paragraphe) return;
 
-      ajouterParagraphe(paragraphe);
+      retirerBrFin(paragraphe);
+
+      if (!elementVide(paragraphe)) {
+        resultat.appendChild(paragraphe);
+      }
+
       paragraphe = null;
     }
 
@@ -560,7 +873,10 @@
         fermerParagraphe();
 
         if (noeud.tagName === "P") {
-          ajouterParagraphe(noeud);
+          ajouterParagraphesNormalises(
+            noeud,
+            resultat
+          );
           return;
         }
 
@@ -577,7 +893,12 @@
         noeud.nodeType === Node.ELEMENT_NODE &&
         noeud.tagName === "BR"
       ) {
-        fermerParagraphe();
+        if (estSautLigneSouple(noeud)) {
+          ouvrirParagraphe().appendChild(noeud);
+        } else {
+          fermerParagraphe();
+        }
+
         return;
       }
 
@@ -596,6 +917,38 @@
     fragment.replaceChildren(resultat);
   }
 
+  function ajouterParagraphesNormalises(
+    source,
+    destination
+  ) {
+    let paragraphe = document.createElement("p");
+
+    function fermer() {
+      retirerBrFin(paragraphe);
+
+      if (!elementVide(paragraphe)) {
+        destination.appendChild(paragraphe);
+      }
+
+      paragraphe = document.createElement("p");
+    }
+
+    Array.from(source.childNodes).forEach((noeud) => {
+      if (
+        noeud.nodeType === Node.ELEMENT_NODE &&
+        noeud.tagName === "BR" &&
+        !estSautLigneSouple(noeud)
+      ) {
+        fermer();
+        return;
+      }
+
+      paragraphe.appendChild(noeud);
+    });
+
+    fermer();
+  }
+
   function nettoyerListe(liste) {
     Array.from(liste.children).forEach((enfant) => {
       if (enfant.tagName !== "LI") {
@@ -604,6 +957,10 @@
     });
 
     liste.querySelectorAll("li").forEach((item) => {
+      item.querySelectorAll("br").forEach((br) => {
+        br.setAttribute(ATTR_SAUT_LIGNE, "true");
+      });
+
       retirerBrFin(item);
 
       if (elementVide(item)) {
@@ -615,7 +972,8 @@
   function retirerBrFin(element) {
     while (
       element.lastChild?.nodeType === Node.ELEMENT_NODE &&
-      element.lastChild.tagName === "BR"
+      element.lastChild.tagName === "BR" &&
+      !estSautLigneSouple(element.lastChild)
     ) {
       element.lastChild.remove();
     }
@@ -623,30 +981,13 @@
 
   function elementVide(element) {
     const copie = element.cloneNode(true);
-    copie.querySelectorAll("br").forEach((br) => br.remove());
+    copie.querySelectorAll("br").forEach((br) => {
+      br.remove();
+    });
 
     return !String(copie.textContent || "")
       .replace(/\u00a0/g, " ")
       .trim();
-  }
-
-
-  function selectionDansListe(zone) {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount < 1) {
-      return false;
-    }
-
-    let noeud = selection.anchorNode;
-
-    if (noeud?.nodeType === Node.TEXT_NODE) {
-      noeud = noeud.parentElement;
-    }
-
-    return noeud instanceof Element &&
-      zone.contains(noeud) &&
-      Boolean(noeud.closest("li"));
   }
 
   function normaliserUrlLien(value) {
