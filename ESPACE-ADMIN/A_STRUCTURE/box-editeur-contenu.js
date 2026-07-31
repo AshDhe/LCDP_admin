@@ -185,6 +185,25 @@
       }
     });
 
+    zone.addEventListener("keydown", (event) => {
+      if (
+        event.key !== "Enter" ||
+        event.shiftKey ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        selectionDansListe(zone)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      zone.focus();
+      document.execCommand("insertParagraph", false, null);
+      masquerErreur(bloc);
+      etat.onChange();
+    });
+
     zone.addEventListener("blur", () => {
       normaliserZoneEdition(zone);
     });
@@ -486,6 +505,38 @@
     const resultat = document.createDocumentFragment();
     let paragraphe = null;
 
+    function ajouterParagraphe(paragrapheSource) {
+      if (!(paragrapheSource instanceof Element)) {
+        return;
+      }
+
+      let segment = document.createElement("p");
+
+      function fermerSegment() {
+        retirerBrFin(segment);
+
+        if (!elementVide(segment)) {
+          resultat.appendChild(segment);
+        }
+
+        segment = document.createElement("p");
+      }
+
+      Array.from(paragrapheSource.childNodes).forEach((noeud) => {
+        if (
+          noeud.nodeType === Node.ELEMENT_NODE &&
+          noeud.tagName === "BR"
+        ) {
+          fermerSegment();
+          return;
+        }
+
+        segment.appendChild(noeud);
+      });
+
+      fermerSegment();
+    }
+
     function ouvrirParagraphe() {
       if (!paragraphe) {
         paragraphe = document.createElement("p");
@@ -497,12 +548,7 @@
     function fermerParagraphe() {
       if (!paragraphe) return;
 
-      retirerBrFin(paragraphe);
-
-      if (!elementVide(paragraphe)) {
-        resultat.appendChild(paragraphe);
-      }
-
+      ajouterParagraphe(paragraphe);
       paragraphe = null;
     }
 
@@ -514,12 +560,7 @@
         fermerParagraphe();
 
         if (noeud.tagName === "P") {
-          retirerBrFin(noeud);
-
-          if (!elementVide(noeud)) {
-            resultat.appendChild(noeud);
-          }
-
+          ajouterParagraphe(noeud);
           return;
         }
 
@@ -536,20 +577,7 @@
         noeud.nodeType === Node.ELEMENT_NODE &&
         noeud.tagName === "BR"
       ) {
-        if (!paragraphe) return;
-
-        const dernier = paragraphe.lastChild;
-
-        if (
-          dernier?.nodeType === Node.ELEMENT_NODE &&
-          dernier.tagName === "BR"
-        ) {
-          dernier.remove();
-          fermerParagraphe();
-        } else {
-          paragraphe.appendChild(noeud);
-        }
-
+        fermerParagraphe();
         return;
       }
 
@@ -600,6 +628,25 @@
     return !String(copie.textContent || "")
       .replace(/\u00a0/g, " ")
       .trim();
+  }
+
+
+  function selectionDansListe(zone) {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount < 1) {
+      return false;
+    }
+
+    let noeud = selection.anchorNode;
+
+    if (noeud?.nodeType === Node.TEXT_NODE) {
+      noeud = noeud.parentElement;
+    }
+
+    return noeud instanceof Element &&
+      zone.contains(noeud) &&
+      Boolean(noeud.closest("li"));
   }
 
   function normaliserUrlLien(value) {
