@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>SuiviDA - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Suivi des demandes d’abonnement des membres La Clé du Parc.">
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        if (typeof config.adminUrl === "function") {
+          return config.adminUrl(path);
+        }
+
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        if (typeof config.objetUrl === "function") {
+          return config.objetUrl(path);
+        }
+
+        return construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css",
+        "/BOX/04-box-dialogue-champ.css",
+        "/BOX/04-box-workflow-abonnement.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-suivida">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Suivi des demandes d’abonnement">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <div id="lcdp-table-lecture-admin-slot"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+      const TABLE_SLOT_ID = "lcdp-table-lecture-admin-slot";
+      const LIGHTBOX_SLOT_ID = "lcdp-lightbox-slot";
+      const RESOURCE_CODE = "membres-suivida";
+
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
+      }
+
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "omit",
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+
+        return template.content.cloneNode(true);
+      }
+
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
+      }
+
+      function chargerFragmentObjet(path) {
+        return chargerFragment(
+          urlObjet(path),
+          "Fragment OBJET " + path
+        );
+      }
+
+      function chargerScriptUneFois(src, attribut, valeur) {
+        if (document.querySelector(`script[${attribut}="${valeur}"]`)) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.setAttribute(attribut, valeur);
+          script.onload = resolve;
+          script.onerror = () => reject(
+            new Error("Script introuvable : " + valeur)
+          );
+          document.body.appendChild(script);
+        });
+      }
+
+      function chargerScriptAdminUneFois(path) {
+        return chargerScriptUneFois(
+          urlAdmin(path),
+          "data-lcdp-script-admin",
+          path
+        );
+      }
+
+      function chargerScriptObjetUneFois(path) {
+        return chargerScriptUneFois(
+          urlObjet(path),
+          "data-lcdp-script-objet",
+          path
+        );
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) return;
+
+        slot.innerHTML = "";
+        slot.appendChild(
+          await chargerFragmentAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+          )
+        );
+      }
+
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (!moduleMenu || typeof moduleMenu.initialiser !== "function") {
+          throw new Error("Menu gauche admin centralisé indisponible.");
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "membres"
+        });
+      }
+
+      async function initialiserTable() {
+        const slot = document.getElementById(TABLE_SLOT_ID);
+
+        if (!slot) return;
+
+        slot.innerHTML = "";
+        slot.appendChild(
+          await chargerFragmentAdmin(
+            "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
+          )
+        );
+
+        await chargerScriptAdminUneFois(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+        );
+
+        const table = window.LCDP_TABLE_LECTURE_ADMIN;
+
+        if (!table || typeof table.initialiser !== "function") {
+          throw new Error("Objet table lecture admin indisponible.");
+        }
+
+        await table.initialiser({
+          slotId: TABLE_SLOT_ID,
+          endpoint: endpointAdminData(),
+          resource: RESOURCE_CODE,
+          interactiveColumns: [
+            "nom",
+            "daterefu",
+            "dataccept"
+          ],
+          interactiveLabel: "Ouvrir",
+          interactiveLabels: {
+            nom: "Consulter la DA de",
+            daterefu: "Renseigner la date de non-retenue",
+            dataccept: "Renseigner la date de retenue"
+          },
+          initialFilters: {
+            statuda: "encours"
+          },
+          initialSortKey: "datenext",
+          initialSortDirection: "asc",
+          onCellActivate: gererActivationCellule
+        });
+      }
+
+      async function gererActivationCellule({ row, column }) {
+        const key = String(column?.key || "");
+
+        if (key === "nom") {
+          await ouvrirConsultationDa(row);
+          return;
+        }
+
+        if (key === "daterefu" || key === "dataccept") {
+          await ouvrirDialogueDateDecision(row, key);
+        }
+      }
+
+      async function ouvrirConsultationDa(row) {
+        const idda = String(row?.idda || "").trim();
+
+        if (!idda) {
+          await afficherAlerte("Identifiant DA absent.");
+          return;
+        }
+
+        try {
+          const requestUrl = new URL(
+            endpointAdminData() + "/suivi-da/detail"
+          );
+          requestUrl.searchParams.set("idda", idda);
+
+          const response = await fetch(requestUrl.toString(), {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" }
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (response.status === 401 || response.status === 403) {
+            redirigerConnexion();
+            return;
+          }
+
+          if (!response.ok || !data || data.success !== true || !data.da) {
+            throw new Error(
+              data?.message ||
+              data?.detail ||
+              "Impossible de lire la DA."
+            );
+          }
+
+          await afficherDaLectureSeule(data.da);
+        } catch (error) {
+          await afficherAlerte(
+            String(error?.message || error || "Erreur de lecture de la DA.")
+          );
+        }
+      }
+
+      async function afficherDaLectureSeule(da) {
+        await chargerScriptObjetUneFois(
+          "/BOX/03-box-formulaire.js"
+        );
+
+        if (typeof window.LCDP_creerFormulaire !== "function") {
+          throw new Error("Objet formulaire indisponible.");
+        }
+
+        const slot = document.getElementById(LIGHTBOX_SLOT_ID);
+        slot.innerHTML = "";
+        slot.appendChild(
+          await chargerFragmentObjet(
+            "/BOX/04-box-workflow-abonnement.html"
+          )
+        );
+
+        const workflow = slot.querySelector(
+          "[data-lcdp-box-workflow-abonnement]"
+        );
+        const card = slot.querySelector(
+          "[data-lcdp-workflow-abonnement-card]"
+        );
+        const contenu = slot.querySelector(
+          "[data-lcdp-workflow-abonnement-content]"
+        );
+
+        if (!workflow || !card || !contenu) {
+          slot.innerHTML = "";
+          throw new Error("Structure de consultation DA incomplète.");
+        }
+
+        const fermer = () => {
+          slot.innerHTML = "";
+        };
+
+        const boutonFermer = document.createElement("button");
+        boutonFermer.type = "button";
+        boutonFermer.className = "lcdp-box-dialogue-bouton__close";
+        boutonFermer.setAttribute("aria-label", "Fermer");
+        boutonFermer.textContent = "×";
+        boutonFermer.addEventListener("click", fermer);
+        card.insertBefore(boutonFermer, card.firstChild);
+
+        workflow.addEventListener("click", (event) => {
+          if (event.target === workflow) {
+            fermer();
+          }
+        });
+
+        const formSlot = document.createElement("div");
+        formSlot.id = "lcdp-suivida-formulaire-lecture";
+        contenu.appendChild(formSlot);
+
+        const membre = da.membre || {};
+        const nomComplet = [
+          membre.nommembre,
+          membre.prenommembre
+        ].filter(Boolean).join(" ");
+
+        await window.LCDP_creerFormulaire(
+          formSlot,
+          {
+            id: "lcdp-suivida-formulaire",
+            ariaLabel: "Consultation de la demande d’abonnement",
+            titre: "DA",
+            sousTitre: nomComplet,
+            validationNative: false,
+            champs: construireChampsDaLecture(membre),
+            boutons: []
+          }
+        );
+      }
+
+      function construireChampsDaLecture(membre) {
+        return [
+          champLecture("nommembre", "Nom", membre.nommembre),
+          champLecture("prenommembre", "Prénom", membre.prenommembre),
+          champLecture("alias", "Alias", membre.alias),
+          champLecture("emailmembre", "E-mail", membre.emailmembre, "email"),
+          champLecture("tel", "N° de mobile personnel", membre.tel, "tel"),
+          champLecture("autoquali", "Vos trois qualités", membre.autoquali),
+          champLecture("autoloisir", "Vos trois loisirs préférés", membre.autoloisir),
+          champLecture("autonouschoisir", "Pourquoi La Clé du Parc ?", membre.autonouschoisir),
+          champCaseLecture(
+            "checkboxvaleurs",
+            "Valeurs du club",
+            "Se reconnaît dans les valeurs de respect, de convivialité et de curiosité",
+            membre.checkboxvaleurs
+          ),
+          champCaseLecture(
+            "targetfamill",
+            "Abonnement Famille",
+            "Recherche un abonnement Famille",
+            membre.targetfamill
+          ),
+          champLecture("emailparrain", "E-mail du parrain", membre.emailparrain, "email"),
+          champLecture("iban", "IBAN remboursement", membre.iban),
+          champLecture("swift", "BIC / SWIFT", membre.swift),
+          champLecture("rib", "Nom sur le RIB", membre.rib),
+          champLecture("adresse1", "Adresse 1", membre.adresse1),
+          champLecture("adresse2", "Adresse 2", membre.adresse2),
+          champLecture("adresse3", "Ville et code postal", membre.adresse3)
+        ];
+      }
+
+      function champLecture(name, label, value, type = "text") {
+        return {
+          name,
+          id: "lcdp-suivida-" + name,
+          label,
+          type,
+          value: value ?? "",
+          readonly: true
+        };
+      }
+
+      function champCaseLecture(name, label, checkboxLabel, value) {
+        return {
+          name,
+          id: "lcdp-suivida-" + name,
+          label,
+          type: "checkbox",
+          checkboxLabel,
+          checked: value === true,
+          disabled: true
+        };
+      }
+
+      async function ouvrirDialogueDateDecision(row, champ) {
+        const autreChamp = champ === "daterefu"
+          ? "dataccept"
+          : "daterefu";
+
+        if (row?.[autreChamp]) {
+          await afficherAlerte(
+            champ === "daterefu"
+              ? "Cette DA est déjà retenue."
+              : "Cette DA est déjà non retenue."
+          );
+          return;
+        }
+
+        const idda = String(row?.idda || "").trim();
+
+        if (!idda) {
+          await afficherAlerte("Identifiant DA absent.");
+          return;
+        }
+
+        const conteneur = document.createElement("div");
+        document.body.appendChild(conteneur);
+
+        try {
+          conteneur.appendChild(
+            await chargerFragmentObjet(
+              "/BOX/04-box-dialogue-champ.html"
+            )
+          );
+
+          const dialogue = conteneur.querySelector(
+            "[data-lcdp-box-dialogue-champ]"
+          );
+          const titre = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-title]"
+          );
+          const formulaire = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-form]"
+          );
+          const zoneContent = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-content]"
+          );
+          const erreur = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-error]"
+          );
+          const boutonFermer = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-close]"
+          );
+          const boutonAnnuler = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-cancel]"
+          );
+          const boutonValider = conteneur.querySelector(
+            "[data-lcdp-dialogue-champ-submit]"
+          );
+
+          if (
+            !dialogue ||
+            !titre ||
+            !formulaire ||
+            !zoneContent ||
+            !erreur ||
+            !boutonFermer ||
+            !boutonAnnuler ||
+            !boutonValider
+          ) {
+            throw new Error("Structure du dialogue date incomplète.");
+          }
+
+          titre.textContent = champ === "daterefu"
+            ? "Date de non-retenue"
+            : "Date de retenue";
+          boutonAnnuler.hidden = true;
+
+          const champFragment = await chargerFragmentObjet(
+            "/BOX/03-box-champ-formulaire.html"
+          );
+          const zoneLabel = champFragment.querySelector(
+            "[data-lcdp-champ-label-zone]"
+          );
+          const zoneControle = champFragment.querySelector(
+            "[data-lcdp-champ-control]"
+          );
+
+          if (!zoneLabel || !zoneControle) {
+            throw new Error("Structure du champ date incomplète.");
+          }
+
+          const inputId = "lcdp-suivida-date-decision";
+          const label = document.createElement("label");
+          label.className = "lcdp-box-champ-formulaire__label";
+          label.setAttribute("for", inputId);
+          label.textContent = "Date";
+
+          const input = document.createElement("input");
+          input.id = inputId;
+          input.name = "date";
+          input.type = "date";
+          input.required = true;
+          input.value = dateAujourdhuiParis();
+
+          zoneLabel.appendChild(label);
+          zoneControle.appendChild(input);
+          zoneContent.appendChild(champFragment);
+
+          const fermer = () => {
+            conteneur.remove();
+          };
+
+          boutonFermer.addEventListener("click", fermer);
+          dialogue.addEventListener("click", (event) => {
+            if (event.target === dialogue) {
+              fermer();
+            }
+          });
+
+          formulaire.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const date = String(input.value || "").trim();
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              erreur.textContent = "La date est obligatoire.";
+              erreur.hidden = false;
+              input.focus();
+              return;
+            }
+
+            erreur.hidden = true;
+            erreur.textContent = "";
+
+            const confirme = await afficherAlerte(
+              "Valider le " + formaterDateFr(date) + " ?",
+              { boutonOk: "Valider" }
+            );
+
+            if (!confirme) {
+              input.focus();
+              return;
+            }
+
+            boutonValider.disabled = true;
+            input.disabled = true;
+
+            try {
+              await enregistrerDecision(idda, champ, date);
+              fermer();
+
+              const table = window.LCDP_TABLE_LECTURE_ADMIN;
+
+              if (table && typeof table.recharger === "function") {
+                await table.recharger(TABLE_SLOT_ID);
+              }
+            } catch (errorDecision) {
+              boutonValider.disabled = false;
+              input.disabled = false;
+              await afficherAlerte(
+                String(
+                  errorDecision?.message ||
+                  errorDecision ||
+                  "Impossible d’enregistrer la date."
+                )
+              );
+              input.focus();
+            }
+          });
+
+          input.focus();
+        } catch (error) {
+          conteneur.remove();
+          await afficherAlerte(
+            String(error?.message || error || "Erreur d’ouverture.")
+          );
+        }
+      }
+
+      async function enregistrerDecision(idda, champ, date) {
+        const response = await fetch(
+          endpointAdminData() + "/suivi-da/decision",
+          {
+            method: "POST",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ idda, champ, date })
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (response.status === 401 || response.status === 403) {
+          redirigerConnexion();
+          throw new Error("Accès administrateur refusé.");
+        }
+
+        if (!response.ok || !data || data.success !== true) {
+          throw new Error(
+            data?.message ||
+            data?.detail ||
+            "Impossible d’enregistrer la décision."
+          );
+        }
+
+        return data;
+      }
+
+      async function afficherAlerte(message, options = {}) {
+        const conteneur = document.createElement("div");
+        document.body.appendChild(conteneur);
+
+        try {
+          conteneur.appendChild(
+            await chargerFragmentObjet("/BOX/02-box-alerte.html")
+          );
+        } catch (error) {
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        const alerte = conteneur.querySelector(
+          "[data-lcdp-box-alerte]"
+        );
+        const texte = conteneur.querySelector(
+          "[data-lcdp-alerte-message]"
+        );
+        const boutonFermer = conteneur.querySelector(
+          "[data-lcdp-alerte-close]"
+        );
+        const boutonOk = conteneur.querySelector(
+          "[data-lcdp-alerte-ok]"
+        );
+
+        if (!alerte || !texte || !boutonFermer || !boutonOk) {
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        texte.textContent = message || "";
+        boutonOk.textContent = options.boutonOk || "OK";
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function fermer(valeur) {
+            if (resolu) return;
+            resolu = true;
+            conteneur.remove();
+            resolve(valeur);
+          }
+
+          boutonFermer.addEventListener("click", () => fermer(false));
+          boutonOk.addEventListener("click", () => fermer(true));
+          alerte.addEventListener("click", (event) => {
+            if (event.target === alerte) {
+              fermer(false);
+            }
+          });
+        });
+      }
+
+      function dateAujourdhuiParis() {
+        const parts = new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).formatToParts(new Date());
+
+        const valeur = (type) =>
+          parts.find((part) => part.type === type)?.value || "";
+
+        return valeur("year") + "-" + valeur("month") + "-" + valeur("day");
+      }
+
+      function formaterDateFr(value) {
+        const match = String(value || "").match(
+          /^(\d{4})-(\d{2})-(\d{2})$/
+        );
+
+        if (!match) return String(value || "");
+
+        return match[3] + "/" + match[2] + "/" + match[1];
+      }
+
+      function redirigerConnexion() {
+        const path = "/ESPACE-ADMIN/connexion-admin.html";
+
+        if (typeof config.adminUrl === "function") {
+          window.location.replace(config.adminUrl(path));
+          return;
+        }
+
+        window.location.replace(urlAdmin(path));
+      }
+
+      async function verifierAcces() {
+        const guard = window.LCDP_GUARD_ADMIN;
+
+        if (!guard || typeof guard.verifierAccesPageAdmin !== "function") {
+          throw new Error("Garde admin centralisé indisponible.");
+        }
+
+        return guard.verifierAccesPageAdmin();
+      }
+
+      async function initialiserPage() {
+        const autorise = await verifierAcces();
+
+        if (!autorise) return;
+
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserMenuGauche(),
+          initialiserTable()
+        ]);
+
+        const main = document.getElementById("lcdp-main-admin");
+
+        if (main) main.hidden = false;
+      }
+
+      initialiserPage().catch(async (error) => {
+        console.error(error);
+        await afficherAlerte(
+          String(error?.message || error || "Erreur de chargement.")
+        );
+      });
+    })();
+  </script>
+</body>
+</html>
