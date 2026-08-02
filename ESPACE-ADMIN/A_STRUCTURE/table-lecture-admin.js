@@ -41,6 +41,9 @@
               .filter(([key]) => Boolean(key))
           )
         : {};
+    const filterOptions = normaliserOptionsFiltres(
+      options.filterOptions
+    );
     const initialSortKey = String(
       options.initialSortKey || ""
     ).trim();
@@ -260,7 +263,8 @@
             filtersRow,
             columns,
             etat,
-            chargerDonnees
+            chargerDonnees,
+            filterOptions
           );
           etat.structureRendue = true;
         }
@@ -436,7 +440,8 @@
     filtersRow,
     columns,
     etat,
-    chargerDonnees
+    chargerDonnees,
+    filterOptions
   ) {
     filtersRow.innerHTML = "";
 
@@ -453,16 +458,21 @@
       }
 
       const label = String(column.label || column.key || "");
-      const controle = estColonneBooleenne(column)
-        ? creerFiltreBooleen(label)
-        : creerFiltreStandard(column, label);
+      const choix = filterOptions.get(
+        String(column.key || "")
+      );
+      const controle = choix
+        ? creerFiltreListe(label, choix)
+        : estColonneBooleenne(column)
+          ? creerFiltreBooleen(label)
+          : creerFiltreStandard(column, label);
 
       controle.value = String(
         etat.filters[column.key] || ""
       );
 
       controle.addEventListener(
-        estColonneBooleenne(column) ? "change" : "input",
+        controle.tagName === "SELECT" ? "change" : "input",
         () => {
           etat.filters[column.key] = controle.value;
           etat.offset = 0;
@@ -496,17 +506,21 @@
   }
 
   function creerFiltreBooleen(label) {
+    return creerFiltreListe(label, [
+      { value: "", label: "Tous" },
+      { value: "true", label: "TRUE" },
+      { value: "false", label: "FALSE" }
+    ]);
+  }
+
+  function creerFiltreListe(label, choix) {
     const select = document.createElement("select");
 
     select.className =
       "lcdp-table-lecture-admin__filter-input";
     select.setAttribute("aria-label", "Filtrer " + label);
 
-    [
-      { value: "", label: "Tous" },
-      { value: "true", label: "TRUE" },
-      { value: "false", label: "FALSE" }
-    ].forEach((item) => {
+    choix.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.value;
       option.textContent = item.label;
@@ -514,6 +528,41 @@
     });
 
     return select;
+  }
+
+  function normaliserOptionsFiltres(value) {
+    const resultat = new Map();
+
+    if (!value || typeof value !== "object") {
+      return resultat;
+    }
+
+    Object.entries(value).forEach(([key, choix]) => {
+      const nomColonne = String(key || "").trim();
+
+      if (!nomColonne || !Array.isArray(choix)) {
+        return;
+      }
+
+      const options = choix
+        .map((item) => {
+          if (!item || typeof item !== "object") {
+            return null;
+          }
+
+          return {
+            value: String(item.value ?? ""),
+            label: String(item.label ?? item.value ?? "")
+          };
+        })
+        .filter(Boolean);
+
+      if (options.length > 0) {
+        resultat.set(nomColonne, options);
+      }
+    });
+
+    return resultat;
   }
 
   function rendreLignes(
