@@ -317,6 +317,14 @@
           initialFilters: {
             statuda: "encours"
           },
+          filterOptions: {
+            statuda: [
+              { value: "", label: "Tous" },
+              { value: "encours", label: "En cours" },
+              { value: "oui", label: "Oui" },
+              { value: "non", label: "Non" }
+            ]
+          },
           initialSortKey: "datenext",
           initialSortDirection: "asc",
           onCellActivate: gererActivationCellule
