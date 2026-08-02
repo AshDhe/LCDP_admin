@@ -24,6 +24,32 @@
       options.interactiveLabel ||
       "Ouvrir la fiche du parc"
     ).trim();
+    const interactiveLabels =
+      options.interactiveLabels &&
+      typeof options.interactiveLabels === "object"
+        ? { ...options.interactiveLabels }
+        : {};
+    const initialFilters =
+      options.initialFilters &&
+      typeof options.initialFilters === "object"
+        ? Object.fromEntries(
+            Object.entries(options.initialFilters)
+              .map(([key, value]) => [
+                String(key || "").trim(),
+                String(value ?? "").trim()
+              ])
+              .filter(([key]) => Boolean(key))
+          )
+        : {};
+    const initialSortKey = String(
+      options.initialSortKey || ""
+    ).trim();
+    const initialSortDirection =
+      String(options.initialSortDirection || "asc")
+        .trim()
+        .toLowerCase() === "desc"
+        ? "desc"
+        : "asc";
 
     const slot = document.getElementById(slotId);
 
@@ -110,9 +136,9 @@
 
     const etat = {
       columns: [],
-      filters: {},
-      sortKey: "",
-      sortDirection: "asc",
+      filters: { ...initialFilters },
+      sortKey: initialSortKey,
+      sortDirection: initialSortDirection,
       filtreTimer: null,
       structureRendue: false,
       limit: normaliserTaillePage(options.pageSize),
@@ -247,7 +273,8 @@
           rows,
           interactiveColumns,
           onCellActivate,
-          interactiveLabel
+          interactiveLabel,
+          interactiveLabels
         );
 
         actualiserPagination(
@@ -430,6 +457,10 @@
         ? creerFiltreBooleen(label)
         : creerFiltreStandard(column, label);
 
+      controle.value = String(
+        etat.filters[column.key] || ""
+      );
+
       controle.addEventListener(
         estColonneBooleenne(column) ? "change" : "input",
         () => {
@@ -491,7 +522,8 @@
     rows,
     interactiveColumns,
     onCellActivate,
-    interactiveLabel
+    interactiveLabel,
+    interactiveLabels
   ) {
     body.innerHTML = "";
 
@@ -513,8 +545,12 @@
           bouton.className =
             "lcdp-table-lecture-admin__cell-action";
           bouton.textContent = texte;
+          const libelleBase = String(
+            interactiveLabels?.[column.key] ||
+            interactiveLabel
+          ).trim();
           const libelleAction =
-            interactiveLabel + " " + texte;
+            libelleBase + " " + texte;
 
           bouton.title = libelleAction;
           bouton.setAttribute(
