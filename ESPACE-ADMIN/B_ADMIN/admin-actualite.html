@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Actualité - Administration - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Gestion et publication du carrousel Actualité de La Clé du Parc."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">' 
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/B_ADMIN/admin-actualite.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">' 
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-admin-actualite">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Gestion du carrousel Actualité"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-admin-actualite__entete">
+                <h1 class="lcdp-admin-actualite__titre">
+                  Actualité
+                </h1>
+
+                <p class="lcdp-admin-actualite__explication">
+                  Ajoute, organise, active ou désactive les images du carrousel,
+                  puis publie la version destinée au site.
+                </p>
+
+                <p
+                  class="lcdp-admin-actualite__meta"
+                  data-lcdp-actualite-meta
+                ></p>
+
+                <p
+                  class="lcdp-admin-actualite__status"
+                  data-lcdp-actualite-status
+                  role="status"
+                ></p>
+              </header>
+
+              <p
+                class="lcdp-admin-actualite__loading"
+                data-lcdp-actualite-loading
+              >
+                Chargement du carrousel Actualité…
+              </p>
+
+              <div
+                class="lcdp-admin-actualite__contenu"
+                data-lcdp-actualite-contenu
+                hidden
+              >
+                <section class="lcdp-admin-actualite__option-accueil">
+                  <label class="lcdp-admin-actualite__checkbox-principale">
+                    <input
+                      type="checkbox"
+                      data-lcdp-actualite-affiche-accueil
+                    >
+                    <span>
+                      Afficher le carrousel Actualité en couche supérieure
+                      sur la page d’accueil
+                    </span>
+                  </label>
+
+                  <p class="lcdp-admin-actualite__aide">
+                    Lorsque cette option est désactivée, l’actualité reste
+                    disponible sur sa page publique, sans affichage prioritaire
+                    à l’arrivée sur le site.
+                  </p>
+                </section>
+
+                <section class="lcdp-admin-actualite__upload" aria-label="Ajouter des images">
+                  <div>
+                    <h2 class="lcdp-admin-actualite__section-title">
+                      Ajouter des images
+                    </h2>
+                    <p class="lcdp-admin-actualite__aide">
+                      De 1 à 6 images par envoi. Formats acceptés : JPG, PNG,
+                      WEBP, AVIF et GIF. Maximum : 15 Mo par image.
+                    </p>
+                  </div>
+
+                  <div class="lcdp-admin-actualite__upload-controls">
+                    <input
+                      class="lcdp-admin-actualite__file-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif"
+                      multiple
+                      data-lcdp-actualite-images
+                    >
+
+                    <button
+                      type="button"
+                      class="lcdp-button lcdp-button-orange"
+                      data-lcdp-actualite-upload
+                    >
+                      Ajouter au carrousel
+                    </button>
+                  </div>
+
+                  <p
+                    class="lcdp-admin-actualite__selection"
+                    data-lcdp-actualite-selection
+                  ></p>
+                </section>
+
+                <section class="lcdp-admin-actualite__slides" aria-label="Images du carrousel">
+                  <div class="lcdp-admin-actualite__slides-entete">
+                    <h2 class="lcdp-admin-actualite__section-title">
+                      Images du carrousel
+                    </h2>
+                    <p class="lcdp-admin-actualite__aide">
+                      L’ordre affiché ici est l’ordre du carrousel.
+                    </p>
+                  </div>
+
+                  <div
+                    class="lcdp-admin-actualite__liste"
+                    data-lcdp-actualite-liste
+                  ></div>
+
+                  <p
+                    class="lcdp-admin-actualite__vide"
+                    data-lcdp-actualite-vide
+                    hidden
+                  >
+                    Aucune image n’est actuellement enregistrée.
+                  </p>
+                </section>
+
+                <div class="lcdp-admin-actualite__actions">
+                  <button
+                    type="button"
+                    class="lcdp-button lcdp-button-primary"
+                    data-lcdp-actualite-previsualiser
+                  >
+                    Prévisualiser
+                  </button>
+
+                  <button
+                    type="button"
+                    class="lcdp-button lcdp-button-orange"
+                    data-lcdp-actualite-enregistrer
+                  >
+                    Enregistrer le brouillon
+                  </button>
+
+                  <button
+                    type="button"
+                    class="lcdp-button lcdp-button-orange"
+                    data-lcdp-actualite-publier
+                  >
+                    Publier
+                  </button>
+                </div>
+
+                <section
+                  class="lcdp-admin-actualite__preview"
+                  data-lcdp-actualite-preview
+                  hidden
+                  aria-label="Prévisualisation du carrousel Actualité"
+                >
+                  <h2 class="lcdp-admin-actualite__section-title">
+                    Prévisualisation
+                  </h2>
+
+                  <div
+                    class="lcdp-admin-actualite__preview-content"
+                    data-lcdp-actualite-preview-content
+                  ></div>
+                </section>
+              </div>
+
+              <template data-lcdp-actualite-slide-template>
+                <article class="lcdp-admin-actualite__slide" data-lcdp-actualite-slide>
+                  <div class="lcdp-admin-actualite__image-zone">
+                    <img
+                      class="lcdp-admin-actualite__image"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      data-lcdp-actualite-image
+                    >
+                  </div>
+
+                  <div class="lcdp-admin-actualite__champs">
+                    <p
+                      class="lcdp-admin-actualite__chemin"
+                      data-lcdp-actualite-chemin
+                    ></p>
+
+                    <label class="lcdp-admin-actualite__champ">
+                      <span>Texte alternatif de l’image</span>
+                      <input
+                        type="text"
+                        maxlength="250"
+                        autocomplete="off"
+                        data-lcdp-actualite-alt
+                      >
+                    </label>
+
+                    <div class="lcdp-admin-actualite__options-slide">
+                      <label class="lcdp-admin-actualite__checkbox">
+                        <input type="checkbox" data-lcdp-actualite-active>
+                        <span>Image active dans le carrousel</span>
+                      </label>
+
+                      <label class="lcdp-admin-actualite__checkbox">
+                        <input type="checkbox" data-lcdp-actualite-en-savoir-plus>
+                        <span>Afficher le bouton « En savoir plus »</span>
+                      </label>
+                    </div>
+
+                    <label class="lcdp-admin-actualite__champ">
+                      <span>Adresse de la page Article</span>
+                      <input
+                        type="text"
+                        inputmode="url"
+                        autocomplete="off"
+                        placeholder="/ESPACE-PUBLIC/actualite-titre-de-l-article.html"
+                        data-lcdp-actualite-article-url
+                      >
+                    </label>
+                  </div>
+
+                  <div class="lcdp-admin-actualite__ordre">
+                    <button
+                      type="button"
+                      class="lcdp-button lcdp-button-secondary"
+                      data-lcdp-actualite-monter
+                    >
+                      Monter
+                    </button>
+
+                    <button
+                      type="button"
+                      class="lcdp-button lcdp-button-secondary"
+                      data-lcdp-actualite-descendre
+                    >
+                      Descendre
+                    </button>
+
+                    <button
+                      type="button"
+                      class="lcdp-button lcdp-button-orange"
+                      data-lcdp-actualite-retirer
+                    >
+                      Retirer du carrousel
+                    </button>
+                  </div>
+                </article>
+              </template>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="./admin-actualite.js"></script>
+</body>
+</html>
