@@ -48,7 +48,8 @@
     dashboardCapacite: "https://dashboard-capacite-api.lacleduparc.fr",
 
     autocompleteParc: "https://autocomplete-parc-api.lacleduparc.fr",
-    editingAdmin: "https://editing-admin-api.lacleduparc.fr"
+    editingAdmin: "https://editing-admin-api.lacleduparc.fr",
+    aboAdmin: "https://abo-admin-api.lacleduparc.fr"
 
   };
 
@@ -88,6 +89,7 @@
 
     workerAutocompleteParcUrl: WORKERS.autocompleteParc,
     workerEditingAdminUrl: WORKERS.editingAdmin,
+    workerAboAdminUrl: WORKERS.aboAdmin,
 
     PUBLIC_BASE: active.publicBase,
     MEMBRE_BASE: active.membreBase,
@@ -113,6 +115,7 @@
 
     WORKER_AUTOCOMPLETE_PARC_URL: WORKERS.autocompleteParc,
     WORKER_EDITING_ADMIN_URL: WORKERS.editingAdmin,
+    WORKER_ABO_ADMIN_URL: WORKERS.aboAdmin,
 
     publicUrl(path) {
       return buildUrl(active.publicBase, path);
@@ -162,7 +165,8 @@
     API_DASHBOARD_CAPACITE: WORKERS.dashboardCapacite,
 
     API_AUTOCOMPLETE_PARC: WORKERS.autocompleteParc,
-    API_EDITING_ADMIN: WORKERS.editingAdmin
+    API_EDITING_ADMIN: WORKERS.editingAdmin,
+    API_ABO_ADMIN: WORKERS.aboAdmin
 
   };
 })();
