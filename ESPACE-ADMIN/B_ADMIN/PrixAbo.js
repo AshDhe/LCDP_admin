@@ -15,10 +15,35 @@
       : path;
   }
 
+  function urlPublic(path) {
+    return typeof window.LCDP_urlPublic === "function"
+      ? window.LCDP_urlPublic(path)
+      : path;
+  }
+
   function urlObjet(path) {
     return typeof window.LCDP_urlObjet === "function"
       ? window.LCDP_urlObjet(path)
       : path;
+  }
+
+  function appliquerRoutes(racine = document) {
+    racine.querySelectorAll("[data-site-href]").forEach((element) => {
+      const path = element.dataset.siteHref || "";
+      const space = element.dataset.space || "public";
+
+      element.setAttribute(
+        "href",
+        space === "admin" ? urlAdmin(path) : urlPublic(path)
+      );
+    });
+
+    racine.querySelectorAll("[data-site-src]").forEach((element) => {
+      const path = String(element.dataset.siteSrc || "")
+        .replace(/^\/?OBJET\/?/, "/");
+
+      element.setAttribute("src", urlObjet(path));
+    });
   }
 
   function endpointAboAdmin() {
@@ -92,6 +117,7 @@
     slot.appendChild(await chargerFragmentAdmin(
       "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
     ));
+    appliquerRoutes(slot);
   }
 
   async function initialiserMenuGauche() {
