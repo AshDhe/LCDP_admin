@@ -797,13 +797,11 @@
 
     try {
       await appelerPoints(
-        "/point?idevent=" +
-        encodeURIComponent(
-          pointEditionCourant.idevent
-        ),
+        "/point/suppression",
         {
-          method: "DELETE",
+          method: "POST",
           body: {
+            idevent: pointEditionCourant.idevent,
             original: {
               type: pointEditionCourant.type,
               description:
