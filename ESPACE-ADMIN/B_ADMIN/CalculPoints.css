@@ -1,0 +1,97 @@
+/* PAGE ADMIN : CALCULPOINTS */
+
+.lcdp-page-calculpoints .lcdp-admin-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-4);
+}
+
+.lcdp-calculpoints__entete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-calculpoints__titre,
+.lcdp-calculpoints__intro,
+.lcdp-calculpoints__resultat-titre,
+.lcdp-calculpoints__statut {
+  margin: 0;
+}
+
+.lcdp-calculpoints__titre {
+  color: var(--lcdp-color-text);
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+
+.lcdp-calculpoints__intro {
+  max-width: 760px;
+  color: var(--lcdp-color-text-muted);
+  line-height: 1.5;
+}
+
+#lcdp-calculpoints-form-slot .lcdp-box-formulaire-page {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#lcdp-calculpoints-form-slot .lcdp-box-formulaire-page__inner {
+  max-width: 760px;
+}
+
+.lcdp-calculpoints__resultat {
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-orange);
+  border-radius: var(--lcdp-radius-large);
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-calculpoints__resultat[hidden] {
+  display: none !important;
+}
+
+.lcdp-calculpoints__resultat-titre {
+  color: var(--lcdp-color-text);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.lcdp-calculpoints__statut {
+  margin-top: var(--lcdp-space-2);
+  color: var(--lcdp-color-text-muted);
+  line-height: 1.4;
+}
+
+.lcdp-calculpoints__grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--lcdp-space-2);
+  margin: var(--lcdp-space-3) 0 0;
+}
+
+.lcdp-calculpoints__donnee {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--lcdp-space-3);
+  padding: 10px 12px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+}
+
+.lcdp-calculpoints__donnee dt {
+  color: var(--lcdp-color-text-muted);
+}
+
+.lcdp-calculpoints__donnee dd {
+  margin: 0;
+  color: var(--lcdp-color-text);
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (min-width: 760px) {
+  .lcdp-calculpoints__grille {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

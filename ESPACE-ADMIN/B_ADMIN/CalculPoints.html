@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>CalculPoints - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Calcul manuel des points et des seuils de référence de La Clé du Parc."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/B_ADMIN/CalculPoints.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-calculpoints">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Calcul manuel des points"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-calculpoints__entete">
+                <h1 class="lcdp-calculpoints__titre">CalculPoints</h1>
+                <p class="lcdp-calculpoints__intro">
+                  Choisis la date de la photographie des points. Un nouveau
+                  calcul à une date déjà enregistrée remplace les valeurs de
+                  cette date dans Points et PointsSeuil.
+                </p>
+              </header>
+
+              <div id="lcdp-calculpoints-form-slot"></div>
+
+              <section
+                class="lcdp-calculpoints__resultat"
+                id="lcdp-calculpoints-resultat"
+                aria-live="polite"
+                hidden
+              >
+                <h2 class="lcdp-calculpoints__resultat-titre">
+                  Résultat du calcul
+                </h2>
+
+                <p
+                  class="lcdp-calculpoints__statut"
+                  data-calculpoints-statut
+                ></p>
+
+                <dl class="lcdp-calculpoints__grille">
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Date</dt>
+                    <dd data-calculpoints-valeur="datepoints"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Population</dt>
+                    <dd data-calculpoints-valeur="population"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Minimum</dt>
+                    <dd data-calculpoints-valeur="pointsminimum"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Maximum</dt>
+                    <dd data-calculpoints-valeur="pointsmaximum"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Intervalle</dt>
+                    <dd data-calculpoints-valeur="pointsintervalle"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Seuil Bronze</dt>
+                    <dd data-calculpoints-valeur="seuilbronze"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Seuil Argent</dt>
+                    <dd data-calculpoints-valeur="seuilargent"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Seuil Or</dt>
+                    <dd data-calculpoints-valeur="seuilor"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Seuil Platine</dt>
+                    <dd data-calculpoints-valeur="seuilplatine"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Sans badge</dt>
+                    <dd data-calculpoints-valeur="effectifsansbadge"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Bronze</dt>
+                    <dd data-calculpoints-valeur="effectifbronze"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Argent</dt>
+                    <dd data-calculpoints-valeur="effectifargent"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Or</dt>
+                    <dd data-calculpoints-valeur="effectifor"></dd>
+                  </div>
+                  <div class="lcdp-calculpoints__donnee">
+                    <dt>Platine</dt>
+                    <dd data-calculpoints-valeur="effectifplatine"></dd>
+                  </div>
+                </dl>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="./CalculPoints.js"></script>
+</body>
+</html>
