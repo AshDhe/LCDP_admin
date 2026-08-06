@@ -287,17 +287,8 @@
     });
     document.addEventListener("keydown", gererEchap);
 
-    const observateur = new MutationObserver(() => {
-      nettoyerActionsPlanning(contenu);
-    });
-    observateur.observe(contenu, {
-      childList: true,
-      subtree: true
-    });
-
     planningOuvert = {
       shift,
-      observateur,
       gererEchap
     };
 
@@ -331,7 +322,6 @@
         }
       );
 
-      nettoyerActionsPlanning(contenu);
     } catch (error) {
       afficherMessagePlanning(
         alerteSlot,
@@ -346,27 +336,9 @@
     }
   }
 
-  function nettoyerActionsPlanning(contenu) {
-    contenu
-      .querySelectorAll(".lcdp-box-fiche-parc__actions-barre")
-      .forEach((element) => element.remove());
-
-    contenu
-      .querySelectorAll("[data-lcdp-planning-instruction-detail]")
-      .forEach((element) => {
-        if (
-          element.closest(
-            ".lcdp-fiche-parc__planning-jour-overlay"
-          )
-        ) {
-          element.textContent = "Détail horaire de la journée.";
-        }
-      });
-  }
 
   function fermerPlanningParc() {
     if (planningOuvert) {
-      planningOuvert.observateur?.disconnect();
       document.removeEventListener(
         "keydown",
         planningOuvert.gererEchap

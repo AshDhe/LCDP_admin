@@ -15,6 +15,10 @@
   min-width: 0;
 }
 
+.lcdp-planning-parc-admin__shift .lcdp-box-fiche-parc__actions-barre {
+  display: none;
+}
+
 .lcdp-planning-parc-admin__message {
   margin: 0 0 1rem;
   padding: 0.8rem 1rem;
