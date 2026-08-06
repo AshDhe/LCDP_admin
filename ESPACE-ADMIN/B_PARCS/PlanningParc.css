@@ -1,0 +1,34 @@
+.lcdp-page-planning-parc-admin .lcdp-admin-page-content {
+  min-width: 0;
+}
+
+.lcdp-planning-parc-admin__entete {
+  margin-bottom: 1.25rem;
+}
+
+.lcdp-planning-parc-admin__titre {
+  margin: 0;
+  text-align: center;
+}
+
+.lcdp-planning-parc-admin__shift [data-lcdp-shift-detail-parc-content] {
+  min-width: 0;
+}
+
+.lcdp-planning-parc-admin__message {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.8rem;
+  font-weight: 600;
+}
+
+.lcdp-planning-parc-admin__message--erreur {
+  color: #8b1f1f;
+}
+
+@media (max-width: 767px) {
+  .lcdp-planning-parc-admin__entete {
+    margin-bottom: 1rem;
+  }
+}

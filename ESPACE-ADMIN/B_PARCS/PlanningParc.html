@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Planning Parc - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Consultation du planning des parcs dans l’espace admin La Clé du Parc.">
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/04-box-card-parc.css",
+        "/BOX/04-box-fiche-parc.css",
+        "/BOX/04-box-shift-detail-parc.css",
+        "/BOX/04-box-calendrier-mois.css",
+        "/BOX/04-box-card-jour-in-calendrier-mois.css",
+        "/BOX/04-box-calendrier-jour.css",
+        "/BOX/04-box-card-heure-in-calendrier-jour.css",
+        "/BOX/04-box-legende.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/B_PARCS/PlanningParc.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-planning-parc-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Planning Parc">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-planning-parc-admin__entete">
+                <h1 class="lcdp-planning-parc-admin__titre">Planning Parc</h1>
+              </header>
+
+              <div id="lcdp-planning-parc-table-slot"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="lcdp-lightbox-slot"></div>
+  </div>
+
+  <script src="./PlanningParc.js"></script>
+</body>
+</html>
