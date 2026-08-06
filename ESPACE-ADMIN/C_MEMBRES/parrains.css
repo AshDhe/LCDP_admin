@@ -1,0 +1,20 @@
+.lcdp-page-parrains-admin .lcdp-admin-page-content,
+#lcdp-parrains-onglets-slot,
+.lcdp-parrains-admin__table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.lcdp-parrains-admin__entete {
+  margin: 0 0 var(--lcdp-space-4);
+}
+
+.lcdp-parrains-admin__titre {
+  margin: 0;
+}
+
+.lcdp-page-parrains-admin
+[data-lcdp-table-lecture-admin-body] td {
+  white-space: pre-line;
+}
