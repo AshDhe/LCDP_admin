@@ -198,35 +198,9 @@
   }
 
   async function ouvrirAjout() {
-    const endpoint = endpointAboAdmin();
-    const response = await fetch(endpoint + "/options", {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: { Accept: "application/json" }
-    });
-
-    const data = await response.json().catch(() => null);
-    gererStatutAcces(response, data);
-
-    if (!response.ok || !data || data.success !== true) {
-      throw new Error(
-        data?.message || data?.detail || "Impossible de préparer l'ajout."
-      );
-    }
-
-    const disponibles = Array.isArray(data.disponibles)
-      ? data.disponibles
-      : [];
-
-    if (disponibles.length < 1) {
-      await afficherAlerte("Tous les types d'abonnement autorisés existent déjà.");
-      return;
-    }
-
     modeEdition = "create";
     abonnementCourant = {
-      typeabo: disponibles[0],
+      typeabo: "",
       prixabottc: "",
       txtvafr: 20,
       ech: "",
@@ -238,10 +212,10 @@
       datecreation: ""
     };
 
-    await rendreFormulaire(abonnementCourant, disponibles);
+    await rendreFormulaire(abonnementCourant);
   }
 
-  async function rendreFormulaire(abonnement, codesDisponibles = []) {
+  async function rendreFormulaire(abonnement) {
     await chargerScriptObjetUneFois("/BOX/03-box-formulaire.js");
 
     if (typeof window.LCDP_creerFormulaire !== "function") {
@@ -268,7 +242,7 @@
         ? ""
         : String(abonnement.typeabo || ""),
       validationNative: true,
-      champs: construireChamps(abonnement, codesDisponibles),
+      champs: construireChamps(abonnement),
       boutons: [
         {
           id: "lcdp-prixabo-enregistrer",
@@ -295,19 +269,15 @@
     editionSlot.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function construireChamps(abonnement, codesDisponibles) {
+  function construireChamps(abonnement) {
     const champType = modeEdition === "create"
       ? {
           name: "typeabo",
           label: "Type d'abonnement",
-          type: "select",
+          type: "text",
           value: abonnement.typeabo,
           required: true,
-          validationNative: true,
-          options: codesDisponibles.map((code) => ({
-            value: code,
-            label: code
-          }))
+          validationNative: true
         }
       : {
           name: "typeabo",
