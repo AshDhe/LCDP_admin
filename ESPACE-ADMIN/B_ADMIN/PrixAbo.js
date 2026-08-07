@@ -162,10 +162,59 @@
       pageSize: 50,
       initialSortKey: "typeabo",
       initialSortDirection: "asc",
-      interactiveColumns: ["typeabo"],
+      interactiveColumns: ["typeabo", "ria"],
       interactiveLabel: "Modifier l'abonnement",
-      onCellActivate: ({ row }) => ouvrirModification(row)
+      interactiveLabels: {
+        typeabo: "Modifier l'abonnement",
+        ria: "Modifier le droit Recherche IA"
+      },
+      onCellActivate: ({ row, column }) => {
+        if (String(column?.key || "") === "ria") {
+          return basculerDroitRechercheIa(row);
+        }
+
+        return ouvrirModification(row);
+      }
     });
+  }
+
+  async function basculerDroitRechercheIa(row) {
+    const typeabo = String(row?.typeabo || "").trim();
+
+    if (!typeabo) {
+      throw new Error("Type d'abonnement absent.");
+    }
+
+    const nouvelEtat = row?.rechercheia !== true;
+    const response = await fetch(endpointAboAdmin() + "/recherche-ia", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        typeabo,
+        actif: nouvelEtat
+      })
+    });
+
+    const data = await response.json().catch(() => null);
+    gererStatutAcces(response, data);
+
+    if (!response.ok || !data || data.success !== true) {
+      const message = String(
+        data?.message ||
+        data?.detail ||
+        "Impossible d'enregistrer le droit Recherche IA."
+      );
+      await afficherAlerte(message);
+      return false;
+    }
+
+    await window.LCDP_TABLE_LECTURE_ADMIN?.recharger(TABLE_SLOT_ID);
+    return true;
   }
 
   async function ouvrirModification(row) {
