@@ -162,11 +162,12 @@
       pageSize: 50,
       initialSortKey: "typeabo",
       initialSortDirection: "asc",
-      interactiveColumns: ["typeabo", "ria"],
+      interactiveColumns: ["typeabo", "ria", "typmb"],
       interactiveLabel: "Modifier l'abonnement",
       interactiveLabels: {
         typeabo: "Modifier l'abonnement",
-        ria: "Modifier le droit Recherche IA"
+        ria: "Modifier le droit Recherche IA",
+        typmb: "Modifier la catégorie membre"
       },
       onCellActivate: ({ row, column }) => {
         if (String(column?.key || "") === "ria") {
@@ -252,6 +253,7 @@
       typeabo: "",
       prixabottc: "",
       txtvafr: 20,
+      typmb: "",
       ech: "",
       mois1: "",
       mois2: "",
@@ -339,6 +341,20 @@
     const champs = [
       champType,
       champMontant("prixabottc", "Prix total TTC", abonnement.prixabottc, true, 0.01),
+      {
+        name: "typmb",
+        label: "TypMb",
+        type: "select",
+        value: abonnement.typmb ?? "",
+        required: true,
+        validationNative: true,
+        options: [
+          { value: "", label: "Sélectionner" },
+          { value: "DUO", label: "DUO" },
+          { value: "FAMILLE", label: "FAMILLE" },
+          { value: "COACH", label: "COACH" }
+        ]
+      },
       champMontant("txtvafr", "Taux de TVA (%)", abonnement.txtvafr, true, 0),
       {
         name: "ech",
@@ -456,6 +472,7 @@
     return {
       typeabo: String(form.elements.namedItem("typeabo")?.value || "").trim(),
       prixabottc: lireNombre("prixabottc", false),
+      typmb: String(form.elements.namedItem("typmb")?.value || "").trim(),
       txtvafr: lireNombre("txtvafr", false),
       ech: echTexte ? Number(echTexte) : null,
       mois1: lireNombre("mois1"),
