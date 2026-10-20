@@ -1355,6 +1355,34 @@
         const button=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");button.type="submit";const message=elementSuivi("p","");message.setAttribute("role","status");form.append(button,message);
         form.addEventListener("submit",async e=>{e.preventDefault();button.disabled=true;try{const values={};for(const [key,input] of Object.entries(inputs))values[key]=input.value===""?null:Number(input.value)*(key==="poll_secondes"?60:1);await appelSuivi("/admin/monitor/settings",{type,id,values});message.textContent="Réglages enregistrés. Ils s’appliquent au prochain contact de l’appareil.";}catch(error){message.textContent=error.message;}finally{button.disabled=false;}});return form;
       }
+      const videoForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
+      const videoLabel=elementSuivi("label","Nombre de séquences vidéo à l’entrée"),videoSelect=elementSuivi("select");
+      for(const [value,label] of [[1,"1 — Boîtier (4 s)"],[2,"2 — Boîtier (4 s), puis selfie et bracelet (6 s)"]]){const option=elementSuivi("option",label);option.value=String(value);videoSelect.append(option);}
+      videoSelect.disabled=true;videoLabel.append(videoSelect);
+      const videoSave=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");videoSave.type="submit";videoSave.disabled=true;
+      const videoStatus=elementSuivi("p","Chargement…");videoStatus.setAttribute("role","status");
+      videoForm.append(videoLabel,elementSuivi("p","En mode automatique, sans bracelet : une seule séquence. Un réglage individuel peut imposer une ou deux séquences. Check-out : une seule séquence. Les six secondes commencent une fois la caméra selfie prête, après appui sur le bouton selfie. Bracelet demandé pendant les trois dernières secondes."),videoSave,videoStatus);
+      zone.append(elementSuivi("h2","Capture vidéo"),videoForm);
+      try{const v=await appelSuivi("/admin/monitor/video");videoSelect.value=String(v.sequenceCount);videoSelect.disabled=false;videoSave.disabled=false;videoStatus.textContent="";}catch(e){videoStatus.textContent=e.message;}
+      videoForm.addEventListener("submit",async e=>{e.preventDefault();videoSave.disabled=true;try{await appelSuivi("/admin/monitor/video",{sequenceCount:Number(videoSelect.value)});videoStatus.textContent="Enregistré. Applicable aux prochaines captures, y compris aux tests.";if(profilMembre.value)await chargerProfil();}catch(e){videoStatus.textContent=e.message;}finally{videoSave.disabled=false;}});
+      const profilForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
+      const profilMembre=elementSuivi("select"),profilChoix=elementSuivi("select");
+      const profilLabel=elementSuivi("label","Membre"),choixLabel=elementSuivi("label","Séquences à l’entrée");profilLabel.append(profilMembre);choixLabel.append(profilChoix);
+      const vide=elementSuivi("option","Choisissez un membre");vide.value="";profilMembre.append(vide);
+      for(const [value,label] of [[0,"Automatique"],[1,"Forcer 1"],[2,"Forcer 2"]]){const option=elementSuivi("option",label);option.value=String(value);profilChoix.append(option);}
+      const profilSave=elementSuivi("button","Enregistrer pour ce membre","lcdp-button lcdp-button-orange");profilSave.type="submit";
+      const profilStatus=elementSuivi("p","");profilStatus.setAttribute("role","status");profilChoix.disabled=true;profilSave.disabled=true;
+      profilForm.append(profilLabel,choixLabel,elementSuivi("p","Automatique suit le réglage global et l’attribution d’un bracelet. Forcer 1 ou Forcer 2 est prioritaire, avec ou sans bracelet. Sans bracelet, le selfie ne demande pas de présenter un bracelet. La sortie reste sur une seule séquence."),profilSave,profilStatus);
+      zone.append(elementSuivi("h2","Réglage vidéo par membre"),profilForm);
+      let profilVersion=0;
+      function resultatProfil(r){return (r.hasBracelet?"Bracelet actif attribué. ":"Sans bracelet actif. ")+"Entrée : "+r.effectiveSequenceCount+" séquence(s). Sortie : 1.";}
+      async function chargerProfil(){
+       const version=++profilVersion,id=profilMembre.value;profilChoix.disabled=true;profilSave.disabled=true;profilStatus.textContent="";if(!id)return;
+       try{const r=await appelSuivi("/admin/monitor/video/member?member="+encodeURIComponent(id));if(version!==profilVersion)return;profilChoix.value=String(r.sequenceCount);profilStatus.textContent=resultatProfil(r);profilChoix.disabled=false;profilSave.disabled=false;}catch(e){if(version===profilVersion)profilStatus.textContent=e.message;}
+      }
+      profilMembre.addEventListener("change",chargerProfil);
+      try{const r=await appelerCle("/options/membres");for(const m of r.options || []){const option=elementSuivi("option",m.label);option.value=m.value;profilMembre.append(option);}}catch(e){profilMembre.disabled=true;profilStatus.textContent=e.message;}
+      profilForm.addEventListener("submit",async e=>{e.preventDefault();if(profilSave.disabled || !profilMembre.value)return;profilSave.disabled=true;profilMembre.disabled=true;profilChoix.disabled=true;try{const r=await appelSuivi("/admin/monitor/video/member",{memberId:profilMembre.value,sequenceCount:Number(profilChoix.value)});profilStatus.textContent="Enregistré. "+resultatProfil(r);}catch(e){profilStatus.textContent=e.message;}finally{profilMembre.disabled=false;profilChoix.disabled=false;profilSave.disabled=false;}});
       zone.append(elementSuivi("h2","Valeurs générales"),formulaire("global","",d.global,d.global));
       zone.append(elementSuivi("h2","Parcs"));
       const filtre=elementSuivi("input");filtre.type="search";filtre.placeholder="Rechercher un parc";filtre.setAttribute("aria-label","Rechercher un parc");zone.append(filtre);
