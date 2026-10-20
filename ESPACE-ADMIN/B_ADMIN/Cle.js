@@ -1383,6 +1383,28 @@
       profilMembre.addEventListener("change",chargerProfil);
       try{const r=await appelerCle("/options/membres");for(const m of r.options || []){const option=elementSuivi("option",m.label);option.value=m.value;profilMembre.append(option);}}catch(e){profilMembre.disabled=true;profilStatus.textContent=e.message;}
       profilForm.addEventListener("submit",async e=>{e.preventDefault();if(profilSave.disabled || !profilMembre.value)return;profilSave.disabled=true;profilMembre.disabled=true;profilChoix.disabled=true;try{const r=await appelSuivi("/admin/monitor/video/member",{memberId:profilMembre.value,sequenceCount:Number(profilChoix.value)});profilStatus.textContent="Enregistré. "+resultatProfil(r);}catch(e){profilStatus.textContent=e.message;}finally{profilMembre.disabled=false;profilChoix.disabled=false;profilSave.disabled=false;}});
+      zone.append(elementSuivi("h2","Géolocalisation"),elementSuivi("p","geoloc_frq : 0 = désactivée ; 2 = entrée et sortie ; 3 = un contrôle intermédiaire ; 4 = deux. Les contrôles intermédiaires sont espacés selon le délai ci-dessous, uniquement avant la fin de réservation. Ils reprennent à la réouverture de la clé si le navigateur l’a suspendue."));
+      function choixGeoloc(heritage){
+        const select=elementSuivi("select");
+        for(const [value,label] of [...(heritage?[["","Hériter du réglage global"]]:[]),[0,"0 — Désactivée"],...Array.from({length:23},(_,i)=>[i+2,(i+2)+" — Entrée, sortie"+(i?", "+i+" intermédiaire(s)":"")])]){
+          const option=elementSuivi("option",label);option.value=String(value);select.append(option);
+        }
+        return select;
+      }
+      const geoForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form"),geoChoix=choixGeoloc(false),geoInterval=elementSuivi("input");
+      geoChoix.disabled=true;geoInterval.type="number";geoInterval.min="1";geoInterval.max="1440";geoInterval.step="1";geoInterval.required=true;geoInterval.value="60";
+      const geoLabel=elementSuivi("label","Fréquence de géolocalisation (geoloc_frq)"),geoDelai=elementSuivi("label","Délai entre contrôles intermédiaires (minutes)");geoLabel.append(geoChoix);geoDelai.append(geoInterval);
+      const geoSave=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange"),geoStatus=elementSuivi("p","");geoSave.type="submit";geoSave.disabled=true;geoStatus.setAttribute("role","status");geoForm.append(geoLabel,geoDelai,geoSave,geoStatus);zone.append(geoForm);
+      try{const r=await appelSuivi("/admin/monitor/geolocation");geoChoix.value=String(r.geoloc_frq);geoInterval.value=r.intervalMinutes;geoChoix.disabled=false;geoSave.disabled=false;}catch(e){geoStatus.textContent=e.message;}
+      geoForm.addEventListener("submit",async e=>{e.preventDefault();geoSave.disabled=true;try{await appelSuivi("/admin/monitor/geolocation",{geoloc_frq:Number(geoChoix.value),intervalMinutes:Number(geoInterval.value)});geoStatus.textContent="Enregistré. Le nouveau réglage s’applique aux prochains contrôles.";}catch(e){geoStatus.textContent=e.message;}finally{geoSave.disabled=false;}});
+      const geoProfil=elementSuivi("form",undefined,"lcdp-cle-suivi__form"),geoMembre=profilMembre.cloneNode(true),geoOverride=choixGeoloc(true),geoProfilSave=elementSuivi("button","Enregistrer pour ce membre","lcdp-button lcdp-button-orange"),geoProfilStatus=elementSuivi("p","");
+      const geoMembreLabel=elementSuivi("label","Membre"),geoOverrideLabel=elementSuivi("label","geoloc_frq individuel");geoMembreLabel.append(geoMembre);geoOverrideLabel.append(geoOverride);geoMembre.value="";geoOverride.disabled=true;geoProfilSave.type="submit";geoProfilSave.disabled=true;geoProfilStatus.setAttribute("role","status");geoProfil.append(geoMembreLabel,geoOverrideLabel,geoProfilSave,geoProfilStatus);zone.append(elementSuivi("h3","Réglage par membre"),geoProfil);
+      let geoVersion=0;
+      geoMembre.addEventListener("change",async()=>{
+        const version=++geoVersion,id=geoMembre.value;geoOverride.disabled=true;geoProfilSave.disabled=true;geoProfilStatus.textContent="";if(!id)return;
+        try{const r=await appelSuivi("/admin/monitor/geolocation/member?member="+encodeURIComponent(id));if(version!==geoVersion)return;geoOverride.value=r.override===null?"":String(r.override);geoProfilStatus.textContent="Valeur effective : "+r.geoloc_frq;geoOverride.disabled=false;geoProfilSave.disabled=false;}catch(e){if(version===geoVersion)geoProfilStatus.textContent=e.message;}
+      });
+      geoProfil.addEventListener("submit",async e=>{e.preventDefault();if(!geoMembre.value||geoProfilSave.disabled)return;geoProfilSave.disabled=true;geoMembre.disabled=true;try{const r=await appelSuivi("/admin/monitor/geolocation/member",{memberId:geoMembre.value,geoloc_frq:geoOverride.value===""?null:Number(geoOverride.value)});geoProfilStatus.textContent="Enregistré. Valeur effective : "+r.geoloc_frq;}catch(e){geoProfilStatus.textContent=e.message;}finally{geoMembre.disabled=false;geoProfilSave.disabled=false;}});
       zone.append(elementSuivi("h2","Valeurs générales"),formulaire("global","",d.global,d.global));
       zone.append(elementSuivi("h2","Parcs"));
       const filtre=elementSuivi("input");filtre.type="search";filtre.placeholder="Rechercher un parc";filtre.setAttribute("aria-label","Rechercher un parc");zone.append(filtre);
