@@ -250,7 +250,7 @@
       racine.querySelectorAll("[data-lcdp-panneau-onglet]")
     );
 
-    if (boutons.length < 3 || panneaux.length < 3) {
+    if (boutons.length < 4 || panneaux.length < 4) {
       throw new Error("Structure des onglets incomplète.");
     }
 
@@ -281,6 +281,7 @@
       "Clés Bluetooth",
       false
     );
+    configurerOnglet(boutons[3],panneaux[3],"suivi","Présence et fréquences",false);
   }
 
   function assurerTroisiemeOnglet(racine) {
@@ -291,7 +292,7 @@
       racine.querySelectorAll("[data-lcdp-panneau-onglet]")
     );
 
-    if (boutons.length >= 3 && panneaux.length >= 3) {
+    if (boutons.length >= 4 && panneaux.length >= 4) {
       return;
     }
 
@@ -308,7 +309,7 @@
       throw new Error("Structure des onglets incomplète.");
     }
 
-    while (boutons.length < 3) {
+    while (boutons.length < 4) {
       const bouton = modeleBouton.cloneNode(true);
       bouton.removeAttribute("id");
       bouton.removeAttribute("aria-controls");
@@ -318,7 +319,7 @@
       boutons.push(bouton);
     }
 
-    while (panneaux.length < 3) {
+    while (panneaux.length < 4) {
       const panneau = modelePanneau.cloneNode(true);
       panneau.removeAttribute("id");
       panneau.removeAttribute("aria-labelledby");
@@ -745,6 +746,22 @@
     }
 
     form.addEventListener("submit", enregistrer);
+    if(contexte.key==="membres" && modeEdition==="update"){
+      const preparer=document.createElement("button");preparer.type="button";preparer.className="lcdp-button lcdp-button-secondary";preparer.textContent="Générer le secret du bracelet Wi-Fi";
+      const note=document.createElement("p");note.textContent="Cette action remplace le secret de connexion précédent du bracelet. Elle ne change pas son mot de passe Wi-Fi.";
+      form.append(note,preparer);
+      preparer.addEventListener("click",async()=>{
+        preparer.disabled=true;
+        try{
+          const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("w-la-cle-du-parc-api"):"")).replace(/\/+$/,"");
+          if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");
+          const r=await fetch(base+"/bracelet/enroll",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({idclemembre:Number(item.idclemembre)})});const d=await r.json();
+          if(!r.ok || !d.success)throw Error(d.message || "Génération refusée.");
+          const sortie=document.createElement("textarea");sortie.readOnly=true;sortie.setAttribute("aria-label","Configuration privée du bracelet");sortie.rows=6;sortie.style.width="100%";sortie.value=JSON.stringify({apiBase:base,idbracelet:d.idbracelet,deviceToken:d.deviceToken},null,2);form.appendChild(sortie);sortie.select();preparer.remove();note.textContent="Copiez cette configuration privée pour programmer l’Atom Lite. Le secret ne sera pas réaffiché après fermeture.";
+        }catch(e){await afficherAlerte(e.message);preparer.disabled=false;}
+      });
+    }
+
 
     if (contexte.key === "bluetooth") {
       initialiserNomBleDepuisBracelet(form, options);
@@ -1320,6 +1337,38 @@
     return guard.verifierAccesPageAdmin();
   }
 
+  function elementSuivi(tag,texte,classe){const e=document.createElement(tag);if(texte!==undefined)e.textContent=texte;if(classe)e.className=classe;return e;}
+  function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("w-la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
+  async function appelSuivi(path,body){const r=await fetch(baseSuivi()+path,{method:body?"POST":"GET",credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok || !d.success)throw Error(d.message || "Suivi indisponible.");return d;}
+  async function initialiserSuivi(page=0){
+    const zone=document.querySelector('[data-lcdp-contenu-onglet="suivi"]');if(!zone)return;
+    zone.replaceChildren();const statut=elementSuivi("p","Chargement du suivi…");statut.setAttribute("role","status");zone.append(statut);
+    try{
+      const d=await appelSuivi("/admin/monitor?page="+page);zone.replaceChildren();
+      zone.append(elementSuivi("p","Réglages globaux, par parc et par bracelet. Les couleurs restent communes aux bracelets d’un même parc."));
+      const avertissement=elementSuivi("p","Sans réponse du serveur, extinction après deux intervalles réseau + 5 secondes au maximum, et au plus tard à la fin du créneau connue du bracelet. Un check-out est reçu au prochain appel réseau.");zone.append(avertissement);
+      function formulaire(type,id,values,effective){
+        const form=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
+        const fields=type==="bracelet"?[["poll_secondes","Appel réseau (secondes)"]]:[["bracelet_secondes","Couleur (secondes)"],["image_secondes","Image (secondes)"],["poll_secondes","Appel réseau (secondes)"]];
+        const inputs={};
+        for(const [key,label] of fields){const l=elementSuivi("label",label),input=elementSuivi("input");input.type="number";input.step="1";input.min=key==="poll_secondes"?"2":"60";input.max=key==="poll_secondes"?"1200":"86400";input.value=values?.[key] ?? "";input.required=type==="global";input.placeholder=type==="global"?"":"Hérité : "+(effective?.[key] ?? d.global[key]);l.append(input);form.append(l);inputs[key]=input;}
+        const button=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");button.type="submit";const message=elementSuivi("p","");message.setAttribute("role","status");form.append(button,message);
+        form.addEventListener("submit",async e=>{e.preventDefault();button.disabled=true;try{const values={};for(const [key,input] of Object.entries(inputs))values[key]=input.value===""?null:Number(input.value);await appelSuivi("/admin/monitor/settings",{type,id,values});message.textContent="Réglages enregistrés. Ils s’appliquent au prochain contact de l’appareil.";}catch(error){message.textContent=error.message;}finally{button.disabled=false;}});return form;
+      }
+      zone.append(elementSuivi("h2","Valeurs générales"),formulaire("global","",d.global,d.global));
+      zone.append(elementSuivi("h2","Parcs"));
+      const filtre=elementSuivi("input");filtre.type="search";filtre.placeholder="Rechercher un parc";filtre.setAttribute("aria-label","Rechercher un parc");zone.append(filtre);
+      const cartes=[];
+      for(const p of d.parks){const carte=elementSuivi("section",undefined,"lcdp-cle-suivi__carte");carte.append(elementSuivi("h3",p.nom));const heure=x=>new Date(x).toLocaleTimeString("fr-FR");carte.append(elementSuivi("p","Prochains tirages : couleur "+heure(p.nextColorAt)+", image "+heure(p.nextImageAt)+". Géolocalisation : "+(p.geoConfigured?"zone configurée":"position recueillie, sans rayon configuré")+"."));carte.append(formulaire("parc",p.idparc,p.overrides,p.effective));zone.append(carte);cartes.push([carte,String(p.nom || "").toLowerCase()]);}
+      filtre.addEventListener("input",()=>cartes.forEach(([c,nom])=>{c.hidden=!nom.includes(filtre.value.toLowerCase());}));
+      if(d.parksTruncated)zone.append(elementSuivi("p","Affichage limité à 1 000 parcs."));
+      zone.append(elementSuivi("h2","Bracelets initialisés — page "+(page+1)));
+      for(const b of d.devices){const carte=elementSuivi("section",undefined,"lcdp-cle-suivi__carte");carte.append(elementSuivi("h3",b.memberName+" — "+b.braceletName));carte.append(elementSuivi("p","Dernier contact : "+(b.dernier_contact?new Date(b.dernier_contact).toLocaleString("fr-FR"):"aucun")+". "+(b.online?"Contact récent":"Contact attendu ou appareil hors ligne")+". Dernière commande : "+(b.dernier_mode || "aucune")+(b.dernier_hex?" "+b.dernier_hex:"")+". "+(b.acknowledged?"Réception confirmée.":"Réception non confirmée.")));carte.append(formulaire("bracelet",b.idbracelet,{poll_secondes:b.poll_secondes},{poll_secondes:b.effectivePollSeconds ?? d.global.poll_secondes}));zone.append(carte);}
+      const actions=elementSuivi("div",undefined,"lcdp-cle-admin__barre-actions");
+      for(const [label,target] of [["Actualiser",page],...(page>0?[["Précédent",page-1]]:[]),...(d.hasMore?[["Suivant",page+1]]:[])]){const b=elementSuivi("button",label,"lcdp-button lcdp-button-orange");b.type="button";b.addEventListener("click",()=>initialiserSuivi(target));actions.append(b);}zone.append(actions);
+    }catch(e){statut.textContent=e.message;}
+  }
+
   async function initialiserPage() {
     const autorise = await verifierAcces();
 
@@ -1332,6 +1381,7 @@
 
     await initialiserWraperOnglets();
     await initialiserTables();
+    initialiserSuivi().catch(gererErreurPage);
 
     const main = document.getElementById("lcdp-main-admin");
 
