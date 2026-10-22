@@ -39,7 +39,8 @@ function afficher(){
   reglerVue();if(onglet==='base'&&!ia){afficherBases();return;}
   let html=entete()+'<tbody>';
   const lecture=onglet!=='duo';
-  html+=ligne('Accueil',j=>'<input aria-label="Capacité le '+j.date+'" type="number" min="1" max="100000" data-date="'+j.date+'" data-key="capacite" value="'+j.jour.capacite+'" '+(lecture||j.date<today?'disabled':'')+'>');
+  html+=ligne('Capacité parc',j=>'<input aria-label="Capacité le '+j.date+'" type="number" min="1" max="100000" data-date="'+j.date+'" data-key="capacite" value="'+j.jour.capacite+'" '+(lecture||j.date<today?'disabled':'')+'>');
+  html+=ligne('Capacité LCDP',j=>'<input aria-label="Capacité LCDP le '+j.date+'" type="number" min="1" max="100000" data-date="'+j.date+'" data-key="capacite_lcdp" value="'+(j.jour.capacite_lcdp??3)+'" '+(lecture||j.date<today?'disabled':'')+'>');
   html+=ligne('Accueil IA',j=>esc(j.jour.operations.filter(o=>o.type==='boost').map(o=>'P'+o.plages.join(', P')+' → '+o.capacite).join(' · ')||'—'));
   html+=ligne('Privatisé',j=>esc(j.jour.operations.filter(o=>o.type==='privatisation').map(o=>'P'+o.plages.join(', P')).join(' · ')||(j.jour.ancien && Object.values(j.jour.ancien.PRIVATISATION||{}).some(Boolean)?'Ancien planning':'—')));
   html+=ligne('Fermé',j=>chk(j,'ferme',-1,j.jour.ferme,lecture||j.date<today));
@@ -61,7 +62,7 @@ async function changement(e){
   const el=e.target;if(!el.matches('input[data-date]'))return;
   const ligne=jours.find(j=>j.date===el.dataset.date),j=ligne.jour,k=el.dataset.key,i=Number(el.dataset.index);
   if(j.ancien){if(!confirm('Cette journée utilise les anciens horaires. La modification la remplace par les réglages affichés. Continuer ?')){afficher();return;}delete j.ancien;}
-  if(k==='capacite'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>100000){statut('Capacité entière entre 1 et 100000.',true);afficher();return;}j.capacite=n;}
+  if(k==='capacite'||k==='capacite_lcdp'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>100000){statut('Capacité entière entre 1 et 100000.',true);afficher();return;}j[k]=n;}
   else if(k==='partage'||k==='exclusif'){
     j[onglet][i]=el.checked?k:'';
     if(el.checked&&k==='exclusif')j[onglet==='famille'?'coach':'famille'][i]='';
