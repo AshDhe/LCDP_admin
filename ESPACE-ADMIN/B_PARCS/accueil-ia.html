@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Accueil IA - La Clé du Parc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Définition du planning général d’un parc.">
+
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = (path) =>
+        typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+
+      window.LCDP_urlPublic = (path) =>
+        typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+
+      window.LCDP_urlObjet = (path) =>
+        typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
+        ) +
+        '">'
+      );
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <script src="./planning-parc.js" defer></script>
+
+<style>
+[hidden]{display:none!important}.planning-shell{background:white;padding:24px;border-radius:16px;min-width:0}.planning-head{display:flex;align-items:end;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:#fff;padding-bottom:15px;border-bottom:1px solid #ddd}.planning-head label{display:grid;gap:5px}.planning-head select{min-width:150px;padding:10px;border:1px solid #aaa;border-radius:6px}.identite{font-size:1.3rem;margin:18px 0 8px;color:#244837}.planning-shell button{padding:9px 17px;border:1px solid #778579;border-radius:6px;background:white;color:#253a2e;cursor:pointer}.planning-shell button:disabled{opacity:.45;cursor:default}.planning-shell .save{background:#294f3d;color:white}.planning-tabs{display:flex;gap:8px;margin:18px 0}.planning-tabs button[aria-selected=true]{background:#294f3d;color:white}.planning-scroll{overflow:auto;max-height:73vh;border:1px solid #ccd1cb;margin:12px 0 18px}.planning-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;text-align:center}.planning-table th,.planning-table td{border-right:1px solid #d6dad4;border-bottom:1px solid #d6dad4;min-width:40px;height:34px;padding:3px}.planning-table thead th{position:sticky;top:0;background:#edf1ea;z-index:3}.planning-table th:first-child{position:sticky;left:0;min-width:185px;text-align:left;background:#f3f5f0;z-index:2;padding-left:10px;font-weight:500}.planning-table thead th:first-child{z-index:4}.planning-table input[type=checkbox]{appearance:none;width:21px;height:21px;border:1px solid #8a9489;border-radius:3px;background:#fff;cursor:pointer;vertical-align:middle;margin:0}.planning-table input[type=checkbox]:checked{background:#969e98;box-shadow:inset 0 0 0 3px #969e98}.planning-table input[type=checkbox]:checked:after{content:'✓';color:white;display:block;font-size:16px;line-height:18px}.planning-table input:focus-visible{outline:3px solid #386dbe;outline-offset:1px}.planning-table input:disabled{cursor:default;opacity:.65}.planning-table input[type=number]{width:44px;padding:3px;font-size:12px;border:1px solid #b8c1b5;border-radius:3px}.planning-table .closed{background:#d7dbd7}.planning-table .winter td{background:#edf4e8}.planning-table .weekend{background:#e0e6d9}.planning-table .group th,.planning-table .group td{background:#e5eadf;font-weight:600;height:26px}.planning-note{font-size:13px;color:#506051;line-height:1.5}.planning-status{min-height:24px;margin:12px 0;white-space:pre-line}.planning-status[data-error=true]{color:#a22b23}.planning-footer{display:flex;gap:16px;align-items:center}.operation{padding:14px;border:1px solid #d1d8cd;border-radius:8px;margin:10px 0}.operation button{float:right}.dictee{background:#f2f5ee;padding:22px;border-radius:12px;margin:18px 0}.dictee pre{white-space:pre-wrap;font-family:inherit}.planning-pc{display:none}@media(max-width:900px){.planning-pc{display:block;padding:30px}.planning-layout{display:none!important}}
+</style></head><body data-mode="ia" class="lcdp-page-admin-interieure lcdp-page-planning-workflow"><div class="lcdp-site-page"><div id="lcdp-bandeau-slot"></div><main class="lcdp-site-main" id="lcdp-main-admin" hidden><section class="lcdp-page-section"><div class="lcdp-page-container"><p class="planning-pc">La programmation du planning s’utilise sur PC.</p><div class="lcdp-admin-page-layout planning-layout"><div id="lcdp-menu-gauche-admin-slot"></div><div class="lcdp-admin-page-content"><section class="planning-shell">
+<h1 id="titre-page">Planning parc</h1><div class="planning-head"><label>Département<select id="departement"><option value="">Choisir</option></select></label><label>Parc<select id="parc" disabled><option value="">Choisir</option></select></label><label id="mois-zone">Mois<select id="mois"></select></label><button type="button" class="save" data-save disabled>Enregistrer</button></div>
+<p class="identite" id="identite">Choisir un département et un parc</p><div class="planning-status" id="status" role="status" aria-live="polite"></div>
+<div id="edition" hidden><div class="planning-tabs" role="tablist" aria-label="Programmation"><button type="button" role="tab" data-tab="base" aria-selected="true">Base</button><button type="button" role="tab" data-tab="duo" aria-selected="false">Duo</button><button type="button" role="tab" data-tab="famille" aria-selected="false">Famille</button><button type="button" role="tab" data-tab="coach" aria-selected="false">Coach</button></div>
+<div id="base-panel" hidden>
+<p class="planning-note">Une trame hebdomadaire propre au parc. Elle sert uniquement à créer de nouveaux mois, à compter de sa date d’application. Les mois déjà ouverts restent inchangés, même s’ils sont futurs.</p>
+<div class="planning-footer"><button type="button" id="nouvelle-base">Nouveau</button><button type="button" id="recharger-bases">Recharger les références</button></div>
+<div id="base-courante"></div>
+<div id="base-editeur" hidden><h2>Nouvelle base</h2><label>Applicable à partir du premier jour de <input type="month" id="base-date" required></label><p class="planning-note">Cocher uniquement les plages ouvertes. Cette trame ne contient ni capacité, ni Hiver, ni demi-plages, ni accès Famille ou Coach.</p><div class="planning-scroll"><table class="planning-table" id="base-tableau"></table></div><button type="button" id="annuler-base">Annuler la nouvelle base</button></div>
+<h2>Références et historique</h2><div id="base-historique"></div><p class="planning-note" id="base-mois-ouverts"></p>
+</div><div id="planning-mensuel">
+<p class="planning-note">Cases grises cochées · cases blanches décochées. Fermé et Privatisation priment sur tous les accès. Hiver réduit les plages 1 et 4 sans les ouvrir. Le boost remplace la capacité sur les seules plages indiquées.</p>
+<div class="planning-scroll" tabindex="0" aria-label="Tableau mensuel du parc"><table class="planning-table" id="tableau"></table></div><p class="planning-note">Une étoile signale une ancienne journée conservée à l’identique jusqu’à sa modification. Toute réduction d’accès annule les réservations des plages touchées et leurs invitations liées.</p></div></div>
+<div id="ia" hidden><p>Dicter un boost de capacité ou une privatisation pour le parc affiché ci-dessus.</p><div class="dictee"><button type="button" id="micro">Démarrer la dictée</button><p class="planning-note">Exemple — Le 26 avril 2027, plages 4 et 5, la capacité passe à 50 personnes.</p><p id="transcription"></p><pre id="proposition"></pre><button type="button" id="rejeter" hidden>Effacer la proposition</button></div><h2>Opérations ponctuelles</h2><p class="planning-note">La suppression rétablit le planning ordinaire. Les réservations déjà annulées restent annulées.</p><div id="operations"></div></div>
+<div class="planning-footer"><button type="button" class="save" data-save disabled>Enregistrer</button><span id="etat-save"></span></div>
+</section></div></div></div></section></main></div></body></html>

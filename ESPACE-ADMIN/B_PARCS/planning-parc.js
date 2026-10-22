@@ -1,829 +1,201 @@
-
 (() => {
-  "use strict";
-
-  const config = window.SITE_CONFIG || {};
-  const PAGE = {
-  "title": "PlanningParc",
-  "prefix": "lcdp-planning-parc",
-  "identiteId": "lcdp-planning-parc-identite",
-  "briefRoute": "/brief",
-  "validateRoute": "/valider",
-  "resumeTitle": "Résumé du PlanningParc",
-  "readyMessage": "Le PlanningParc est prêt à être validé.",
-  "confirmTitle": "Validation PlanningParc",
-  "confirmMessage": "Valider ce PlanningParc et écrire simultanément DUO, COACH et les fermetures explicites ?",
-  "analysisMessage": "Analyse IA du PlanningParc en cours…",
-  "analysisReadyMessage": "PlanningParc IA prêt à être vérifié.",
-  "validationMessage": "Écriture du PlanningParc en cours. Ne ferme pas cette page.",
-  "successMessage": "PlanningParc enregistré.",
-  "focusId": "lcdp-planning-parc-date-debut"
-};
-
-  let parcCourant = null;
-  let briefCourant = null;
-  let dicteeCourante = null;
-
-  function urlAdmin(path) {
-    return typeof window.LCDP_urlAdmin === "function"
-      ? window.LCDP_urlAdmin(path)
-      : path;
-  }
-
-  function urlPublic(path) {
-    return typeof window.LCDP_urlPublic === "function"
-      ? window.LCDP_urlPublic(path)
-      : path;
-  }
-
-  function urlObjet(path) {
-    return typeof window.LCDP_urlObjet === "function"
-      ? window.LCDP_urlObjet(path)
-      : path;
-  }
-
-  function endpointWorker() {
-    return String(
-      config.workerParcPlanningAdminUrl ||
-      config.WORKER_PARC_PLANNING_ADMIN_URL ||
-      window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN ||
-      ""
-    ).replace(/\/+$/, "");
-  }
-
-  function appliquerRoutes(racine = document) {
-    racine.querySelectorAll("[data-site-href]").forEach((element) => {
-      const path = element.dataset.siteHref || "";
-      const space = element.dataset.space || "public";
-      element.setAttribute(
-        "href",
-        space === "admin" ? urlAdmin(path) : urlPublic(path)
-      );
-    });
-
-    racine.querySelectorAll("[data-site-src]").forEach((element) => {
-      const path = String(element.dataset.siteSrc || "")
-        .replace(/^\/?OBJET\/?/, "/");
-      element.setAttribute("src", urlObjet(path));
-    });
-  }
-
-  async function chargerFragment(url, libelle) {
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "omit",
-      cache: "no-cache"
-    });
-
-    if (!response.ok) {
-      throw new Error(libelle + " introuvable.");
-    }
-
-    const template = document.createElement("template");
-    template.innerHTML = (await response.text()).trim();
-    return template.content.cloneNode(true);
-  }
-
-  async function initialiserBandeau() {
-    const slot = document.getElementById("lcdp-bandeau-slot");
-    if (!slot) return;
-
-    slot.innerHTML = "";
-    const fragment = await chargerFragment(
-      urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"),
-      "Bandeau admin"
-    );
-    slot.appendChild(fragment);
-    appliquerRoutes(slot);
-  }
-
-  async function initialiserMenuGauche() {
-    const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
-
-    if (!moduleMenu || typeof moduleMenu.initialiser !== "function") {
-      throw new Error("Menu gauche admin centralisé indisponible.");
-    }
-
-    await moduleMenu.initialiser({
-      slotId: "lcdp-menu-gauche-admin-slot",
-      categorieActive: "parcs"
-    });
-  }
-
-  function lireSelectionUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return {
-      dptmt: String(params.get("dptmt") || "").trim(),
-      idparc: String(params.get("idparc") || "").trim()
-    };
-  }
-
-  async function appelerJson(url, options = {}) {
-    let response;
-
-    try {
-      response = await fetch(url, {
-        method: options.method || "GET",
-        credentials: "include",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          ...(options.body !== undefined
-            ? { "Content-Type": "application/json" }
-            : {})
-        },
-        body: options.body !== undefined
-          ? JSON.stringify(options.body)
-          : undefined
-      });
-    } catch (error) {
-      throw new Error(
-        "Connexion impossible avec le worker. " +
-        String(error?.message || error || "")
-      );
-    }
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok || !data || data.success !== true) {
-      const message = String(data?.message || "").trim();
-      const detail = String(data?.detail || "").trim();
-      throw new Error(
-        [message, detail]
-          .filter((item, index, liste) =>
-            item && liste.indexOf(item) === index
-          )
-          .join(" — ") ||
-        "Réponse serveur inexploitable."
-      );
-    }
-
-    return data;
-  }
-
-  async function chargerParc() {
-    const endpoint = endpointWorker();
-    const selection = lireSelectionUrl();
-
-    if (!endpoint) {
-      throw new Error("Endpoint Parc Planning non configuré.");
-    }
-
-    if (!selection.dptmt || !selection.idparc) {
-      throw new Error("Département ou parc absent de l’URL.");
-    }
-
-    const data = await appelerJson(
-      endpoint + "/parc?" + new URLSearchParams(selection).toString()
-    );
-
-    parcCourant = data.parc;
-
-    const identite = document.getElementById(PAGE.identiteId);
-    if (identite) {
-      identite.textContent =
-        "Parc : " + parcCourant.nom +
-        " — Département " + parcCourant.dptmt;
-    }
-  }
-
-  function afficherStatus(message, erreur = false) {
-    const status = document.getElementById(PAGE.prefix + "-status");
-    if (!status) return;
-
-    status.textContent = String(message || "");
-    status.hidden = !message;
-    status.dataset.etat = erreur ? "erreur" : "succes";
-  }
-
-  function afficherValidation(data) {
-    briefCourant = data;
-
-    const section = document.getElementById(PAGE.prefix + "-validation");
-    const resume = document.getElementById(PAGE.prefix + "-resume");
-    const alertes = document.getElementById(PAGE.prefix + "-alertes");
-    const json = document.getElementById(PAGE.prefix + "-json");
-    const boutonValider = document.getElementById(PAGE.prefix + "-valider");
-
-    if (!section || !resume || !alertes || !json || !boutonValider) {
-      throw new Error("Bloc de validation incomplet.");
-    }
-
-    const jsonbrief = data?.jsonbrief || {};
-    const listeAlertes = Array.isArray(jsonbrief.alertes)
-      ? jsonbrief.alertes
-      : [];
-    const resumeOral = String(jsonbrief.resume_oral || "").trim();
-    const resumeLisible = Array.isArray(jsonbrief.resume_lisible)
-      ? jsonbrief.resume_lisible
-          .map((item) => String(item || "").trim())
-          .filter(Boolean)
-      : [];
-
-    resume.innerHTML = "";
-    const blocResume = document.createElement("div");
-    blocResume.className = "lcdp-validation-bloc";
-
-    const titreResume = document.createElement("h3");
-    titreResume.textContent = PAGE.resumeTitle;
-    blocResume.appendChild(titreResume);
-
-    if (resumeOral) {
-      const paragraphe = document.createElement("p");
-      paragraphe.textContent = resumeOral;
-      blocResume.appendChild(paragraphe);
-    }
-
-    if (resumeLisible.length > 0) {
-      const liste = document.createElement("ul");
-      liste.className = "lcdp-validation-liste";
-
-      for (const ligne of resumeLisible) {
-        const item = document.createElement("li");
-        item.textContent = ligne;
-        liste.appendChild(item);
-      }
-
-      blocResume.appendChild(liste);
-    }
-
-    if (!resumeOral && resumeLisible.length === 0) {
-      const paragraphe = document.createElement("p");
-      paragraphe.textContent = "Aucun résumé n’a été produit.";
-      blocResume.appendChild(paragraphe);
-    }
-
-    resume.appendChild(blocResume);
-
-    alertes.innerHTML = "";
-    alertes.hidden = listeAlertes.length === 0;
-
-    if (listeAlertes.length > 0) {
-      const titre = document.createElement("h3");
-      titre.textContent = "Points à corriger";
-      alertes.appendChild(titre);
-
-      const liste = document.createElement("ul");
-      liste.className = "lcdp-validation-liste";
-
-      for (const alerte of listeAlertes) {
-        const item = document.createElement("li");
-        item.textContent = String(alerte || "");
-        liste.appendChild(item);
-      }
-
-      alertes.appendChild(liste);
-    }
-
-    const note = document.createElement("p");
-    note.className = "lcdp-validation-note";
-    note.textContent = listeAlertes.length > 0
-      ? "Le brief doit être corrigé avant validation."
-      : PAGE.readyMessage;
-    resume.appendChild(note);
-
-    boutonValider.disabled = listeAlertes.length > 0;
-    json.textContent = JSON.stringify(jsonbrief, null, 2);
-    section.hidden = false;
-    section.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  async function demanderConfirmation(message) {
-    const slot = document.getElementById("lcdp-lightbox-slot");
-
-    if (!slot) {
-      throw new Error("Slot de dialogue absent.");
-    }
-
-    slot.innerHTML = "";
-    const fragment = await chargerFragment(
-      urlObjet("/BOX/02-box-dialogue-bouton.html"),
-      "Boîte de dialogue"
-    );
-    slot.appendChild(fragment);
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector("[data-lcdp-dialogue-title]");
-    const texte = slot.querySelector("[data-lcdp-dialogue-text]");
-    const actions = slot.querySelector("[data-lcdp-dialogue-actions]");
-    const boutonFermer = slot.querySelector("[data-lcdp-dialogue-close]");
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
-      throw new Error("Structure de la boîte de dialogue incomplète.");
-    }
-
-    if (boutonFermer) boutonFermer.remove();
-
-    titre.textContent = PAGE.confirmTitle;
-    texte.textContent = String(message || "").trim();
-
-    const boutonAnnuler = document.createElement("button");
-    boutonAnnuler.type = "button";
-    boutonAnnuler.className = "lcdp-button lcdp-button-secondary";
-    boutonAnnuler.textContent = "Annuler";
-
-    const boutonOk = document.createElement("button");
-    boutonOk.type = "button";
-    boutonOk.className = "lcdp-button lcdp-button-orange";
-    boutonOk.textContent = "Valider";
-
-    actions.append(boutonAnnuler, boutonOk);
-
-    return new Promise((resolve) => {
-      let resolu = false;
-
-      function terminer(valeur) {
-        if (resolu) return;
-        resolu = true;
-        document.removeEventListener("keydown", gererTouche);
-        slot.innerHTML = "";
-        resolve(valeur);
-      }
-
-      function gererTouche(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
-        }
-      }
-
-      boutonAnnuler.addEventListener("click", () => terminer(false));
-      boutonOk.addEventListener("click", () => terminer(true));
-      dialogue.addEventListener("click", (event) => {
-        if (event.target === dialogue) terminer(false);
-      });
-      document.addEventListener("keydown", gererTouche);
-
-      window.setTimeout(() => boutonOk.focus(), 0);
-    });
-  }
-
-  function normaliserMotDictee(value) {
-    return String(value || "")
-      .toLocaleLowerCase("fr-FR")
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .replace(
-        /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,
-        ""
-      );
-  }
-
-  function supprimerDoublonsConsecutifsDictee(value) {
-    const mots = String(value || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    const resultat = [];
-
-    for (const mot of mots) {
-      resultat.push(mot);
-
-      let doublonSupprime = true;
-
-      while (doublonSupprime) {
-        doublonSupprime = false;
-
-        const longueurMax = Math.min(
-          8,
-          Math.floor(resultat.length / 2)
-        );
-
-        for (
-          let longueur = longueurMax;
-          longueur >= 1;
-          longueur -= 1
-        ) {
-          const debutPremier =
-            resultat.length - 2 * longueur;
-          const debutSecond =
-            resultat.length - longueur;
-          let identiques = true;
-
-          for (let index = 0; index < longueur; index += 1) {
-            if (
-              normaliserMotDictee(
-                resultat[debutPremier + index]
-              ) !==
-              normaliserMotDictee(
-                resultat[debutSecond + index]
-              )
-            ) {
-              identiques = false;
-              break;
-            }
-          }
-
-          if (!identiques) continue;
-
-          resultat.splice(debutSecond, longueur);
-          doublonSupprime = true;
-          break;
-        }
-      }
-    }
-
-    return resultat.join(" ");
-  }
-
-  function fusionnerTexteDictee(texteInitial, texteReconnu) {
-    const texte = [texteInitial, texteReconnu]
-      .map((item) => String(item || "").trim())
-      .filter(Boolean)
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return supprimerDoublonsConsecutifsDictee(texte);
-  }
-
-  function restaurerBoutonDictee(bouton) {
-    if (!bouton) return;
-    bouton.disabled = false;
-    bouton.textContent = "Dicter";
-  }
-
-  function arreterDictee() {
-    const etat = dicteeCourante;
-    dicteeCourante = null;
-
-    if (!etat) return;
-
-    try {
-      etat.reconnaissance.stop();
-    } catch {
-      try {
-        etat.reconnaissance.abort();
-      } catch {
-        // La reconnaissance est déjà terminée.
-      }
-    }
-
-    restaurerBoutonDictee(etat.bouton);
-  }
-
-  function initialiserDictee() {
-    const SpeechRecognition =
-      window.SpeechRecognition ||
-      window.webkitSpeechRecognition;
-
-    document.querySelectorAll("[data-dictee-cible]").forEach((bouton) => {
-      if (!SpeechRecognition) {
-        bouton.disabled = true;
-        bouton.title = "Dictée non prise en charge par ce navigateur.";
-        return;
-      }
-
-      bouton.addEventListener("click", () => {
-        const cible = document.getElementById(
-          bouton.dataset.dicteeCible || ""
-        );
-
-        if (!cible) return;
-
-        if (dicteeCourante?.bouton === bouton) {
-          arreterDictee();
-          return;
-        }
-
-        if (dicteeCourante) arreterDictee();
-
-        const reconnaissance = new SpeechRecognition();
-        const texteInitial = String(cible.value || "").trim();
-        const resultats = new Map();
-
-        dicteeCourante = {
-          reconnaissance,
-          bouton,
-          cible
-        };
-
-        bouton.textContent = "Arrêter";
-        bouton.disabled = false;
-
-        reconnaissance.lang = "fr-FR";
-        reconnaissance.interimResults = true;
-        reconnaissance.continuous = true;
-        reconnaissance.maxAlternatives = 1;
-
-        reconnaissance.addEventListener("result", (event) => {
-          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
-
-          for (
-            let index = event.resultIndex || 0;
-            index < event.results.length;
-            index += 1
-          ) {
-            const texte = String(
-              event.results[index]?.[0]?.transcript || ""
-            ).trim();
-
-            if (texte) {
-              resultats.set(index, texte);
-            } else {
-              resultats.delete(index);
-            }
-          }
-
-          const texteReconnu = Array.from(resultats.entries())
-            .sort(([a], [b]) => a - b)
-            .map(([, texte]) => texte)
-            .join(" ");
-
-          cible.value = fusionnerTexteDictee(
-            texteInitial,
-            texteReconnu
-          );
-        });
-
-        reconnaissance.addEventListener("error", (event) => {
-          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
-
-          const code = String(event?.error || "");
-
-          if (
-            code === "not-allowed" ||
-            code === "service-not-allowed"
-          ) {
-            afficherStatus("Autorisation du microphone refusée.", true);
-          } else if (
-            code !== "no-speech" &&
-            code !== "aborted"
-          ) {
-            afficherStatus(
-              "La dictée a été interrompue : " + code + ".",
-              true
-            );
-          }
-        });
-
-        reconnaissance.addEventListener("end", () => {
-          if (dicteeCourante?.reconnaissance !== reconnaissance) return;
-          dicteeCourante = null;
-          restaurerBoutonDictee(bouton);
-        });
-
-        try {
-          reconnaissance.start();
-        } catch (error) {
-          dicteeCourante = null;
-          restaurerBoutonDictee(bouton);
-          afficherStatus(
-            "Impossible de démarrer la dictée : " +
-            String(error?.message || error || ""),
-            true
-          );
-        }
-      });
-    });
-
-    window.addEventListener("beforeunload", arreterDictee);
-  }
-
-  
-function valeur(id) {
-  return String(document.getElementById(id)?.value || "").trim();
+'use strict';
+const config=window.SITE_CONFIG||{};
+const base=String(config.workerParcPlanningAdminUrl||config.WORKER_PARC_PLANNING_ADMIN_URL||window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN||'').replace(/\/+$/,'');
+const $=id=>document.getElementById(id), ia=document.body.dataset.mode==='ia';
+let jours=[], parc=null, onglet='base', dirty=new Set(), saving=null, timer=null, busy=false, operations=[], proposition=null;
+let bases=[],moisOuverts=[],baseBrouillon=null,baseDirty=false;
+let recorder=null, stream=null, recordTimer=null;
+const selected={dptmt:'',idparc:'',mois:''};
+const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function statut(msg,erreur=false){$('status').textContent=msg;$('status').dataset.error=String(erreur);}
+function boutons(){ document.querySelectorAll('[data-save]').forEach(b=>b.disabled=busy||!!saving||!parc||(ia?!proposition:onglet==='base'?!baseBrouillon:!dirty.size));$('etat-save').textContent=saving?'Enregistrement…':busy?'Traitement en cours…':ia&&proposition?'Proposition non enregistrée':baseDirty?'Nouvelle base non enregistrée':dirty.size?'Modifications non enregistrées':parc?'Enregistré':''; }
+async function api(path,body,method){
+  if(!base) throw Error('API Planning parc non configurée.');
+  const response=await fetch(base+path,{credentials:'include',cache:'no-store',method:method||(body?'POST':'GET'),headers:body instanceof FormData?{Accept:'application/json'}:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
+  const d=await response.json().catch(()=>null);if(!response.ok||!d?.success)throw Error(d?.message||'Connexion impossible.');return d;
 }
-
-function formaterHeure(heure) {
-  const [h, m] = String(heure || "").split(":");
-  return m === "00" ? String(Number(h)) + " h" : String(Number(h)) + " h " + m;
+const contexte=()=>({idparc:selected.idparc,dptmt:selected.dptmt,mois:selected.mois});
+function apres(d){if(d.jours)jours=d.jours;if(d.operations)operations=d.operations;if(d.bases)bases=d.bases;if(d.moisOuverts)moisOuverts=d.moisOuverts;if(d.parc)parc=d.parc;$('identite').textContent=parc?parc.nom+' — Département '+parc.dptmt:'Choisir un département et un parc';}
+async function enregistrer(){
+  clearTimeout(timer);if(saving)return saving;if(!dirty.size)return;
+  const dates=[...dirty], snapshot=jours.filter(j=>dirty.has(j.date)).map(j=>JSON.parse(JSON.stringify(j)));
+  saving=(async()=>{
+    busy=true;bloquer(true);boutons();statut('Enregistrement du mois…');
+    try{const d=await api('/enregistrer',{...contexte(),jours:snapshot});apres(d);dates.forEach(date=>dirty.delete(date));afficher();statut('Planning enregistré.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
+    catch(e){statut(e.message+' Les modifications restent à enregistrer.',true);throw e;}
+    finally{busy=false;saving=null;bloquer(false);boutons();}
+  })();return saving;
 }
-
-function construireRegleOuverture(libelle, prefix, precisionId) {
-  const debut = valeur(prefix + "-debut");
-  const fin = valeur(prefix + "-fin");
-  const precision = valeur(precisionId);
-
-  if (!debut || !fin) {
-    throw new Error("Les heures d’ouverture " + libelle + " sont incomplètes.");
+function bloquer(on){document.querySelectorAll('#tableau input,#departement,#parc,#mois,[data-tab]').forEach(e=>{if(on){e.dataset.disabledBefore=e.disabled?'1':'0';e.disabled=true;}else if(e.dataset.disabledBefore!==undefined){e.disabled=e.dataset.disabledBefore==='1';delete e.dataset.disabledBefore;}});}
+async function navigation(action){if(busy)throw Error('Une opération est en cours.');await enregistrer();if(baseDirty){if(!confirm('Abandonner la nouvelle base non enregistrée et continuer ?'))return;annulerBase();}if(ia && proposition){if(!confirm('Effacer la proposition IA non enregistrée et continuer ?'))return;effacerProposition();}await action();}
+function entete(){return '<thead><tr><th scope="col">'+esc(selected.mois)+'</th>'+jours.map(j=>{const dt=new Date(j.date+'T12:00:00Z');return '<th scope="col" class="'+([0,6].includes(dt.getUTCDay())?'weekend':'')+'">'+dt.getUTCDate()+(j.jour.ancien?' *':'')+'<br>'+dt.toLocaleDateString('fr-FR',{weekday:'short',timeZone:'UTC'})+'</th>';}).join('')+'</tr></thead>';}
+const horaires=['6 h – 10 h','10 h – 13 h','13 h – 17 h','17 h – 21 h','21 h – 2 h'];
+function chk(ligne,k,index,checked,disabled){return '<input type="checkbox" data-date="'+ligne.date+'" data-key="'+k+'" data-index="'+index+'" '+(checked?'checked ':'')+(disabled?'disabled ':'')+'aria-label="'+esc(k+' '+(index>=0?index+1:'')+' le '+ligne.date)+'">';}
+function ligne(label,fn,classe=''){return '<tr class="'+classe+'"><th scope="row">'+esc(label)+'</th>'+jours.map(j=>'<td class="'+(j.jour.ferme?'closed':'')+'">'+fn(j)+'</td>').join('')+'</tr>';}
+function afficher(){
+  if(!parc)return;
+  reglerVue();if(onglet==='base'&&!ia){afficherBases();return;}
+  let html=entete()+'<tbody>';
+  const lecture=onglet!=='duo';
+  html+=ligne('Accueil',j=>'<input aria-label="Capacité le '+j.date+'" type="number" min="1" max="100000" data-date="'+j.date+'" data-key="capacite" value="'+j.jour.capacite+'" '+(lecture||j.date<today?'disabled':'')+'>');
+  html+=ligne('Accueil IA',j=>esc(j.jour.operations.filter(o=>o.type==='boost').map(o=>'P'+o.plages.join(', P')+' → '+o.capacite).join(' · ')||'—'));
+  html+=ligne('Privatisé',j=>esc(j.jour.operations.filter(o=>o.type==='privatisation').map(o=>'P'+o.plages.join(', P')).join(' · ')||(j.jour.ancien && Object.values(j.jour.ancien.PRIVATISATION||{}).some(Boolean)?'Ancien planning':'—')));
+  html+=ligne('Fermé',j=>chk(j,'ferme',-1,j.jour.ferme,lecture||j.date<today));
+  for(let p=0;p<5;p++)html+=ligne('Plage '+(p+1)+' · '+horaires[p],j=>chk(j,'ouvert',p,j.jour.ouvert[p],lecture||j.date<today));
+  for(const [i,p] of [[0,1],[1,4],[2,5]])html+=ligne('50 % plage '+p,j=>chk(j,'demi',i,j.jour.demi[i]||(j.jour.hiver && p!==5),lecture||j.date<today||(j.jour.hiver&&p!==5)));
+  html+=ligne('Hiver',j=>chk(j,'hiver',-1,j.jour.hiver,lecture||j.date<today),'winter');
+  if(lecture)for(const mode of ['partage','exclusif']){
+    html+='<tr class="group"><th colspan="'+(jours.length+1)+'">'+(mode==='partage'?'Partagé':'Exclusif')+' '+(onglet==='famille'?'Famille':'Coach')+'</th></tr>';
+    for(let p=0;p<5;p++)html+=ligne('Plage '+(p+1)+' · '+horaires[p],j=>{
+      const other=onglet==='famille'?'coach':'famille';
+      const interdit=j.jour[other][p]==='exclusif';
+      const prive=j.jour.operations.some(o=>o.type==='privatisation'&&o.plages.includes(p+1));
+      return chk(j,mode,p,j.jour[onglet][p]===mode,j.date<today||j.jour.ferme||!j.jour.ouvert[p]||prive||interdit);
+    });
   }
-
-  return (
-    "OUVERTURE " + libelle + " de " +
-    formaterHeure(debut) + " à " + formaterHeure(fin) +
-    (precision ? ". " + precision : ".")
-  );
+  $('tableau').innerHTML=html+'</tbody>';boutons();
 }
-
-function construireBrief() {
-  const dateDebut = valeur("lcdp-planning-parc-date-debut");
-  const horizon = valeur("lcdp-planning-parc-horizon");
-  const capaciteSaisie = valeur("lcdp-planning-parc-capacite");
-  const capacite = capaciteSaisie === ""
-    ? null
-    : Number(capaciteSaisie);
-  const fermeturesSaisies = valeur(
-    "lcdp-planning-parc-fermetures"
-  );
-
-  if (!dateDebut || !horizon || dateDebut > horizon) {
-    throw new Error("La période globale du PlanningParc est invalide.");
-  }
-
-  if (
-    capacite !== null &&
-    (!Number.isInteger(capacite) || capacite < 1)
-  ) {
-    throw new Error("La capacité PlanningParc est invalide.");
-  }
-
-  if (capacite === null && !fermeturesSaisies) {
-    throw new Error(
-      "Renseigne une fermeture explicite lorsque la capacité est laissée vide."
-    );
-  }
-
-  const ouvertureSemaine = construireRegleOuverture(
-    "du lundi au vendredi",
-    "lcdp-planning-parc-semaine",
-    "lcdp-planning-parc-semaine-precision"
-  );
-  const ouvertureWeekend = construireRegleOuverture(
-    "du samedi et du dimanche",
-    "lcdp-planning-parc-weekend",
-    "lcdp-planning-parc-weekend-precision"
-  );
-  const fermetures = fermeturesSaisies ||
-    "Aucune fermeture explicite.";
-
-  return {
-    dateDebut,
-    horizon,
-    fermetures,
-    ouvertureSemaine,
-    ouvertureWeekend,
-    capacite
+async function changement(e){
+  const el=e.target;if(!el.matches('input[data-date]'))return;
+  const ligne=jours.find(j=>j.date===el.dataset.date),j=ligne.jour,k=el.dataset.key,i=Number(el.dataset.index);
+  if(j.ancien){if(!confirm('Cette journée utilise les anciens horaires. La modification la remplace par les réglages affichés. Continuer ?')){afficher();return;}delete j.ancien;}
+  if(k==='capacite'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>100000){statut('Capacité entière entre 1 et 100000.',true);afficher();return;}j.capacite=n;}
+  else if(k==='partage'||k==='exclusif'){
+    j[onglet][i]=el.checked?k:'';
+    if(el.checked&&k==='exclusif')j[onglet==='famille'?'coach':'famille'][i]='';
+  } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
+  dirty.add(ligne.date);afficher();statut('Modifications non enregistrées.');
+  clearTimeout(timer);timer=setTimeout(()=>enregistrer().catch(()=>{}),1800);
+}
+function options(el,items,empty){el.innerHTML=empty?'<option value="">'+empty+'</option>':'';for(const [v,t]of items)el.add(new Option(t,v));}
+async function chargerMois(){
+  if(!selected.idparc)return;statut('Chargement du planning…');busy=true;boutons();
+  try{const q=new URLSearchParams(contexte());const d=await api('/mois?'+q);apres(d);dirty.clear();$('edition').hidden=ia;$('ia').hidden=!ia;afficher();afficherOperations();statut(d.emailsEnAttente?'Des emails d’annulation sont en attente d’envoi.':'Planning chargé.');}
+  finally{busy=false;boutons();}
+}
+function reglerVue(){
+  $('base-panel').hidden=ia||onglet!=='base';$('planning-mensuel').hidden=ia||onglet==='base';$('mois-zone').hidden=ia||onglet==='base';
+}
+function semaineInitiale(){return Array.from({length:7},()=>[false,true,true,false,false]);}
+function basesTriees(){return [...bases].sort((a,b)=>b.applicable.localeCompare(a.applicable)||Number(b.id)-Number(a.id));}
+function baseActuelle(){return basesTriees().find(b=>b.applicable<=today);}
+function tableSemaine(semaine,editable=false){
+  const joursSemaine=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+  let html='<thead><tr><th scope="col">Plage</th>'+joursSemaine.map(j=>'<th scope="col">'+j+'</th>').join('')+'</tr></thead><tbody>';
+  for(let p=0;p<5;p++)html+='<tr><th scope="row">Plage '+(p+1)+' · '+horaires[p]+'</th>'+semaine.map((j,d)=>'<td><input type="checkbox" data-base-jour="'+d+'" data-base-plage="'+p+'" '+(j[p]?'checked ':'')+(editable?'':'disabled ')+'aria-label="Plage '+(p+1)+' '+joursSemaine[d]+'"></td>').join('')+'</tr>';
+  return html+'</tbody>';
+}
+function dateLisible(date){return new Date(date+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});}
+function afficherBases(){
+  const active=baseActuelle(),triees=basesTriees();
+  $('base-courante').innerHTML='<h2>Base actuelle</h2>'+(active?'<p>Applicable depuis le '+esc(dateLisible(active.applicable))+'</p><div class="planning-scroll"><table class="planning-table">'+tableSemaine(active.semaine)+'</table></div>':'<p>Aucune référence disponible.</p>');
+  $('base-historique').innerHTML=triees.map(b=>{
+    const remplacee=triees.some(a=>a.applicable===b.applicable&&Number(a.id)>Number(b.id));
+    const etat=remplacee?'Remplacée':active?.id===b.id?'Actuelle':b.applicable>today?'Programmée':'Historique';
+    return '<details class="operation"><summary>'+esc(etat+' · À compter du '+dateLisible(b.applicable))+'</summary><div class="planning-scroll"><table class="planning-table">'+tableSemaine(b.semaine)+'</table></div></details>';
+  }).join('');
+  const ouverts=moisOuverts.filter(m=>m.mois.slice(0,7)>=today.slice(0,7)).map(m=>m.mois.slice(0,7)).sort();
+  $('base-mois-ouverts').textContent=ouverts.length?'Mois déjà ouverts, non modifiés par une nouvelle base — '+ouverts.join(', '):'Aucun mois ouvert recensé pour ce parc.';
+  $('base-courante').hidden=!!baseBrouillon;
+  $('base-editeur').hidden=!baseBrouillon;
+  if(baseBrouillon){$('base-date').value=baseBrouillon.applicable.slice(0,7);$('base-tableau').innerHTML=tableSemaine(baseBrouillon.semaine,true);}
+  boutons();
+}
+async function chargerBases(){
+  if(!selected.idparc)return;busy=true;boutons();statut('Chargement des références du parc…');
+  try{const d=await api('/bases?'+new URLSearchParams(contexte()));apres(d);$('edition').hidden=false;$('ia').hidden=true;reglerVue();afficherBases();statut('Références chargées. Les mois déjà ouverts restent inchangés.');}
+  finally{busy=false;boutons();}
+}
+async function chargerSelection(){return !ia&&onglet==='base'?chargerBases():chargerMois();}
+function annulerBase(){baseBrouillon=null;baseDirty=false;$('base-editeur').hidden=true;$('base-courante').hidden=false;boutons();}
+function nouvelleBase(){
+  if(busy||!parc)return;
+  if(baseDirty&&!confirm('Abandonner la nouvelle base en cours ?'))return;
+  const prochain=new Date(today.slice(0,7)+'-01T12:00:00Z');prochain.setUTCMonth(prochain.getUTCMonth()+1);
+  const applicable=prochain.toISOString().slice(0,10);
+  // Préremplir avec la référence prévue à la date choisie, ou l'actuelle.
+  const reference=basesTriees().find(b=>b.applicable<=applicable);
+  baseBrouillon={semaine:JSON.parse(JSON.stringify(reference?.semaine||semaineInitiale())),applicable,requete:crypto.randomUUID(),derniere:Math.max(0,...bases.map(b=>Number(b.id)))};
+  baseDirty=true;$('base-date').min=applicable.slice(0,7);afficherBases();$('base-date').focus();statut('Nouvelle base à vérifier puis enregistrer.');
+}
+async function enregistrerBase(){
+  if(!baseBrouillon||busy)return;
+  const applicable=$('base-date').value+'-01';
+  if(!/^\d{4}-\d{2}-01$/.test(applicable)||applicable<=today.slice(0,7)+'-01')throw Error('Choisissez un mois à venir.');
+  baseBrouillon.applicable=applicable;
+  const remplace=bases.some(b=>b.applicable===applicable);
+  if(!confirm('Enregistrer cette nouvelle base pour '+parc.nom+' — Département '+parc.dptmt+', à compter du '+dateLisible(applicable)+' ? Les mois déjà ouverts restent inchangés.'+(remplace?' Une référence est déjà programmée à cette date ; elle reste en historique et cette nouvelle version la remplace.':'')))return;
+  busy=true;bloquer(true);$('nouvelle-base').disabled=true;$('base-date').disabled=true;$('base-tableau').querySelectorAll('input').forEach(e=>e.disabled=true);boutons();
+  try{const d=await api('/base',{...contexte(),...baseBrouillon});apres(d);annulerBase();afficherBases();statut('Nouvelle base enregistrée. Elle sert uniquement à créer de nouveaux mois à partir du '+dateLisible(applicable)+'.');}
+  catch(e){statut(e.message+' La nouvelle base reste à l’écran.',true);throw e;}
+  finally{busy=false;bloquer(false);$('nouvelle-base').disabled=false;$('base-date').disabled=false;$('base-tableau').querySelectorAll('input').forEach(e=>e.disabled=false);boutons();}
+}
+async function chargerParcs(dptmt){const d=await api('/parcs?'+new URLSearchParams({dptmt}));options($('parc'),d.parcs.map(p=>[p.idparc,p.nom]),'Choisir un parc');$('parc').disabled=false;}
+function afficherOperations(){
+  $('operations').innerHTML=operations.length?operations.map(o=>'<div class="operation"><button type="button" data-delete="'+esc(o.id)+'">Supprimer</button>'+esc(o.type==='boost'?'Boost à '+o.capacite+' personnes':'Privatisation')+'<br>'+esc(o.date_debut+' → '+o.date_fin+' · Plages '+o.plages.join(', '))+'</div>').join(''):'<p>Aucune opération ponctuelle.</p>';
+}
+function effacerProposition(){proposition=null;$('transcription').textContent='';$('proposition').textContent='';$('rejeter').hidden=true;boutons();}
+async function appliquerIA(){
+  if(!proposition||busy)return;
+  if(!confirm('Enregistrer cette opération pour '+parc.nom+' — département '+parc.dptmt+' ? Une réduction d’accès annule les réservations concernées.'))return;
+  busy=true;boutons();
+  try{const d=await api('/operation',{...contexte(),operation:proposition});apres(d);effacerProposition();afficherOperations();statut('Opération enregistrée.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
+  finally{busy=false;boutons();}
+}
+async function micro(){
+  if(recorder?.state==='recording'){clearTimeout(recordTimer);recorder.stop();return;}
+  if(!parc)throw Error('Choisir un parc.');if(busy)return;
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('La dictée audio n’est pas disponible dans ce navigateur.');
+  effacerProposition();stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  try{recorder=new MediaRecorder(stream);}catch(e){stream.getTracks().forEach(t=>t.stop());throw e;}
+  const chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  recorder.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());$('micro').textContent='Démarrer la dictée';$('micro').disabled=true;statut('Transcription et analyse de la dictée…');
+    try{
+      const form=new FormData();const type=recorder.mimeType||'audio/webm';form.append('audio',new Blob(chunks,{type}),type.includes('mp4')?'dictee.mp4':'dictee.webm');
+      const d=await api('/dictee?'+new URLSearchParams(contexte()),form);
+      $('transcription').textContent=d.texte||'';
+      if(d.question){$('proposition').textContent=d.question+' Recommencez la dictée complète.';}
+      else{proposition=d.operation;$('proposition').textContent=(proposition.type==='boost'?'Capacité portée à '+proposition.capacite+' personnes':'Privatisation')+'\n'+proposition.date_debut+' → '+proposition.date_fin+'\nPlages '+proposition.plages.join(', ')+'\n'+parc.nom+' — Département '+parc.dptmt;}
+      $('rejeter').hidden=false;statut(proposition?'Vérifier puis enregistrer la proposition.':'Une précision est nécessaire.');
+    }catch(e){statut(e.message,true);}finally{busy=false;$('micro').disabled=false;boutons();}
   };
+  recorder.onerror=()=>{clearTimeout(recordTimer);stream.getTracks().forEach(t=>t.stop());busy=false;$('micro').textContent='Démarrer la dictée';statut('Enregistrement interrompu. Réessayez.',true);boutons();};
+  recorder.start();busy=true;boutons();$('micro').textContent='Terminer la dictée';statut('Dictée en cours…');recordTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},120000);
 }
+async function initialiser(){
+  if(!window.LCDP_GUARD_ADMIN)throw Error('Contrôle d’accès admin indisponible.');
+  if(!await window.LCDP_GUARD_ADMIN.verifierAccesPageAdmin())return;
+  $('lcdp-main-admin').hidden=false;
+  $('titre-page').textContent=ia?'Accueil IA':'Planning parc';$('mois-zone').hidden=ia;
+  const d=new Date(today.slice(0,7)+'-01T12:00:00Z');for(let i=0;i<13;i++){const x=new Date(d);x.setUTCMonth(x.getUTCMonth()+i);$('mois').add(new Option(x.toLocaleDateString('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}),x.toISOString().slice(0,7)));}
+  selected.mois=$('mois').value;
+  const initialTab=new URLSearchParams(location.search).get('onglet');
+  if(['base','duo','famille','coach'].includes(initialTab)){onglet=initialTab;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===onglet)));}
+  $('tableau').addEventListener('change',changement);
+  $('nouvelle-base').addEventListener('click',nouvelleBase);
+  $('annuler-base').addEventListener('click',()=>{if(!busy&&confirm('Abandonner la nouvelle base ?'))annulerBase();});
+  $('recharger-bases').addEventListener('click',()=>navigation(chargerBases).catch(e=>statut(e.message,true)));
+  $('base-tableau').addEventListener('change',e=>{if(!baseBrouillon||busy)return;const el=e.target;if(el.dataset.baseJour===undefined)return;baseBrouillon.semaine[Number(el.dataset.baseJour)][Number(el.dataset.basePlage)]=el.checked;baseDirty=true;boutons();});
+  $('base-date').addEventListener('change',()=>{if(baseBrouillon){baseBrouillon.applicable=$('base-date').value+'-01';baseDirty=true;boutons();}});
 
-function initialiserComportementsFormulaire() {}
-
-
-  async function analyser(event) {
-    event.preventDefault();
-
-    if (!parcCourant) {
-      afficherStatus("Parc non chargé.", true);
-      return;
-    }
-
-    const endpoint = endpointWorker();
-    const bouton = document.getElementById(PAGE.prefix + "-analyser");
-
-    if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
-      return;
-    }
-
-    let brief;
-
-    try {
-      brief = construireBrief();
-    } catch (error) {
-      afficherStatus(String(error?.message || error || ""), true);
-      return;
-    }
-
-    if (bouton) bouton.disabled = true;
-    afficherStatus(PAGE.analysisMessage);
-
-    try {
-      const data = await appelerJson(
-        endpoint + PAGE.briefRoute,
-        {
-          method: "POST",
-          body: {
-            idparc: parcCourant.idparc,
-            dptmt: parcCourant.dptmt,
-            brief
-          }
-        }
-      );
-
-      afficherValidation(data);
-      afficherStatus(PAGE.analysisReadyMessage);
-    } catch (error) {
-      afficherStatus(String(error?.message || error || ""), true);
-    } finally {
-      if (bouton) bouton.disabled = false;
-    }
-  }
-
-  async function valider() {
-    if (!briefCourant || !parcCourant) return;
-
-    const endpoint = endpointWorker();
-    const bouton = document.getElementById(PAGE.prefix + "-valider");
-
-    if (!endpoint) {
-      afficherStatus("Endpoint Parc Planning non configuré.", true);
-      return;
-    }
-
-    try {
-      const confirmation = await demanderConfirmation(
-        PAGE.confirmMessage
-      );
-
-      if (!confirmation) return;
-
-      if (bouton) bouton.disabled = true;
-      afficherStatus(PAGE.validationMessage);
-
-      const data = await appelerJson(
-        endpoint + PAGE.validateRoute,
-        {
-          method: "POST",
-          body: {
-            idbrief: briefCourant.idbrief,
-            idparc: parcCourant.idparc,
-            dptmt: parcCourant.dptmt
-          }
-        }
-      );
-
-      afficherStatus(
-        PAGE.successMessage +
-        (
-          Number.isInteger(Number(data.joursModifies))
-            ? " " + String(data.joursModifies) + " journée(s)."
-            : ""
-        )
-      );
-    } catch (error) {
-      afficherStatus(String(error?.message || error || ""), true);
-    } finally {
-      if (bouton) bouton.disabled = false;
-    }
-  }
-
-  function retourAdminParc() {
-    window.location.assign(
-      urlAdmin("/ESPACE-ADMIN/accueil-admin.html?categorie=parcs")
-    );
-  }
-
-  function corriger() {
-    const section = document.getElementById(
-      PAGE.prefix + "-validation"
-    );
-
-    if (section) section.hidden = true;
-    briefCourant = null;
-    document.getElementById(PAGE.focusId)?.focus();
-  }
-
-  async function verifierAcces() {
-    const guard = window.LCDP_GUARD_ADMIN;
-
-    if (!guard || typeof guard.verifierAccesPageAdmin !== "function") {
-      throw new Error("Garde admin centralisé indisponible.");
-    }
-
-    return guard.verifierAccesPageAdmin();
-  }
-
-  async function initialiserPage() {
-    const autorise = await verifierAcces();
-    if (!autorise) return;
-
-    await Promise.all([
-      initialiserBandeau(),
-      initialiserMenuGauche(),
-      chargerParc()
-    ]);
-
-    const main = document.getElementById("lcdp-main-admin");
-    if (main) main.hidden = false;
-
-    document.getElementById(PAGE.prefix + "-form")
-      ?.addEventListener("submit", analyser);
-
-    document.getElementById(PAGE.prefix + "-valider")
-      ?.addEventListener("click", valider);
-
-    document.getElementById(PAGE.prefix + "-corriger")
-      ?.addEventListener("click", corriger);
-
-    document.getElementById(PAGE.prefix + "-retour-admin-parc")
-      ?.addEventListener("click", retourAdminParc);
-
-    initialiserComportementsFormulaire();
-    initialiserDictee();
-  }
-
-  initialiserPage().catch((error) => {
-    console.error(error);
-    const main = document.getElementById("lcdp-main-admin");
-    if (main) main.hidden = false;
-    afficherStatus(
-      PAGE.title + " indisponible : " +
-      String(error?.message || error || ""),
-      true
-    );
-  });
+  document.querySelectorAll('[data-save]').forEach(b=>b.addEventListener('click',()=>{(ia?appliquerIA():onglet==='base'?enregistrerBase():enregistrer()).catch(e=>statut(e.message,true));}));
+  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>navigation(async()=>{const precedent=onglet;onglet=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));if(onglet==='base')await chargerBases();else if(precedent==='base'||!jours.length)await chargerMois();else afficher();}).catch(e=>statut(e.message,true))));
+  $('mois').addEventListener('change',()=>{const next=$('mois').value;$('mois').value=selected.mois;navigation(async()=>{selected.mois=next;$('mois').value=next;await chargerMois();}).catch(e=>statut(e.message,true));});
+  $('departement').addEventListener('change',()=>{const next=$('departement').value;$('departement').value=selected.dptmt;navigation(async()=>{selected.dptmt=next;selected.idparc='';parc=null;jours=[];$('departement').value=next;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc — Département '+next;options($('parc'),[],'Choisir un parc');$('parc').disabled=true;if(next)await chargerParcs(next);boutons();}).catch(e=>statut(e.message,true));});
+  $('parc').addEventListener('change',()=>{const next=$('parc').value;$('parc').value=selected.idparc;navigation(async()=>{selected.idparc=next;$('parc').value=next;parc=null;jours=[];bases=[];moisOuverts=[];$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent=next?'Chargement du parc…':'Choisir un parc';boutons();if(next)await chargerSelection();else{parc=null;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc';boutons();}}).catch(e=>statut(e.message,true));});
+  $('micro').addEventListener('click',()=>micro().catch(e=>statut(e.message,true)));$('rejeter').addEventListener('click',effacerProposition);
+  $('operations').addEventListener('click',async e=>{const id=e.target.dataset.delete;if(!id||busy)return;if(!confirm('Supprimer cette opération pour '+parc.nom+' ? Les réservations annulées restent annulées.'))return;busy=true;boutons();try{const d=await api('/supprimer-operation',{...contexte(),id});apres(d);afficherOperations();statut('Opération supprimée.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':''));}catch(e){statut(e.message,true);}finally{busy=false;boutons();}});
+  document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||e.defaultPrevented||a.target==='_blank'||(!dirty.size&&!saving&&!proposition&&!baseDirty&&!busy))return;
+    e.preventDefault();e.stopImmediatePropagation();navigation(async()=>{location.href=a.href;}).catch(e=>statut(e.message,true));},true);
+  window.addEventListener('beforeunload',e=>{if(dirty.size||saving||proposition||baseDirty||busy){e.preventDefault();e.returnValue='';}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&dirty.size&&!saving)enregistrer().catch(()=>{});});
+  const deps=await api('/departements');options($('departement'),deps.departements.map(d=>[d,d]),'Choisir un département');
+  const params=new URLSearchParams(location.search);if(params.get('dptmt')&&deps.departements.includes(params.get('dptmt'))){selected.dptmt=params.get('dptmt');$('departement').value=selected.dptmt;await chargerParcs(selected.dptmt);if([...$('parc').options].some(o=>o.value===params.get('idparc'))){selected.idparc=params.get('idparc');$('parc').value=selected.idparc;await chargerSelection();}}
+  if(window.LCDP_MENU_GAUCHE_ADMIN)await window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'parcs'});
+  const slot=$('lcdp-bandeau-slot');if(window.LCDP_urlAdmin){const r=await fetch(window.LCDP_urlAdmin('/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html'));if(r.ok){slot.innerHTML=await r.text();slot.querySelectorAll('[data-site-href]').forEach(e=>e.href=(e.dataset.space==='admin'?window.LCDP_urlAdmin:window.LCDP_urlPublic)(e.dataset.siteHref));slot.querySelectorAll('[data-site-src]').forEach(e=>e.src=window.LCDP_urlObjet(e.dataset.siteSrc.replace(/^\/?OBJET\/?/,'/')));}}
+}
+initialiser().catch(e=>statut(e.message,true));
 })();

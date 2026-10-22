@@ -495,34 +495,12 @@
       }
 
       function configurerBoutonPlanningParc(lien) {
-        lien.textContent = "PlanningParc";
-        lien.href = "#planningparc";
-        lien.classList.remove(
-          "lcdp-button-primary",
-          "lcdp-button-secondary"
-        );
+        lien.textContent = "Planning parc";
+        lien.href = urlAdmin("/ESPACE-ADMIN/B_PARCS/planning-parc.html");
         lien.classList.add("lcdp-button-orange");
         lien.removeAttribute("aria-disabled");
         lien.dataset.permissionCode = "parcs.planning";
-        lien.setAttribute(
-          "aria-label",
-          "Afficher le planning d’un parc"
-        );
-
-        lien.addEventListener("click", (event) => {
-          event.preventDefault();
-
-          ouvrirPlanningParcDepuisAccueil().catch(async (error) => {
-            const alerte = await ouvrirAlerteLocalisation(
-              "PlanningParc indisponible : " +
-              String(error?.message || error || "")
-            );
-
-            if (alerte) {
-              alerte.afficherOk();
-            }
-          });
-        });
+        lien.setAttribute("aria-label", "Programmer le planning d’un parc");
       }
 
       function estSlotInsertFamille(categorie, position) {
@@ -533,34 +511,12 @@
       }
 
       function configurerBoutonInsertFamille(lien) {
-        lien.textContent = "InsertFamille";
-        lien.href = "#insertfamille";
-        lien.classList.remove(
-          "lcdp-button-primary",
-          "lcdp-button-secondary"
-        );
+        lien.textContent = "Accueil IA";
+        lien.href = urlAdmin("/ESPACE-ADMIN/B_PARCS/accueil-ia.html");
         lien.classList.add("lcdp-button-orange");
         lien.removeAttribute("aria-disabled");
         lien.dataset.permissionCode = "parcs.planning";
-        lien.setAttribute(
-          "aria-label",
-          "Insérer le planning FAMILLE d’un parc"
-        );
-
-        lien.addEventListener("click", (event) => {
-          event.preventDefault();
-
-          ouvrirInsertFamilleDepuisAccueil().catch(async (error) => {
-            const alerte = await ouvrirAlerteLocalisation(
-              "InsertFamille indisponible : " +
-              String(error?.message || error || "")
-            );
-
-            if (alerte) {
-              alerte.afficherOk();
-            }
-          });
-        });
+        lien.setAttribute("aria-label", "Dicter un boost de capacité ou une privatisation");
       }
 
       function estSlotAjustFamille(categorie, position) {
@@ -765,6 +721,9 @@
           position <= NOMBRE_BOUTONS_PAR_MENU;
           position += 1
         ) {
+          // Deux entrées pour la programmation ; les autres rubriques Parcs restent présentes.
+          if (categorie.id === "parcs" && [SLOT_HORIZON_PLANNING, SLOT_AJUST_FAMILLE,
+              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION].includes(position)) continue;
           const lien = template.content.firstElementChild.cloneNode(true);
 
           const configuration = boutonsConfigures.find((bouton) => {
