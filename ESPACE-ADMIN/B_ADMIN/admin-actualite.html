@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta
     name="description"
-    content="Gestion et publication du carrousel Actualité de La Clé du Parc."
+    content="Gestion et publication des actualités de La Clé du Parc."
   >
 
   <script src="../../config.js"></script>
@@ -109,7 +109,7 @@
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
       <section
         class="lcdp-page-section"
-        aria-label="Gestion du carrousel Actualité"
+        aria-label="Gestion des actualités"
       >
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
@@ -117,240 +117,25 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
-              <header class="lcdp-admin-actualite__entete">
-                <h1 class="lcdp-admin-actualite__titre">
-                  Actualité
-                </h1>
-
-                <p class="lcdp-admin-actualite__explication">
-                  Ajoute, organise, active ou désactive les images du carrousel,
-                  puis publie la version destinée au site.
-                </p>
-
-                <p
-                  class="lcdp-admin-actualite__meta"
-                  data-lcdp-actualite-meta
-                ></p>
-
-                <p
-                  class="lcdp-admin-actualite__status"
-                  data-lcdp-actualite-status
-                  role="status"
-                ></p>
-              </header>
-
-              <p
-                class="lcdp-admin-actualite__loading"
-                data-lcdp-actualite-loading
-              >
-                Chargement du carrousel Actualité…
-              </p>
-
-              <div
-                class="lcdp-admin-actualite__contenu"
-                data-lcdp-actualite-contenu
-                hidden
-              >
-                <section class="lcdp-admin-actualite__option-accueil">
-                  <label class="lcdp-admin-actualite__checkbox-principale">
-                    <input
-                      type="checkbox"
-                      data-lcdp-actualite-affiche-accueil
-                    >
-                    <span>
-                      Afficher le carrousel Actualité en couche supérieure
-                      sur la page d’accueil
-                    </span>
-                  </label>
-
-                  <p class="lcdp-admin-actualite__aide">
-                    Lorsque cette option est désactivée, l’actualité reste
-                    disponible sur sa page publique, sans affichage prioritaire
-                    à l’arrivée sur le site.
-                  </p>
-                </section>
-
-                <section class="lcdp-admin-actualite__upload" aria-label="Ajouter des images">
-                  <div>
-                    <h2 class="lcdp-admin-actualite__section-title">
-                      Ajouter des images
-                    </h2>
-                    <p class="lcdp-admin-actualite__aide">
-                      De 1 à 6 images par envoi. Formats acceptés : JPG, PNG,
-                      WEBP, AVIF et GIF. Maximum : 15 Mo par image.
-                    </p>
-                  </div>
-
-                  <div class="lcdp-admin-actualite__upload-controls">
-                    <input
-                      class="lcdp-admin-actualite__file-input"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/avif,image/gif,.jpg,.jpeg,.png,.webp,.avif,.gif"
-                      multiple
-                      data-lcdp-actualite-images
-                    >
-
-                    <button
-                      type="button"
-                      class="lcdp-button lcdp-button-orange"
-                      data-lcdp-actualite-upload
-                    >
-                      Ajouter au carrousel
-                    </button>
-                  </div>
-
-                  <p
-                    class="lcdp-admin-actualite__selection"
-                    data-lcdp-actualite-selection
-                  ></p>
-                </section>
-
-                <section class="lcdp-admin-actualite__slides" aria-label="Images du carrousel">
-                  <div class="lcdp-admin-actualite__slides-entete">
-                    <h2 class="lcdp-admin-actualite__section-title">
-                      Images du carrousel
-                    </h2>
-                    <p class="lcdp-admin-actualite__aide">
-                      L’ordre affiché ici est l’ordre du carrousel.
-                    </p>
-                  </div>
-
-                  <div
-                    class="lcdp-admin-actualite__liste"
-                    data-lcdp-actualite-liste
-                  ></div>
-
-                  <p
-                    class="lcdp-admin-actualite__vide"
-                    data-lcdp-actualite-vide
-                    hidden
-                  >
-                    Aucune image n’est actuellement enregistrée.
-                  </p>
-                </section>
-
-                <div class="lcdp-admin-actualite__actions">
-                  <button
-                    type="button"
-                    class="lcdp-button lcdp-button-primary"
-                    data-lcdp-actualite-previsualiser
-                  >
-                    Prévisualiser
-                  </button>
-
-                  <button
-                    type="button"
-                    class="lcdp-button lcdp-button-orange"
-                    data-lcdp-actualite-enregistrer
-                  >
-                    Enregistrer le brouillon
-                  </button>
-
-                  <button
-                    type="button"
-                    class="lcdp-button lcdp-button-orange"
-                    data-lcdp-actualite-publier
-                  >
-                    Publier
-                  </button>
+              <h1>Actualité</h1>
+              <p data-lcdp-actualite-status role="status"></p>
+              <p data-lcdp-actualite-meta></p>
+              <p data-lcdp-actualite-loading>Chargement…</p>
+              <div data-lcdp-actualite-contenu hidden>
+                <p>Une image par actualité. Les quatre dernières publications alimentent le bandeau.</p>
+                <label>Ajouter une actualité avec une image WebP
+                  <input type="file" accept="image/webp,.webp" data-image-nouvelle>
+                </label>
+                <p>Image entière, centrée, cadre 16:9. Aucun recadrage ni déformation. Maximum : 15 Mio.</p>
+                <button type="button" class="lcdp-button" data-ajouter>Ajouter l’actualité</button>
+                <button type="button" class="lcdp-button" data-sans-popup>Aucune pop-up</button>
+                <div data-liste-articles></div>
+                <div class="lcdp-actualite-actions">
+                  <button type="button" class="lcdp-button" data-enregistrer>Enregistrer le brouillon</button>
+                  <button type="button" class="lcdp-button lcdp-button-orange" data-publier>Publier les modifications</button>
                 </div>
-
-                <section
-                  class="lcdp-admin-actualite__preview"
-                  data-lcdp-actualite-preview
-                  hidden
-                  aria-label="Prévisualisation du carrousel Actualité"
-                >
-                  <h2 class="lcdp-admin-actualite__section-title">
-                    Prévisualisation
-                  </h2>
-
-                  <div
-                    class="lcdp-admin-actualite__preview-content"
-                    data-lcdp-actualite-preview-content
-                  ></div>
-                </section>
+                <p>Enregistrer garde les modifications dans l’admin. Publier applique l’ensemble des modifications au site, y compris les dépublications.</p>
               </div>
-
-              <template data-lcdp-actualite-slide-template>
-                <article class="lcdp-admin-actualite__slide" data-lcdp-actualite-slide>
-                  <div class="lcdp-admin-actualite__image-zone">
-                    <img
-                      class="lcdp-admin-actualite__image"
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      data-lcdp-actualite-image
-                    >
-                  </div>
-
-                  <div class="lcdp-admin-actualite__champs">
-                    <p
-                      class="lcdp-admin-actualite__chemin"
-                      data-lcdp-actualite-chemin
-                    ></p>
-
-                    <label class="lcdp-admin-actualite__champ">
-                      <span>Texte alternatif de l’image</span>
-                      <input
-                        type="text"
-                        maxlength="250"
-                        autocomplete="off"
-                        data-lcdp-actualite-alt
-                      >
-                    </label>
-
-                    <div class="lcdp-admin-actualite__options-slide">
-                      <label class="lcdp-admin-actualite__checkbox">
-                        <input type="checkbox" data-lcdp-actualite-active>
-                        <span>Image active dans le carrousel</span>
-                      </label>
-
-                      <label class="lcdp-admin-actualite__checkbox">
-                        <input type="checkbox" data-lcdp-actualite-en-savoir-plus>
-                        <span>Afficher le bouton « En savoir plus »</span>
-                      </label>
-                    </div>
-
-                    <label class="lcdp-admin-actualite__champ">
-                      <span>Adresse de la page Article</span>
-                      <input
-                        type="text"
-                        inputmode="url"
-                        autocomplete="off"
-                        placeholder="/ESPACE-PUBLIC/actualite-titre-de-l-article.html"
-                        data-lcdp-actualite-article-url
-                      >
-                    </label>
-                  </div>
-
-                  <div class="lcdp-admin-actualite__ordre">
-                    <button
-                      type="button"
-                      class="lcdp-button lcdp-button-secondary"
-                      data-lcdp-actualite-monter
-                    >
-                      Monter
-                    </button>
-
-                    <button
-                      type="button"
-                      class="lcdp-button lcdp-button-secondary"
-                      data-lcdp-actualite-descendre
-                    >
-                      Descendre
-                    </button>
-
-                    <button
-                      type="button"
-                      class="lcdp-button lcdp-button-orange"
-                      data-lcdp-actualite-retirer
-                    >
-                      Retirer du carrousel
-                    </button>
-                  </div>
-                </article>
-              </template>
             </div>
 
           </div>
