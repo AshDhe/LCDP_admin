@@ -481,17 +481,20 @@
     q('[data-vide]').hidden=articles.length>0;
     for(const a of articles) {
       const p=publie(a.id), tr=el('tr');
-      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'Publié':'Dépublié'),el('td',documentCharge.publie.popupId===a.id?'Oui':'Non'));
+      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'En ligne':'Hors ligne'),el('td',documentCharge.publie.popupId===a.id?'Oui':'Non'));
       const actions=el('td'), wrap=el('div');wrap.className='lcdp-actualite-actions';
       const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);wrap.append(modifier);
-      wrap.append(bouton(p?'Publier les modifications':'Publier',async()=>{
-        if(!await demanderConfirmation({titre:'Publier l’actualité',texte:'Publier cet article sur le site ?',confirmer:'Publier'}))return;
-        await sauver('publier',a.id);afficherStatus('Article publié.');
-      }));
-      if(p){const depublier=bouton('Dépublier',async()=>{
-        if(!await demanderConfirmation({titre:'Dépublier l’actualité',texte:'Retirer cet article du site public et de la pop-up éventuelle ?',confirmer:'Dépublier'}))return;
-        await sauver('depublier',a.id);afficherStatus('Article dépublié.');
-      });depublier.classList.add('lcdp-button-orange');wrap.append(depublier);}
+      const publication = bouton(p?'Dépublier':'Publier',async()=>{
+        if(!await demanderConfirmation({
+          titre:p?'Dépublier l’actualité':'Publier l’actualité',
+          texte:p?'Retirer cet article du site public et de la pop-up éventuelle ?':'Publier cet article sur le site ?',
+          confirmer:p?'Dépublier':'Publier'
+        }))return;
+        await sauver(p?'depublier':'publier',a.id);
+        afficherStatus(p?'Article hors ligne.':'Article en ligne.');
+      });
+      if(p)publication.classList.add('lcdp-button-orange');
+      wrap.append(publication);
       wrap.append(bouton('Supprimer',async()=>{
         if(!await demanderConfirmation({titre:'Supprimer l’actualité',texte:'Supprimer cet article du brouillon, du site public et de la pop-up éventuelle ? Le fichier image est conservé.',confirmer:'Supprimer'}))return;
         await sauver('supprimer',a.id);afficherStatus('Article supprimé.');
