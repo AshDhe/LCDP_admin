@@ -477,12 +477,12 @@
   function bouton(label, fn) { const b=el('button',label); b.type='button'; b.className='lcdp-button'; b.onclick=()=>operation(fn); return b; }
   function rendreInventaire() {
     const tbody=q('[data-inventaire]'); tbody.replaceChildren();
-    q('[data-popup-status]').textContent = documentCharge.publie.popupId ? 'Une actualité est en pop-up.' : 'Aucune actualité en pop-up';
+    q('[data-popup-status]').textContent = popupId ? (publie(popupId)?'Une actualité est en pop-up.':'L’actualité sélectionnée en pop-up est hors ligne. Aucune pop-up publique.') : 'Aucune actualité en pop-up';
     q('[data-vide]').hidden=articles.length>0;
     for(const a of articles) {
       const p=publie(a.id), tr=el('tr');
-      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'En ligne':'Hors ligne'),el('td',documentCharge.publie.popupId===a.id?'Oui':'Non'));
-      const actions=el('td'), wrap=el('div');wrap.className='lcdp-actualite-actions';
+      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'En ligne':'Hors ligne'),el('td',popupId===a.id?'Oui':'Non'));
+      const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';
       const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);wrap.append(modifier);
       const publication = bouton(p?'Dépublier':'Publier',async()=>{
         if(!await demanderConfirmation({
@@ -520,32 +520,32 @@
   }
   function initialiserEdition() {
     const id=new URLSearchParams(location.search).get('id');
-    article=id?articles.find(a=>a.id===id):{id:crypto.randomUUID(),titre:'',texte:'',image:'',alt:'',active:false};
+    article=id?articles.find(a=>a.id===id):{id:crypto.randomUUID(),titre:'',texte:'',contact:'',image:'',alt:'',active:false};
     if(!article)throw Error('Actualité introuvable. Revenez à la liste.');
     if(!id && articles.length>=40)throw Error('Maximum : 40 actualités.');
     const form=q('[data-edition]');
-    for(const key of ['titre','alt','texte'])form.elements[key].value=article[key]||'';
+    for(const key of ['titre','alt','texte','contact'])form.elements[key].value=article[key]||'';
     const checkbox=form.elements.popup;checkbox.checked=popupId===article.id;checkbox.disabled=false;
-    q('[data-popup-aide]').textContent=publie(article.id)?'La sélection remplace l’ancienne pop-up à l’enregistrement.':'Cocher Pop-up publie cet article après confirmation à l’enregistrement.';
-    const preview=q('[data-image-preview]');if(article.image){preview.src=urlImage(article.image);preview.alt=article.alt||'';preview.hidden=false;}
+    q('[data-popup-aide]').textContent='La pop-up apparaît uniquement si cet article est en ligne. Cocher cette case ne publie pas l’article.';
+    const preview=q('[data-image-preview]');if(article.image){preview.src=urlImage(article.image);preview.alt=article.alt||'';q('[data-image-frame]').hidden=false;}
     form.oninput=()=>{modificationsLocales=true;};
     form.elements.image.onchange=()=>operation(async()=>{
       const next=form.elements.image.files[0];if(!next)return;
       try {await verifierImage(next);}catch(e){form.elements.image.value='';throw e;}
-      fichier=next;const url=URL.createObjectURL(next);preview.onload=()=>URL.revokeObjectURL(url);preview.src=url;preview.hidden=false;
+      fichier=next;const url=URL.createObjectURL(next);preview.onload=()=>URL.revokeObjectURL(url);preview.src=url;q('[data-image-frame]').hidden=false;
     });
     form.onsubmit=e=>{e.preventDefault();operation(async()=>{
       if(!form.reportValidity())return;
       const selectionChange = checkbox.checked ? popupId!==article.id : popupId===article.id;
-      if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?(publie(article.id)?'Afficher cet article en pop-up à la place de la sélection actuelle ?':'Publier cet article et l’afficher en pop-up à la place de la sélection actuelle ?'):'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
-      const next={...article};for(const key of ['titre','alt','texte'])next[key]=form.elements[key].value.trim();
+      if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?'Sélectionner cet article pour la pop-up ? Elle apparaît uniquement lorsque l’article est en ligne.':'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
+      const next={...article};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
       if(!next.titre||!next.texte||!next.alt)throw Error('Titre, texte et description de l’image obligatoires.');
       if(fichier){await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
       if(!next.image)throw Error('Ajoutez une image WebP.');
       const oldArticles=articles,oldPopup=popupId;
       articles=articles.some(a=>a.id===next.id)?articles.map(a=>a.id===next.id?next:a):[next,...articles];
-      if(checkbox.checked){popupId=next.id;next.active=true;}else if(popupId===next.id)popupId=null;
-      try{await sauver(checkbox.checked && !publie(next.id)?'publier':'enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
+      if(checkbox.checked){popupId=next.id;}else if(popupId===next.id)popupId=null;
+      try{await sauver('enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
       location.assign('./admin-actualite.html');
     });};
   }

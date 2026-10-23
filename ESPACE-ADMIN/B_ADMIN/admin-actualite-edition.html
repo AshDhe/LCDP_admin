@@ -74,7 +74,10 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
-        "/BOX/02-box-dialogue-bouton.css"
+        "/BOX/02-box-dialogue-bouton.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css",
+        "/BOX/01-box-carrousel.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -84,8 +87,7 @@
       });
 
       [
-        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
-        "/ESPACE-ADMIN/B_ADMIN/admin-actualite.css"
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -122,16 +124,17 @@
               <p data-lcdp-actualite-meta></p>
               <p data-lcdp-actualite-loading>Chargement…</p>
               <div data-lcdp-actualite-contenu hidden>
-                <form data-edition class="lcdp-actualite-editeur">
-                  <label>Titre<input name="titre" required maxlength="160"></label>
+                <form data-edition class="lcdp-box-formulaire lcdp-stack">
+                  <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-titre">Titre</label><input type="text" id="actu-titre" name="titre" required maxlength="160"></div>
                   <label>Image WebP<input name="image" type="file" accept="image/webp,.webp"></label>
                   <p>Image entière, centrée, cadre 16:9. Maximum 15 Mio. Aucun recadrage ni déformation.</p>
-                  <img data-image-preview class="lcdp-actualite-image" alt="" hidden>
-                  <label>Description de l’image<input name="alt" required maxlength="250"></label>
-                  <label>Texte<textarea name="texte" required maxlength="20000"></textarea></label>
-                  <label class="lcdp-actualite-checkbox"><input name="popup" type="checkbox"> Pop-up</label>
+                  <div class="lcdp-box-carousel__viewport" data-image-frame hidden><img data-image-preview class="lcdp-box-carousel__image" alt=""></div>
+                  <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-alt">Description de l’image</label><input type="text" id="actu-alt" name="alt" required maxlength="250"></div>
+                  <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-texte">Texte</label><textarea id="actu-texte" name="texte" required maxlength="20000"></textarea></div>
+                  <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-contact">Contact</label><input type="text" id="actu-contact" name="contact" maxlength="250"><p class="lcdp-box-formulaire__note">Information libre sur une ligne, affichée en texte dans l’article.</p></div>
+                  <label class="lcdp-box-champ-formulaire__label"><input name="popup" type="checkbox"> Pop-up</label>
                   <p data-popup-aide></p>
-                  <div class="lcdp-actualite-actions">
+                  <div class="lcdp-box-formulaire__actions">
                     <button type="submit" class="lcdp-button lcdp-button-orange">Enregistrer l’article</button>
                     <a class="lcdp-button" href="./admin-actualite.html">Retour à la liste</a>
                   </div>
