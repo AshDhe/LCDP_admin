@@ -482,7 +482,7 @@
     for(const a of articles) {
       const p=publie(a.id), tr=el('tr');
       tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'En ligne':'Hors ligne'),el('td',popupId===a.id?'Oui':'Non'));
-      const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';
+      const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';wrap.style.cssText='display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:.4rem;margin:0';actions.style.whiteSpace='nowrap';
       const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);wrap.append(modifier);
       const publication = bouton(p?'Dépublier':'Publier',async()=>{
         if(!await demanderConfirmation({
@@ -499,6 +499,9 @@
         if(!await demanderConfirmation({titre:'Supprimer l’actualité',texte:'Supprimer cet article du brouillon, du site public et de la pop-up éventuelle ? Le fichier image est conservé.',confirmer:'Supprimer'}))return;
         await sauver('supprimer',a.id);afficherStatus('Article supprimé.');
       }));
+      for (const control of wrap.children) {
+        control.style.cssText='display:inline-flex;flex:0 0 auto;width:auto;min-width:0;min-height:2rem;margin:0;padding:.4rem .65rem;font-size:.8rem;line-height:1.2;align-items:center;justify-content:center;white-space:nowrap';
+      }
       actions.append(wrap);tr.append(actions);tbody.append(tr);
     }
   }
@@ -545,7 +548,7 @@
       const oldArticles=articles,oldPopup=popupId;
       articles=articles.some(a=>a.id===next.id)?articles.map(a=>a.id===next.id?next:a):[next,...articles];
       if(checkbox.checked){popupId=next.id;}else if(popupId===next.id)popupId=null;
-      try{await sauver('enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
+      try{await sauver(publie(next.id)?'publier':'enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
       location.assign('./admin-actualite.html');
     });};
   }
