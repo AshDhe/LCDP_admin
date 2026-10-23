@@ -477,6 +477,8 @@
   function bouton(label, fn) { const b=el('button',label); b.type='button'; b.className='lcdp-button'; b.onclick=()=>operation(fn); return b; }
   function rendreInventaire() {
     const tbody=q('[data-inventaire]'); tbody.replaceChildren();
+    const tableFrame=tbody.closest('.lcdp-table-lecture-admin');
+    if(tableFrame)tableFrame.style.marginTop='1rem';
     q('[data-popup-status]').textContent = popupId ? (publie(popupId)?'Une actualité est en pop-up.':'L’actualité sélectionnée en pop-up est hors ligne. Aucune pop-up publique.') : 'Aucune actualité en pop-up';
     q('[data-vide]').hidden=articles.length>0;
     for(const a of articles) {
