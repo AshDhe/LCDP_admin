@@ -4,3 +4,339 @@
 .lcdp-actualite-editeur textarea {min-height:180px;}
 .lcdp-actualite-image {display:block;width:100%;aspect-ratio:16/9;object-fit:contain;object-position:center;background:var(--lcdp-color-surface-soft);}
 .lcdp-actualite-actions {display:flex;gap:12px;flex-wrap:wrap;}
+
+.lcdp-table-lecture-admin {
+  position: relative;
+  width: 100%;
+  min-height: 72px;
+  padding: var(--lcdp-space-2);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-table-lecture-admin__scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.lcdp-table-lecture-admin__table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  color: var(--lcdp-color-text);
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.lcdp-table-lecture-admin__table th,
+.lcdp-table-lecture-admin__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--lcdp-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.lcdp-table-lecture-admin__table th {
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: var(--lcdp-color-surface-soft);
+  white-space: nowrap;
+}
+
+.lcdp-table-lecture-admin__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.lcdp-table-lecture-admin__status {
+  margin: 0;
+  color: var(--lcdp-color-text-muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+
+.lcdp-table-lecture-admin__status--error {
+  color: var(--lcdp-color-text);
+  font-weight: 700;
+}
+
+
+.lcdp-table-lecture-admin__sorts th {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background: var(--lcdp-color-surface);
+}
+
+.lcdp-table-lecture-admin__sort-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lcdp-table-lecture-admin__sort-button {
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lcdp-table-lecture-admin__sort-button:hover {
+  border-color: var(--lcdp-color-primary);
+}
+
+.lcdp-table-lecture-admin__sort-button[aria-pressed="true"] {
+  border-color: var(--lcdp-color-primary);
+  background: var(--lcdp-color-primary);
+  color: #ffffff;
+}
+
+.lcdp-table-lecture-admin__filter-input {
+  width: 100%;
+  min-width: 120px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+}
+
+select.lcdp-table-lecture-admin__filter-input {
+  cursor: pointer;
+}
+
+.lcdp-table-lecture-admin__filter-input:focus {
+  outline: none;
+  border-color: var(--lcdp-color-primary);
+  box-shadow: 0 0 0 3px rgba(85, 115, 63, 0.16);
+}
+
+
+/* Aucun indicateur de chargement visible : la table reste visuellement stable. */
+.lcdp-table-lecture-admin__status[data-lcdp-table-lecture-admin-loading] {
+  display: none !important;
+}
+
+
+/* Sécurité finale : aucun indicateur de chargement visible. */
+.lcdp-table-lecture-admin__status[data-lcdp-table-lecture-admin-loading] {
+  display: none !important;
+  position: static !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Cellule interactive activée uniquement par les pages qui la demandent.
+   Sélecteur renforcé pour neutraliser les styles génériques de bouton. */
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--lcdp-color-text);
+  font: inherit;
+  font-weight: 700;
+  line-height: inherit;
+  text-align: left !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:hover,
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--lcdp-color-primary);
+}
+
+.lcdp-table-lecture-admin__table button.lcdp-table-lecture-admin__cell-action:focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Éditeur de la ligne parc, spécifique à la page StatutParc. */
+#lcdp-parc-edition-slot[hidden] {
+  display: none !important;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire-page {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire-page__inner {
+  max-width: 1120px;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--lcdp-space-3);
+}
+
+#lcdp-parc-edition-slot .lcdp-box-champ-formulaire--wide {
+  grid-column: 1 / -1;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note {
+  padding: 10px 12px;
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note[data-state="success"] {
+  border: 1px solid var(--lcdp-color-primary);
+}
+
+#lcdp-parc-edition-slot .lcdp-box-formulaire__note[data-state="error"] {
+  border: 1px solid var(--lcdp-color-orange);
+}
+
+.lcdp-parc-edition-loading {
+  margin: 0;
+  padding: var(--lcdp-space-4);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-large);
+  background: var(--lcdp-color-surface);
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  #lcdp-parc-edition-slot .lcdp-box-formulaire__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Pagination générique : 100 lignes par page par défaut. */
+.lcdp-table-lecture-admin__pagination {
+  width: 100%;
+  margin-top: var(--lcdp-space-3);
+  padding-top: var(--lcdp-space-2);
+  border-top: 1px solid var(--lcdp-color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-table-lecture-admin__pagination[hidden] {
+  display: none !important;
+}
+
+.lcdp-table-lecture-admin__pagination-info,
+.lcdp-table-lecture-admin__pagination-page {
+  margin: 0;
+  color: var(--lcdp-color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.lcdp-table-lecture-admin__pagination-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lcdp-space-2);
+  flex-wrap: wrap;
+}
+
+.lcdp-table-lecture-admin__pagination-button {
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lcdp-table-lecture-admin__pagination-button:hover:not(:disabled),
+.lcdp-table-lecture-admin__pagination-button:focus-visible:not(:disabled) {
+  border-color: var(--lcdp-color-primary);
+  color: var(--lcdp-color-primary);
+}
+
+.lcdp-table-lecture-admin__pagination-button:focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 2px;
+}
+
+.lcdp-table-lecture-admin__pagination-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (min-width: 700px) {
+  .lcdp-table-lecture-admin__pagination {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .lcdp-table-lecture-admin__pagination-info {
+    text-align: left;
+  }
+}
+
+/* Correctif définitif ciblé sur la colonne « Nom du parc ».
+   On neutralise intégralement le style natif et les styles génériques
+   de bouton, puis on réapplique uniquement l'apparence d'un lien texte. */
+[data-lcdp-table-lecture-admin-body]
+tr > td:nth-child(2) > button {
+  all: unset !important;
+  display: inline-block !important;
+  max-width: 100% !important;
+  color: var(--lcdp-color-text) !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+  line-height: inherit !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 3px !important;
+  cursor: pointer !important;
+}
+
+[data-lcdp-table-lecture-admin-body]
+tr > td:nth-child(2) > button:hover {
+  color: var(--lcdp-color-primary) !important;
+}
+
+[data-lcdp-table-lecture-admin-body]
+tr > td:nth-child(2) > button:focus-visible {
+  color: var(--lcdp-color-primary) !important;
+  outline: 2px solid var(--lcdp-color-primary) !important;
+  outline-offset: 3px !important;
+  border-radius: 2px !important;
+}
+
+
+.lcdp-actualite-checkbox {display:flex!important;align-items:center;gap:8px;}
+.lcdp-table-lecture-admin {box-sizing:border-box;margin-top:20px;}
+.lcdp-actualite-actions .lcdp-button {white-space:normal;}

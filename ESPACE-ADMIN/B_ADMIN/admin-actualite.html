@@ -122,19 +122,17 @@
               <p data-lcdp-actualite-meta></p>
               <p data-lcdp-actualite-loading>Chargement…</p>
               <div data-lcdp-actualite-contenu hidden>
-                <p>Une image par actualité. Les quatre dernières publications alimentent le bandeau.</p>
-                <label>Ajouter une actualité avec une image WebP
-                  <input type="file" accept="image/webp,.webp" data-image-nouvelle>
-                </label>
-                <p>Image entière, centrée, cadre 16:9. Aucun recadrage ni déformation. Maximum : 15 Mio.</p>
-                <button type="button" class="lcdp-button" data-ajouter>Ajouter l’actualité</button>
-                <button type="button" class="lcdp-button" data-sans-popup>Aucune pop-up</button>
-                <div data-liste-articles></div>
-                <div class="lcdp-actualite-actions">
-                  <button type="button" class="lcdp-button" data-enregistrer>Enregistrer le brouillon</button>
-                  <button type="button" class="lcdp-button lcdp-button-orange" data-publier>Publier les modifications</button>
+                <p data-popup-status></p>
+                <a class="lcdp-button lcdp-button-orange" href="./admin-actualite-edition.html">Ajouter</a>
+                <div class="lcdp-table-lecture-admin">
+                  <div class="lcdp-table-lecture-admin__scroll">
+                    <table class="lcdp-table-lecture-admin__table">
+                      <thead><tr><th>Titre</th><th>Publication</th><th>Pop-up</th><th>Actions</th></tr></thead>
+                      <tbody data-inventaire></tbody>
+                    </table>
+                  </div>
+                  <p data-vide hidden>Aucune actualité.</p>
                 </div>
-                <p>Enregistrer garde les modifications dans l’admin. Publier applique l’ensemble des modifications au site, y compris les dépublications.</p>
               </div>
             </div>
 

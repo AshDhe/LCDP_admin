@@ -322,24 +322,6 @@
     });
   }
 
-  async function demanderConfirmationPublication() {
-    return demanderConfirmation({
-      titre: "Publier l’actualité",
-      texte:
-        "La version publique du carrousel sera remplacée par le contenu actuel.",
-      confirmer: "Publier"
-    });
-  }
-
-  async function demanderConfirmationRetrait() {
-    return demanderConfirmation({
-      titre: "Retirer cette image",
-      texte:
-        "L’image sera retirée du carrousel. Le fichier conservé dans GitHub ne sera pas supprimé.",
-      confirmer: "Retirer"
-    });
-  }
-
   async function demanderConfirmation(options) {
     const slot = document.getElementById(
       "lcdp-lightbox-slot"
@@ -485,55 +467,92 @@
   }
 
 
-  let articles=[], popupId=null;
-  function afficherStatus(message) { const e=document.querySelector('[data-lcdp-actualite-status]'); if(e)e.textContent=message; }
-  function actualiserMeta() { document.querySelector('[data-lcdp-actualite-meta]').textContent='Version '+documentCharge.version; }
-  function dirty(){modificationsLocales=true;afficherStatus('Modifications non publiées.');}
-  function el(tag,text){const e=document.createElement(tag);if(text)e.textContent=text;return e;}
-  function rendre(){
-    const list=document.querySelector('[data-liste-articles]');list.replaceChildren();
-    for(const a of articles){
-      const card=el('article');card.className='lcdp-actualite-editeur';
-      const image=el('img');image.src=urlImage(a.image);image.alt=a.alt||'';image.className='lcdp-actualite-image';card.append(image);
-      for(const [key,label,multi] of [['titre','Titre court',false],['alt','Description de l’image',false],['texte','Texte',true]]){
-        const l=el('label',label),input=el(multi?'textarea':'input');input.value=a[key]||'';input.maxLength=multi?20000:key==='titre'?160:250;
-        input.addEventListener('input',()=>{a[key]=input.value;dirty();});l.append(input);card.append(l);
-      }
-      const l=el('label','Publier cette actualité'),c=el('input');c.type='checkbox';c.checked=a.active;
-      c.onchange=()=>{a.active=c.checked;if(!a.active&&popupId===a.id)popupId=null;dirty();rendre();};l.prepend(c);card.append(l);
-      const p=el('label','Afficher en pop-up à l’accueil'),r=el('input');r.type='radio';r.name='popup';r.checked=popupId===a.id;r.disabled=!a.active;
-      r.onchange=()=>{popupId=a.id;dirty();};p.prepend(r);card.append(p);
-      const replace=el('input');replace.type='file';replace.accept='image/webp,.webp';replace.setAttribute('aria-label','Remplacer l’image');
-      replace.onchange=()=>operation(async()=>{const f=replace.files[0];if(!f)return;await verifierImage(f);const data=await appelerUpload([f]);if(!data.slides?.length)throw Error('Image non enregistrée.');a.image=data.slides[0].image;dirty();rendre();});card.append(replace);
-      const previewButton=el('button','Prévisualiser');previewButton.type='button';previewButton.className='lcdp-button';
-      previewButton.onclick=()=>{const old=card.querySelector('[data-preview]');if(old){old.remove();return;}const preview=el('section');preview.dataset.preview='true';const title=el('h2',a.titre||'Titre à renseigner'),im=el('img'),text=el('div',a.texte||'Texte à renseigner'),contact=el('a','Contact');im.src=urlImage(a.image);im.alt=a.alt||'';im.className='lcdp-actualite-image';text.style.whiteSpace='pre-wrap';contact.href=urlPublic('/ESPACE-PUBLIC/contact.html');preview.append(title,im,text,contact);card.append(preview);};card.append(previewButton);
-      const remove=el('button','Supprimer cette actualité');remove.type='button';remove.className='lcdp-button';
-      remove.onclick=()=>operation(async()=>{if(!await demanderConfirmation({titre:'Supprimer l’actualité',texte:'Retirer cette actualité du brouillon ? La publication applique ensuite ce retrait au site.',confirmer:'Supprimer'}))return;articles=articles.filter(x=>x!==a);if(popupId===a.id)popupId=null;dirty();rendre();});card.append(remove);list.append(card);
+  const edition = location.pathname.endsWith("admin-actualite-edition.html");
+  let articles = [], popupId = null, article = null, fichier = null, busy = false;
+  const q = s => document.querySelector(s);
+  const copie = value => JSON.parse(JSON.stringify(value));
+  function afficherStatus(message) { q('[data-lcdp-actualite-status]').textContent = message; }
+  function el(tag, text) { const e = document.createElement(tag); if(text) e.textContent = text; return e; }
+  function publie(id) { return documentCharge.publie.slides.find(a => a.id === id && a.active); }
+  function bouton(label, fn) { const b=el('button',label); b.type='button'; b.className='lcdp-button'; b.onclick=()=>operation(fn); return b; }
+  function rendreInventaire() {
+    const tbody=q('[data-inventaire]'); tbody.replaceChildren();
+    q('[data-popup-status]').textContent = documentCharge.publie.popupId ? 'Une actualité est en pop-up.' : 'Aucune actualité en pop-up';
+    q('[data-vide]').hidden=articles.length>0;
+    for(const a of articles) {
+      const p=publie(a.id), tr=el('tr');
+      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'Publiée':'Brouillon'),el('td',documentCharge.publie.popupId===a.id?'Oui':'Non'));
+      const actions=el('td'), wrap=el('div');wrap.className='lcdp-actualite-actions';
+      const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);wrap.append(modifier);
+      wrap.append(bouton(p?'Publier les modifications':'Publier',async()=>{
+        if(!await demanderConfirmation({titre:'Publier l’actualité',texte:'Publier cet article sur le site ?',confirmer:'Publier'}))return;
+        await sauver('publier',a.id);afficherStatus('Article publié.');
+      }));
+      if(p)wrap.append(bouton('Dépublier',async()=>{
+        if(!await demanderConfirmation({titre:'Dépublier l’actualité',texte:'Retirer cet article du site public et de la pop-up éventuelle ?',confirmer:'Dépublier'}))return;
+        await sauver('depublier',a.id);afficherStatus('Article dépublié.');
+      }));
+      wrap.append(bouton('Supprimer',async()=>{
+        if(!await demanderConfirmation({titre:'Supprimer l’actualité',texte:'Supprimer cet article du brouillon, du site public et de la pop-up éventuelle ? Le fichier image est conservé.',confirmer:'Supprimer'}))return;
+        await sauver('supprimer',a.id);afficherStatus('Article supprimé.');
+      }));
+      actions.append(wrap);tr.append(actions);tbody.append(tr);
     }
-    if(!articles.length)list.append(el('p','Aucune actualité.'));
   }
-  async function verifierImage(f){
-    if(!f||f.size>15*1024*1024||f.type!=='image/webp')throw Error('Choisissez une image WebP de 15 Mio maximum.');
+  async function sauver(actionArticle,id) {
+    const data=await appelerJson('/admin/actualite/brouillon',{method:'POST',body:{version:documentCharge.version,titre:'Actualité',slides:articles,popupId,actionArticle,idArticle:id}});
+    documentCharge=data;articles=copie(data.brouillon.slides);popupId=data.brouillon.popupId;
+    modificationsLocales=false;
+  }
+  async function verifierImage(f) {
+    if(!f || f.size>15*1024*1024 || f.type!=='image/webp' || !/\.webp$/i.test(f.name))throw Error('Choisissez une image WebP de 15 Mio maximum.');
     const bytes=new Uint8Array(await f.slice(0,12).arrayBuffer());
     if(String.fromCharCode(...bytes.slice(0,4))!=='RIFF'||String.fromCharCode(...bytes.slice(8,12))!=='WEBP')throw Error('Fichier WebP invalide.');
     const bitmap=await createImageBitmap(f);bitmap.close();
   }
-  let busy=false;
-  async function operation(fn){if(busy)return;busy=true;document.querySelectorAll('button,input,textarea').forEach(e=>e.disabled=true);try{await fn();}catch(e){afficherStatus(e.message);}finally{busy=false;document.querySelectorAll('button,input,textarea').forEach(e=>e.disabled=false);rendre();}}
-  async function enregistrer(publication){
-    if(publication&&!await demanderConfirmation({titre:'Publier les modifications',texte:'Appliquer toutes les modifications au site public ?',confirmer:'Publier'}))return;
-    const d=await appelerJson('/admin/actualite/'+(publication?'publier':'brouillon'),{method:'POST',body:{version:documentCharge.version,titre:'Actualité',slides:articles,popupId}});
-    documentCharge=d;articles=d.brouillon.slides;popupId=d.brouillon.popupId;modificationsLocales=false;actualiserMeta();afficherStatus(publication?'Modifications publiées.':'Brouillon enregistré.');
+  async function operation(fn) {
+    if(busy)return;busy=true;
+    const controls=Array.from(document.querySelectorAll('button,input,textarea')).map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);
+    try{await fn();}catch(e){afficherStatus(e.message);}finally{busy=false;controls.forEach(([e,d])=>e.disabled=d);if(!edition)rendreInventaire();}
   }
-  async function initialiser(){
+  function initialiserEdition() {
+    const id=new URLSearchParams(location.search).get('id');
+    article=id?articles.find(a=>a.id===id):{id:crypto.randomUUID(),titre:'',texte:'',image:'',alt:'',active:false};
+    if(!article)throw Error('Actualité introuvable. Revenez à la liste.');
+    if(!id && articles.length>=40)throw Error('Maximum : 40 actualités.');
+    const form=q('[data-edition]');
+    for(const key of ['titre','alt','texte'])form.elements[key].value=article[key]||'';
+    const checkbox=form.elements.popup;checkbox.checked=popupId===article.id;checkbox.disabled=!publie(article.id);
+    q('[data-popup-aide]').textContent=checkbox.disabled?'Publiez l’article depuis la liste pour activer sa pop-up.':'La sélection remplace l’ancienne pop-up à l’enregistrement.';
+    const preview=q('[data-image-preview]');if(article.image){preview.src=urlImage(article.image);preview.alt=article.alt||'';preview.hidden=false;}
+    form.oninput=()=>{modificationsLocales=true;};
+    form.elements.image.onchange=()=>operation(async()=>{
+      const next=form.elements.image.files[0];if(!next)return;
+      try {await verifierImage(next);}catch(e){form.elements.image.value='';throw e;}
+      fichier=next;const url=URL.createObjectURL(next);preview.onload=()=>URL.revokeObjectURL(url);preview.src=url;preview.hidden=false;
+    });
+    form.onsubmit=e=>{e.preventDefault();operation(async()=>{
+      if(!form.reportValidity())return;
+      const selectionChange = checkbox.checked ? popupId!==article.id : popupId===article.id;
+      if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?'Afficher cet article en pop-up à la place de la sélection actuelle ?':'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
+      const next={...article};for(const key of ['titre','alt','texte'])next[key]=form.elements[key].value.trim();
+      if(!next.titre||!next.texte||!next.alt)throw Error('Titre, texte et description de l’image obligatoires.');
+      if(fichier){await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
+      if(!next.image)throw Error('Ajoutez une image WebP.');
+      const oldArticles=articles,oldPopup=popupId;
+      articles=articles.some(a=>a.id===next.id)?articles.map(a=>a.id===next.id?next:a):[next,...articles];
+      if(checkbox.checked)popupId=next.id;else if(popupId===next.id)popupId=null;
+      try{await sauver('enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
+      location.assign('./admin-actualite.html');
+    });};
+  }
+  async function initialiser() {
     if(!await verifierAcces())return;
-    const [d]=await Promise.all([appelerJson('/admin/actualite'),initialiserBandeau(),initialiserMenuGauche()]);
-    documentCharge=d;articles=d.brouillon.slides;popupId=d.brouillon.popupId;actualiserMeta();rendre();
-    document.querySelector('[data-lcdp-actualite-loading]').hidden=true;document.querySelector('[data-lcdp-actualite-contenu]').hidden=false;document.getElementById('lcdp-main-admin').hidden=false;
-    document.querySelector('[data-ajouter]').onclick=()=>operation(async()=>{if(articles.length>=40)throw Error('Maximum : 40 actualités.');const input=document.querySelector('[data-image-nouvelle]'),f=input.files[0];await verifierImage(f);const d=await appelerUpload([f]);if(!d.slides?.length)throw Error('Image non enregistrée.');articles.unshift({...d.slides[0],titre:'',texte:'',active:false});input.value='';dirty();});
-    document.querySelector('[data-sans-popup]').onclick=()=>{popupId=null;dirty();rendre();};
-    document.querySelector('[data-enregistrer]').onclick=()=>operation(()=>enregistrer(false));
-    document.querySelector('[data-publier]').onclick=()=>operation(()=>enregistrer(true));
+    const [data]=await Promise.all([appelerJson('/admin/actualite'),initialiserBandeau(),initialiserMenuGauche()]);
+    documentCharge=data;articles=copie(data.brouillon.slides);popupId=data.brouillon.popupId;
+    if(edition)initialiserEdition();else rendreInventaire();
+    q('[data-lcdp-actualite-loading]').hidden=true;q('[data-lcdp-actualite-contenu]').hidden=false;
+    document.getElementById('lcdp-main-admin').hidden=false;
   }
   window.addEventListener('beforeunload',e=>{if(modificationsLocales){e.preventDefault();e.returnValue='';}});
   initialiser().catch(e=>{afficherStatus(e.message);document.getElementById('lcdp-main-admin').hidden=false;});
