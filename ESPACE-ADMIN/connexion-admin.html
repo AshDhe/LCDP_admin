@@ -166,7 +166,7 @@
       async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
-          credentials: "omit",
+          credentials: "same-origin",
           cache: "no-cache"
         });
 
@@ -374,7 +374,11 @@
       }
 
       async function initialiserPage() {
-        await initialiserBandeau();
+        try {
+          await initialiserBandeau();
+        } catch (error) {
+          console.error("Chargement du bandeau admin impossible :", error);
+        }
         await initialiserFormulaireConnexion();
         await chargerScriptAdminUneFois(
           "/ESPACE-ADMIN/connexion-admin.js"
