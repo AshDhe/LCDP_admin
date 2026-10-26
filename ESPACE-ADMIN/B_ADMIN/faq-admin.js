@@ -271,9 +271,50 @@
 
     racine.querySelector("[data-lcdp-editeur-ajouter]").addEventListener("click", event => {
       event.stopImmediatePropagation();
-      controleurEditeur.ajouterBloc({ titre: "", html: "<p><br></p>" });
+      controleurEditeur.ajouterBloc({ id: "q-" + crypto.randomUUID(), titre: "", html: "<p><br></p>" });
     }, true);
+    installerLiensFAQ(racine);
     slot.hidden = false;
+  }
+
+  function installerLiensFAQ(racine) {
+    function ajouterBoutons() {
+      racine.querySelectorAll("[data-lcdp-editeur-bloc]").forEach(bloc => {
+        if (bloc.querySelector("[data-faq-liens]")) return;
+        const zone = document.createElement("div");
+        zone.className = "lcdp-faq-admin__liens";
+        zone.setAttribute("data-faq-liens", "");
+        const statut = document.createElement("span");
+        statut.setAttribute("role", "status");
+        for (const [label, publicComplet] of [["Copier le lien interne", false], ["Copier le lien public", true]]) {
+          const bouton = document.createElement("button");
+          bouton.type = "button";
+          bouton.className = "lcdp-button lcdp-button-secondary";
+          bouton.textContent = label;
+          bouton.title = "Le lien ouvre cette FAQ dans sa version publiée.";
+          bouton.addEventListener("click", async () => {
+            const ancre = window.LCDP_FAQ.ancre({ id: bloc.dataset.lcdpEditeurBlocId });
+            const path = "/ESPACE-PUBLIC/FAQ-public.html#" + ancre;
+            const config = window.SITE_CONFIG || {};
+            const base = String(config.publicBaseUrl || config.PUBLIC_BASE || "https://lacleduparc.fr").replace(/\/+$/, "");
+            const lien = publicComplet ? (typeof config.publicUrl === "function" ? config.publicUrl(path) : base + path) : "#" + ancre;
+            try {
+              if (!navigator.clipboard?.writeText) throw new Error("Copie manuelle");
+              await navigator.clipboard.writeText(lien);
+              statut.textContent = "Lien copié. À utiliser après publication de la FAQ.";
+            } catch {
+              window.prompt("Copie ce lien (à utiliser après publication) :", lien);
+            }
+          });
+          zone.appendChild(bouton);
+        }
+        zone.appendChild(statut);
+        bloc.appendChild(zone);
+      });
+    }
+    ajouterBoutons();
+    const observateur = new MutationObserver(ajouterBoutons);
+    observateur.observe(racine.querySelector("[data-lcdp-editeur-blocs]"), { childList: true });
   }
 
   function signalerModificationLocale() {

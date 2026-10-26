@@ -208,8 +208,13 @@
 
   </div>
 
-  <link rel="stylesheet" href="./faq-accordeon.css">
-  <script src="./faq-accordeon.js"></script>
+  <script>
+    (() => {
+      const attribut = value => String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+      document.write('<link rel="stylesheet" href="' + attribut(window.LCDP_urlPublic("/ESPACE-PUBLIC/faq-accordeon.css")) + '">');
+      document.write('<script src="' + attribut(window.LCDP_urlPublic("/ESPACE-PUBLIC/faq-accordeon.js")) + '"><\/script>');
+    })();
+  </script>
   <script src="./faq-admin.js"></script>
 </body>
 </html>
