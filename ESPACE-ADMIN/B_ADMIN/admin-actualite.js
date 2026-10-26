@@ -286,9 +286,13 @@
 
     slot.innerHTML = "";
 
-    const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-alerte.html"
-    );
+    let fragment;
+    try {
+      fragment = await chargerFragmentObjet("/BOX/02-box-alerte.html");
+    } catch (_) {
+      window.alert(message || "");
+      return;
+    }
 
     slot.appendChild(fragment);
 
@@ -535,7 +539,7 @@
   async function operation(fn) {
     if(busy)return;busy=true;
     const controls=Array.from(document.querySelectorAll('button,input,textarea,select')).map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);
-    try{await fn();}catch(e){afficherStatus(e.message);}finally{busy=false;controls.forEach(([e,d])=>e.disabled=d);if(!edition)rendreInventaire();}
+    try{await fn();}catch(e){const message=e.message||'L’enregistrement a échoué.';afficherStatus(message);await afficherAlerte(message);}finally{busy=false;controls.forEach(([e,d])=>e.disabled=d);if(!edition)rendreInventaire();}
   }
   function initialiserEdition() {
     const id=new URLSearchParams(location.search).get('id');
@@ -554,20 +558,22 @@
     form.elements.image.onchange=()=>operation(async()=>{
       const next=form.elements.image.files[0];if(!next)return;
       try {await verifierImage(next);}catch(e){form.elements.image.value='';throw e;}
-      fichier=next;const url=URL.createObjectURL(next);preview.onload=()=>URL.revokeObjectURL(url);preview.src=url;q('[data-image-frame]').hidden=false;
+      fichier=next;modificationsLocales=true;afficherStatus('Image sélectionnée. Elle est enregistrée avec l’article lors du clic sur Enregistrer.');const url=URL.createObjectURL(next);preview.onload=()=>URL.revokeObjectURL(url);preview.src=url;q('[data-image-frame]').hidden=false;
     });
-    form.onsubmit=e=>{e.preventDefault();operation(async()=>{
-      if(!form.reportValidity())return;
+    form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;operation(async()=>{
       const selectionChange = checkbox.checked ? popupId!==article.id : popupId===article.id;
       if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?'Sélectionner cet article pour la pop-up ? Elle apparaît uniquement lorsque l’article est en ligne.':'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
       const next={...article,groupe:form.elements.groupe.value};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
       if(!next.titre||!next.texte||!next.alt)throw Error('Titre, texte et description de l’image obligatoires.');
-      if(fichier){await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
+      if(fichier){afficherStatus('Enregistrement de l’image…');await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
       if(!next.image)throw Error('Ajoutez une image WebP.');
       const oldArticles=articles,oldPopup=popupId;
       articles=articles.some(a=>a.id===next.id)?articles.map(a=>a.id===next.id?next:a):[next,...articles];
       if(checkbox.checked){popupId=next.id;}else if(popupId===next.id)popupId=null;
+      afficherStatus('Enregistrement de l’article…');
       try{await sauver(publie(next.id)?'publier':'enregistrer',next.id);}catch(e){articles=oldArticles;popupId=oldPopup;throw e;}
+      afficherStatus('L’article et son image sont enregistrés.');
+      await afficherAlerte('L’article et son image sont enregistrés. Cliquez sur OK pour revenir à la liste des actualités.');
       location.assign('./admin-actualite.html');
     });};
   }
