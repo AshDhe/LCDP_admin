@@ -475,6 +475,18 @@
   function el(tag, text) { const e = document.createElement(tag); if(text) e.textContent = text; return e; }
   function publie(id) { return documentCharge.publie.slides.find(a => a.id === id && a.active); }
   function bouton(label, fn) { const b=el('button',label); b.type='button'; b.className='lcdp-button'; b.onclick=()=>operation(fn); return b; }
+  function picto(element, nom, label) {
+    const dessins={
+      crayon:'<path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m14 5 5 5"/>',
+      oeil:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+      oeilbarre:'<path d="m3 3 18 18M10.5 5.1 12 5c7 0 10 7 10 7a20 20 0 0 1-3 4M6 6a21 21 0 0 0-4 6s3 7 10 7a12 12 0 0 0 5-1"/><path d="M10 10a3 3 0 0 0 4 4"/>',
+      poubelle:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>'
+    };
+    element.textContent='';element.setAttribute('aria-label',label);
+    element.classList.add('lcdp-actualite-picto');
+    element.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+dessins[nom]+'</svg>';
+    return element;
+  }
   function rendreInventaire() {
     const tbody=q('[data-inventaire]'); tbody.replaceChildren();
     const tableFrame=tbody.closest('.lcdp-table-lecture-admin');
@@ -483,9 +495,10 @@
     q('[data-vide]').hidden=articles.length>0;
     for(const a of articles) {
       const p=publie(a.id), tr=el('tr');
-      tr.append(el('td',a.titre || 'Sans titre'),el('td',p?'En ligne':'Hors ligne'),el('td',popupId===a.id?'Oui':'Non'));
+      const groupe=el('td');groupe.append(window.LCDP_ACTUALITE_GROUPES.cartouche(a.groupe));
+      tr.append(el('td',a.titre || 'Sans titre'),groupe,el('td',popupId===a.id?'Oui':'Non'));
       const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';wrap.style.cssText='display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:.4rem;margin:0';actions.style.whiteSpace='nowrap';
-      const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);wrap.append(modifier);
+      const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);picto(modifier,'crayon','Modifier l’article');wrap.append(modifier);
       const publication = bouton(p?'Dépublier':'Publier',async()=>{
         if(!await demanderConfirmation({
           titre:p?'Dépublier l’actualité':'Publier l’actualité',
@@ -496,11 +509,12 @@
         afficherStatus(p?'Article hors ligne.':'Article en ligne.');
       });
       if(p)publication.classList.add('lcdp-button-orange');
+      picto(publication,p?'oeil':'oeilbarre',p?'Dépublier l’article':'Publier l’article');
       wrap.append(publication);
-      wrap.append(bouton('Supprimer',async()=>{
+      wrap.append(picto(bouton('Supprimer',async()=>{
         if(!await demanderConfirmation({titre:'Supprimer l’actualité',texte:'Supprimer cet article du brouillon, du site public et de la pop-up éventuelle ? Le fichier image est conservé.',confirmer:'Supprimer'}))return;
         await sauver('supprimer',a.id);afficherStatus('Article supprimé.');
-      }));
+      }),'poubelle','Supprimer l’article'));
       for (const control of wrap.children) {
         control.style.cssText='display:inline-flex;flex:0 0 auto;width:auto;min-width:0;min-height:2rem;margin:0;padding:.4rem .65rem;font-size:.8rem;line-height:1.2;align-items:center;justify-content:center;white-space:nowrap';
       }
@@ -520,7 +534,7 @@
   }
   async function operation(fn) {
     if(busy)return;busy=true;
-    const controls=Array.from(document.querySelectorAll('button,input,textarea')).map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);
+    const controls=Array.from(document.querySelectorAll('button,input,textarea,select')).map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);
     try{await fn();}catch(e){afficherStatus(e.message);}finally{busy=false;controls.forEach(([e,d])=>e.disabled=d);if(!edition)rendreInventaire();}
   }
   function initialiserEdition() {
@@ -529,6 +543,9 @@
     if(!article)throw Error('Actualité introuvable. Revenez à la liste.');
     if(!id && articles.length>=40)throw Error('Maximum : 40 actualités.');
     const form=q('[data-edition]');
+    form.elements.groupe.value=window.LCDP_ACTUALITE_GROUPES.cle(article.groupe);
+    const apercuGroupe=()=>q('[data-groupe-preview]').replaceChildren(window.LCDP_ACTUALITE_GROUPES.cartouche(form.elements.groupe.value));
+    form.elements.groupe.addEventListener('change',()=>{apercuGroupe();modificationsLocales=true;});apercuGroupe();
     for(const key of ['titre','alt','texte','contact'])form.elements[key].value=article[key]||'';
     const checkbox=form.elements.popup;checkbox.checked=popupId===article.id;checkbox.disabled=false;
     q('[data-popup-aide]').textContent='La pop-up apparaît uniquement si cet article est en ligne. Cocher cette case ne publie pas l’article.';
@@ -543,7 +560,7 @@
       if(!form.reportValidity())return;
       const selectionChange = checkbox.checked ? popupId!==article.id : popupId===article.id;
       if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?'Sélectionner cet article pour la pop-up ? Elle apparaît uniquement lorsque l’article est en ligne.':'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
-      const next={...article};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
+      const next={...article,groupe:form.elements.groupe.value};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
       if(!next.titre||!next.texte||!next.alt)throw Error('Titre, texte et description de l’image obligatoires.');
       if(fichier){await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
       if(!next.image)throw Error('Ajoutez une image WebP.');

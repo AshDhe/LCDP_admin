@@ -77,7 +77,8 @@
         "/BOX/02-box-dialogue-bouton.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css",
-        "/BOX/01-box-carrousel.css"
+        "/BOX/01-box-carrousel.css",
+        "/BOX/01-box-actualite.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -98,6 +99,7 @@
     })();
   </script>
 
+  <script>document.write('<script src="' + window.LCDP_urlPublic("/ESPACE-PUBLIC/actualite-groupes.js") + '"><\/script>');</script>
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
 </head>
@@ -129,7 +131,7 @@
                 <div class="lcdp-table-lecture-admin">
                   <div class="lcdp-table-lecture-admin__scroll">
                     <table class="lcdp-table-lecture-admin__table">
-                      <thead><tr><th>Article</th><th>Statut</th><th>Pop-up</th><th>Actions</th></tr></thead>
+                      <thead><tr><th>Article</th><th>Groupe</th><th>Pop-up</th><th>Actions</th></tr></thead>
                       <tbody data-inventaire></tbody>
                     </table>
                   </div>

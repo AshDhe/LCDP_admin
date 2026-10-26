@@ -77,7 +77,8 @@
         "/BOX/02-box-dialogue-bouton.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css",
-        "/BOX/01-box-carrousel.css"
+        "/BOX/01-box-carrousel.css",
+        "/BOX/01-box-actualite.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -98,6 +99,7 @@
     })();
   </script>
 
+  <script>document.write('<script src="' + window.LCDP_urlPublic("/ESPACE-PUBLIC/actualite-groupes.js") + '"><\/script>');</script>
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
 </head>
@@ -125,6 +127,7 @@
               <p data-lcdp-actualite-loading>Chargement…</p>
               <div data-lcdp-actualite-contenu hidden>
                 <form data-edition class="lcdp-box-formulaire lcdp-stack">
+                  <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-groupe">Groupe</label><select id="actu-groupe" name="groupe" required><option value="RESEAU">RÉSEAU</option><option value="CLUB">CLUB</option><option value="COACHS">COACHS</option><option value="ASSO">ASSO</option></select><span data-groupe-preview></span></div>
                   <div class="lcdp-box-champ-formulaire"><label class="lcdp-box-champ-formulaire__label" for="actu-titre">Titre</label><input type="text" id="actu-titre" name="titre" required maxlength="160"></div>
                   <label>Image WebP<input name="image" type="file" accept="image/webp,.webp"></label>
                   <p>Image entière, centrée, cadre 16:9. Maximum 15 Mio. Aucun recadrage ni déformation.</p>
