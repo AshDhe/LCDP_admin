@@ -500,7 +500,14 @@
     for(const a of articles) {
       const p=publie(a.id), tr=el('tr');
       const groupe=el('td');groupe.append(window.LCDP_ACTUALITE_GROUPES.cartouche(a.groupe));
-      tr.append(el('td',a.titre || 'Sans titre'),groupe,el('td',popupId===a.id?'Oui':'Non'));
+      const miniature=el('td');miniature.className='lcdp-actu-admin-image-col';
+      if(a.image){
+        const im=el('img');im.className='lcdp-actu-admin-miniature';
+        im.alt=a.alt||'';im.loading='lazy';im.decoding='async';
+        im.width=72;im.height=48;im.src=urlImage(a.image);
+        im.onerror=()=>{im.hidden=true;};miniature.append(im);
+      }
+      tr.append(el('td',a.titre || 'Sans titre'),miniature,groupe,el('td',popupId===a.id?'Oui':'Non'));
       const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';wrap.style.cssText='display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:.4rem;margin:0';actions.style.whiteSpace='nowrap';
       const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);picto(modifier,'crayon','Modifier l’article');wrap.append(modifier);
       const publication = bouton(p?'Dépublier':'Publier',async()=>{
