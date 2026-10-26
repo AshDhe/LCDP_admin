@@ -747,6 +747,15 @@
     const template = document.createElement("template");
     template.innerHTML = String(htmlBrut || "");
 
+    // Convertir les balises du navigateur avant le filtrage.
+    template.content.querySelectorAll("b,i").forEach((element) => {
+      const remplacement = document.createElement(
+        element.tagName === "B" ? "strong" : "em"
+      );
+      remplacement.append(...element.childNodes);
+      element.replaceWith(remplacement);
+    });
+
     template.content.querySelectorAll(
       "script,style,iframe,object,embed,svg,math,form,input,button,textarea,select,template"
     ).forEach((element) => element.remove());
