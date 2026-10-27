@@ -273,8 +273,42 @@
       event.stopImmediatePropagation();
       controleurEditeur.ajouterBloc({ id: "q-" + crypto.randomUUID(), titre: "", html: "<p><br></p>" });
     }, true);
+    installerConfirmationSuppressionFAQ(racine);
     installerLiensFAQ(racine);
     slot.hidden = false;
+  }
+
+  function installerConfirmationSuppressionFAQ(racine) {
+    const autorises = new WeakSet();
+    let confirmationEnCours = false;
+    racine.addEventListener("click", async event => {
+      const bouton = event.target.closest?.("[data-lcdp-editeur-supprimer]");
+      if (!bouton || !racine.contains(bouton) || bouton.disabled) return;
+      if (autorises.has(bouton)) { autorises.delete(bouton); return; }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (confirmationEnCours) return;
+      confirmationEnCours = true;
+      const bloc = bouton.closest("[data-lcdp-editeur-bloc]");
+      const question = bloc?.querySelector("[data-lcdp-editeur-titre]")?.value?.trim();
+      try {
+        const confirme = await demanderConfirmationPublication({
+          titre: "Supprimer cette FAQ ?",
+          texte: question ? "Supprimer la FAQ « " + question + " » du brouillon ?" : "Supprimer ce bloc FAQ du brouillon ?",
+          annuler: "Non",
+          confirmer: "Oui"
+        });
+        if (confirme && bouton.isConnected && !bouton.disabled) {
+          autorises.add(bouton);
+          bouton.click();
+          autorises.delete(bouton);
+        }
+      } catch (error) {
+        afficherStatus("Confirmation indisponible : aucune FAQ supprimée.", "erreur");
+      } finally {
+        confirmationEnCours = false;
+      }
+    }, true);
   }
 
   function installerLiensFAQ(racine) {
@@ -580,7 +614,7 @@
     });
   }
 
-  async function demanderConfirmationPublication() {
+  async function demanderConfirmationPublication(options = {}) {
     const slot = document.getElementById(
       "lcdp-lightbox-slot"
     );
@@ -617,21 +651,21 @@
       return false;
     }
 
-    titre.textContent = "Publier les FAQ";
+    titre.textContent = options.titre || "Publier les FAQ";
     texte.textContent =
-      "La version affichée sur le site sera remplacée par le contenu actuel.";
+      options.texte || "La version affichée sur le site sera remplacée par le contenu actuel.";
 
     const annuler = document.createElement("button");
     annuler.type = "button";
     annuler.className =
       "lcdp-button lcdp-button-secondary";
-    annuler.textContent = "Annuler";
+    annuler.textContent = options.annuler || "Annuler";
 
     const confirmer = document.createElement("button");
     confirmer.type = "button";
     confirmer.className =
       "lcdp-button lcdp-button-orange";
-    confirmer.textContent = "Publier";
+    confirmer.textContent = options.confirmer || "Publier";
 
     actions.appendChild(annuler);
     actions.appendChild(confirmer);
