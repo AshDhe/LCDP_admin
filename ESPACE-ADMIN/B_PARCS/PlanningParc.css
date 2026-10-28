@@ -1,43 +1,87 @@
+/* Planning Parc : mise en page large, sans modifier les autres écrans Admin. */
+.lcdp-page-planning-parc-admin .lcdp-page-section { width:100%; min-width:0; }
+.lcdp-page-planning-parc-admin .lcdp-page-container {
+  width:100%; max-width:none; margin-inline:auto;
+  padding-inline:clamp(12px,1.6vw,30px); box-sizing:border-box;
+}
+.lcdp-page-planning-parc-admin .lcdp-admin-page-layout {
+  width:100%; max-width:none; min-width:0;
+  display:flex; align-items:flex-start; gap:clamp(12px,1.3vw,22px);
+}
+.lcdp-page-planning-parc-admin #lcdp-menu-gauche-admin-slot { flex:0 0 178px; min-width:0; }
 .lcdp-page-planning-parc-admin .lcdp-admin-page-content {
-  min-width: 0;
+  flex:1 1 0; width:auto; max-width:none; min-width:0;
+  box-sizing:border-box; padding:clamp(16px,1.6vw,26px);
 }
+.lcdp-planning-parc-admin__entete { margin-bottom:.9rem; }
+.lcdp-planning-parc-admin__titre { margin:0; text-align:center; }
+.lcdp-planning-parc-admin__mois-nav { display:flex; justify-content:center; align-items:center; gap:1rem; margin:0 0 1.15rem; }
+.lcdp-planning-parc-admin__mois-nav strong { min-width:175px; text-align:center; font-size:1.13rem; }
+.lcdp-planning-parc-admin__mois-nav button { border:1px solid #55733f; background:#fff; color:#55733f; border-radius:9px; min-height:38px; min-width:44px; font-size:1.5rem; cursor:pointer; }
+.lcdp-planning-parc-admin__mois-nav button:disabled { opacity:.4; cursor:wait; }
+.lcdp-planning-parc-admin__shift [data-lcdp-shift-detail-parc-content] { min-width:0; }
+.lcdp-planning-parc-admin__shift .lcdp-box-fiche-parc__actions-barre { display:none; }
+.lcdp-planning-parc-admin__message { margin:0 0 1rem; padding:.8rem 1rem; border:1px solid currentColor; border-radius:.8rem; font-weight:600; }
+.lcdp-planning-parc-admin__message--erreur { color:#8b1f1f; }
 
-.lcdp-planning-parc-admin__entete {
-  margin-bottom: 1.25rem;
+/* Table uniquement sur Planning Parc. */
+.lcdp-page-planning-parc-admin #lcdp-planning-parc-table-slot { width:100%; min-width:0; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin { width:100%; max-width:none; min-width:0; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__scroll {
+  width:100%; max-width:100%; overflow-x:auto; overflow-y:visible;
+  border-radius:8px; scrollbar-width:thin;
 }
-
-.lcdp-planning-parc-admin__titre {
-  margin: 0;
-  text-align: center;
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table {
+  width:100%; min-width:1040px; table-layout:fixed;
+  border-collapse:separate; border-spacing:0;
+  font-size:13px; line-height:1.45;
 }
-
-.lcdp-planning-parc-admin__shift [data-lcdp-shift-detail-parc-content] {
-  min-width: 0;
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td {
+  box-sizing:border-box; padding:8px 6px; vertical-align:middle;
+  white-space:nowrap; font-size:13px;
 }
-
-.lcdp-planning-parc-admin__shift .lcdp-box-fiche-parc__actions-barre {
-  display: none;
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table thead tr:first-child th {
+  background:#edf1e8; color:#273b2f; font-weight:700; padding-block:12px;
+  border-bottom:1px solid #c9d6c4;
 }
-
-.lcdp-planning-parc-admin__message {
-  margin: 0 0 1rem;
-  padding: 0.8rem 1rem;
-  border: 1px solid currentColor;
-  border-radius: 0.8rem;
-  font-weight: 600;
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table tbody tr:nth-child(even) { background:#f8faf6; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table tbody tr:hover { background:#eef4e8; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(1),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(1) { width:6%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(2),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(2) { width:20%; text-align:left; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(3),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(3) { width:11%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(4),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(4) { width:10%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(n+5):nth-child(-n+10),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(n+5):nth-child(-n+10) { width:6%; text-align:center; font-variant-numeric:tabular-nums; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:last-child,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:last-child { width:17%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__sorts th { padding:4px 5px; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__sort-actions { display:flex; justify-content:center; gap:4px; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__sort-button {
+  min-width:23px; min-height:24px; padding:1px 5px; font-size:14px; line-height:1;
 }
-
-.lcdp-planning-parc-admin__message--erreur {
-  color: #8b1f1f;
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__filters th { padding:5px 4px; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__filter-input,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__filters input,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__filters select {
+  display:block; width:100%; min-width:0; max-width:100%; box-sizing:border-box;
+  padding:6px 5px; font-size:12px; height:32px;
 }
-
-@media (max-width: 767px) {
-  .lcdp-planning-parc-admin__entete {
-    margin-bottom: 1rem;
-  }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__cell-action {
+  color:#255b3c; font-size:13px; font-weight:650; text-decoration:underline;
 }
-
-.lcdp-planning-parc-admin__mois-nav{display:flex;justify-content:center;align-items:center;gap:1rem;margin:0 0 1.2rem}
-.lcdp-planning-parc-admin__mois-nav strong{min-width:175px;text-align:center;font-size:1.14rem}
-.lcdp-planning-parc-admin__mois-nav button{border:1px solid #55733f;background:#fff;color:#55733f;border-radius:10px;min-height:38px;min-width:44px;font-size:1.6rem;cursor:pointer}
-.lcdp-planning-parc-admin__mois-nav button:disabled{opacity:.4;cursor:wait}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__pagination { font-size:13px; }
+@media (max-width:900px) {
+  .lcdp-page-planning-parc-admin .lcdp-page-container { padding-inline:10px; }
+  .lcdp-page-planning-parc-admin #lcdp-menu-gauche-admin-slot { flex-basis:145px; }
+  .lcdp-page-planning-parc-admin .lcdp-admin-page-content { padding:14px; }
+}
+@media (max-width:650px) {
+  .lcdp-page-planning-parc-admin .lcdp-admin-page-layout { display:block; }
+  .lcdp-page-planning-parc-admin .lcdp-admin-page-content { width:100%; }
+  .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table { min-width:1040px; }
+}
