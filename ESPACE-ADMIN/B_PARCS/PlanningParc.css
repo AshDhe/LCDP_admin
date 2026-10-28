@@ -36,3 +36,8 @@
     margin-bottom: 1rem;
   }
 }
+
+.lcdp-planning-parc-admin__mois-nav{display:flex;justify-content:center;align-items:center;gap:1rem;margin:0 0 1.2rem}
+.lcdp-planning-parc-admin__mois-nav strong{min-width:175px;text-align:center;font-size:1.14rem}
+.lcdp-planning-parc-admin__mois-nav button{border:1px solid #55733f;background:#fff;color:#55733f;border-radius:10px;min-height:38px;min-width:44px;font-size:1.6rem;cursor:pointer}
+.lcdp-planning-parc-admin__mois-nav button:disabled{opacity:.4;cursor:wait}

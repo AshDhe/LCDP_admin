@@ -8,6 +8,28 @@
   let templateJourMois = null;
   let templateHeureJour = null;
   let planningOuvert = null;
+  const moisSelectionne = (() => {
+    const parties = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit"}).formatToParts(new Date());
+    return {annee:Number(parties.find(p=>p.type==="year").value),mois:Number(parties.find(p=>p.type==="month").value)};
+  })();
+  function cleMoisSelectionne() { return String(moisSelectionne.annee)+"-"+String(moisSelectionne.mois).padStart(2,"0"); }
+  function initialiserNavigationMois() {
+    const precedent=document.querySelector("[data-planning-mois-prev]");
+    const suivant=document.querySelector("[data-planning-mois-next]");
+    const titre=document.querySelector("[data-planning-mois-label]");
+    const actualiser=()=> { titre.textContent=new Intl.DateTimeFormat("fr-FR",{month:"long",year:"numeric"}).format(new Date(moisSelectionne.annee,moisSelectionne.mois-1,1)); };
+    const changer=async(delta)=> {
+      const date=new Date(moisSelectionne.annee,moisSelectionne.mois-1+delta,1);
+      moisSelectionne.annee=date.getFullYear();moisSelectionne.mois=date.getMonth()+1;
+      actualiser();precedent.disabled=true;suivant.disabled=true;
+      try { await window.LCDP_TABLE_LECTURE_ADMIN.premierePage(TABLE_SLOT_ID); }
+      finally {precedent.disabled=false;suivant.disabled=false;}
+    };
+    precedent.addEventListener("click",()=>changer(-1).catch(console.error));
+    suivant.addEventListener("click",()=>changer(1).catch(console.error));
+    actualiser();
+  }
+
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -482,6 +504,7 @@
       initialiserObjetsPlanning()
     ]);
 
+    initialiserNavigationMois();
     await initialiserTable();
 
     const main = document.getElementById("lcdp-main-admin");

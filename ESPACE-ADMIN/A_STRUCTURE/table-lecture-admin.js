@@ -29,6 +29,7 @@
       typeof options.interactiveLabels === "object"
         ? { ...options.interactiveLabels }
         : {};
+    const extraParams = typeof options.extraParams === "function" ? options.extraParams : null;
     const initialFilters =
       options.initialFilters &&
       typeof options.initialFilters === "object"
@@ -168,6 +169,9 @@
         errorBox.hidden = true;
 
         const requestUrl = new URL(endpoint + "/read");
+        if (extraParams) Object.entries(extraParams() || {}).forEach(([k,v]) => {
+          if (v !== undefined && v !== null) requestUrl.searchParams.set(k,String(v));
+        });
 
         requestUrl.searchParams.set("resource", resource);
         requestUrl.searchParams.set("limit", String(etat.limit));
@@ -341,7 +345,8 @@
     });
 
     CONTROLEURS.set(slotId, {
-      recharger: chargerDonnees
+      recharger: chargerDonnees,
+      premierePage: () => { etat.offset=0; return chargerDonnees(); }
     });
 
     return chargerDonnees();
@@ -775,6 +780,11 @@
     return String(value || "").replace(/\/+$/, "");
   }
 
+  function premierePage(slotId) {
+    const c=CONTROLEURS.get(String(slotId || ""));
+    return c?.premierePage?.() || Promise.resolve(false);
+  }
+
   function recharger(slotId) {
     const controleur = CONTROLEURS.get(String(slotId || ""));
 
@@ -787,6 +797,7 @@
 
   window.LCDP_TABLE_LECTURE_ADMIN = Object.freeze({
     initialiser,
-    recharger
+    recharger,
+    premierePage
   });
 })();
