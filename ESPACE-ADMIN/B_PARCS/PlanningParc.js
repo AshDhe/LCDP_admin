@@ -208,6 +208,7 @@
       slotId: TABLE_SLOT_ID,
       endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
+      extraParams: () => ({ mois: cleMoisSelectionne() }),
       interactiveColumns: ["nom"],
       onCellActivate: ({ row }) => {
         ouvrirPlanningParc(row).catch(console.error);
