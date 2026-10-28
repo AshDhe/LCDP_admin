@@ -29,7 +29,6 @@
       typeof options.interactiveLabels === "object"
         ? { ...options.interactiveLabels }
         : {};
-    const extraParams = typeof options.extraParams === "function" ? options.extraParams : null;
     const initialFilters =
       options.initialFilters &&
       typeof options.initialFilters === "object"
@@ -169,9 +168,6 @@
         errorBox.hidden = true;
 
         const requestUrl = new URL(endpoint + "/read");
-        if (extraParams) Object.entries(extraParams() || {}).forEach(([k,v]) => {
-          if (v !== undefined && v !== null) requestUrl.searchParams.set(k,String(v));
-        });
 
         requestUrl.searchParams.set("resource", resource);
         requestUrl.searchParams.set("limit", String(etat.limit));
@@ -192,6 +188,16 @@
             requestUrl.searchParams.set("filter_" + key, texte);
           }
         });
+
+        // Paramètres contextuels propres à la page (mois, ouvertures, etc.).
+        const paramsSupplementaires = typeof options.extraParams === "function"
+          ? options.extraParams()
+          : (options.extraParams || {});
+        for (const [cle, valeur] of Object.entries(paramsSupplementaires || {})) {
+          if (valeur !== null && valeur !== undefined && String(valeur) !== "") {
+            requestUrl.searchParams.set(cle, String(valeur));
+          }
+        }
 
         const response = await fetch(requestUrl.toString(), {
           method: "GET",
@@ -346,7 +352,7 @@
 
     CONTROLEURS.set(slotId, {
       recharger: chargerDonnees,
-      premierePage: () => { etat.offset=0; return chargerDonnees(); }
+      premierePage: () => { etat.offset = 0; return chargerDonnees(); }
     });
 
     return chargerDonnees();
@@ -630,6 +636,9 @@
           cellule.appendChild(bouton);
         } else {
           cellule.textContent = texte;
+          if (column.key === "horaire" && texte !== "—") {
+            cellule.title = texte;
+          }
         }
 
         ligne.appendChild(cellule);
@@ -780,11 +789,6 @@
     return String(value || "").replace(/\/+$/, "");
   }
 
-  function premierePage(slotId) {
-    const c=CONTROLEURS.get(String(slotId || ""));
-    return c?.premierePage?.() || Promise.resolve(false);
-  }
-
   function recharger(slotId) {
     const controleur = CONTROLEURS.get(String(slotId || ""));
 
@@ -793,6 +797,11 @@
     }
 
     return controleur.recharger();
+  }
+
+  function premierePage(slotId) {
+    const controleur = CONTROLEURS.get(slotId);
+    return controleur?.premierePage ? controleur.premierePage() : Promise.resolve(false);
   }
 
   window.LCDP_TABLE_LECTURE_ADMIN = Object.freeze({

@@ -85,3 +85,47 @@
   .lcdp-page-planning-parc-admin .lcdp-admin-page-content { width:100%; }
   .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table { min-width:1040px; }
 }
+
+/* V9 : un texte d'horaire ne doit jamais recouvrir les compteurs. */
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table { font-size:14px; min-width:1180px; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td {font-size:14px; padding:10px 8px; overflow:hidden; text-overflow:ellipsis;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(4) {max-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#526256;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(1),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(1) {width:5%;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(2),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(2) {width:22%;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(3),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(3) {width:8%;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(4),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(4) {width:18%;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(n+5):nth-child(-n+10),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(n+5):nth-child(-n+10) {width:5.5%;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:last-child,
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:last-child {width:14%;}
+.lcdp-planning-parc-admin__outils {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
+.lcdp-planning-parc-admin__ouvertures {display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:#263f2e;font-size:14px;font-weight:650;}
+.lcdp-planning-parc-admin__ouvertures input {width:19px;height:19px;accent-color:#55733f;cursor:pointer;}
+.lcdp-planning-parc-admin__indice {color:#526256;font-size:13px;}
+
+/* V10 : tableau quantitatif, sans colonne Horaires. */
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table { min-width: 850px; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(1),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(1) { width:7%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(2),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(2) { width:25%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(3),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(3) { width:10%; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(n+4):nth-child(-n+9),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(n+4):nth-child(-n+9) { width:7%; text-align:center; font-variant-numeric:tabular-nums; }
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th:nth-child(10),
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td:nth-child(10) { width:16%; }
+/* La barre de navigation horizontale est placée juste au-dessus du tableau. */
+.lcdp-page-planning-parc-admin .lcdp-planning-parc-admin__scroll-haut {
+  width:100%; overflow-x:auto; overflow-y:hidden; height:17px;
+  margin-bottom:7px; scrollbar-width:auto;
+}
+.lcdp-page-planning-parc-admin .lcdp-planning-parc-admin__scroll-haut[hidden] {display:none;}
+.lcdp-page-planning-parc-admin .lcdp-planning-parc-admin__scroll-haut-interieur {height:1px;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__scroll {scrollbar-width:none;}
+.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__scroll::-webkit-scrollbar {display:none;}

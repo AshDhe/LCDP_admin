@@ -8,6 +8,7 @@
   let templateJourMois = null;
   let templateHeureJour = null;
   let planningOuvert = null;
+  let avecOuverturesSeulement = false;
   const moisSelectionne = (() => {
     const parties = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit"}).formatToParts(new Date());
     return {annee:Number(parties.find(p=>p.type==="year").value),mois:Number(parties.find(p=>p.type==="month").value)};
@@ -208,12 +209,57 @@
       slotId: TABLE_SLOT_ID,
       endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
-      extraParams: () => ({ mois: cleMoisSelectionne() }),
+      extraParams: () => ({ mois: cleMoisSelectionne(), avec_ouvertures: avecOuverturesSeulement ? "1" : "0" }),
       interactiveColumns: ["nom"],
       onCellActivate: ({ row }) => {
         ouvrirPlanningParc(row).catch(console.error);
       }
     });
+    installerDefilementHorizontalHaut(slot);
+  }
+
+  function installerDefilementHorizontalHaut(slot) {
+    const scroll = slot.querySelector("[data-lcdp-table-lecture-admin-scroll]");
+    const tableau = scroll?.querySelector("table");
+    if (!scroll || !tableau) return;
+
+    const barre = document.createElement("div");
+    barre.className = "lcdp-planning-parc-admin__scroll-haut";
+    barre.setAttribute("role", "region");
+    barre.setAttribute("aria-label", "Défilement horizontal du tableau");
+    barre.tabIndex = 0;
+    const contenu = document.createElement("div");
+    contenu.className = "lcdp-planning-parc-admin__scroll-haut-interieur";
+    barre.appendChild(contenu);
+    scroll.before(barre);
+
+    let synchronisation = false;
+    barre.addEventListener("scroll", () => {
+      if (synchronisation) return;
+      synchronisation = true;
+      scroll.scrollLeft = barre.scrollLeft;
+      synchronisation = false;
+    });
+    scroll.addEventListener("scroll", () => {
+      if (synchronisation) return;
+      synchronisation = true;
+      barre.scrollLeft = scroll.scrollLeft;
+      synchronisation = false;
+    });
+
+    const redimensionner = () => {
+      const largeur = Math.max(tableau.scrollWidth, tableau.offsetWidth);
+      contenu.style.width = largeur + "px";
+      barre.hidden = scroll.hidden || largeur <= scroll.clientWidth + 1;
+    };
+    if (typeof ResizeObserver === "function") {
+      const observateur = new ResizeObserver(redimensionner);
+      observateur.observe(scroll);
+      observateur.observe(tableau);
+    }
+    new MutationObserver(redimensionner).observe(scroll, {attributes:true,attributeFilter:["hidden"]});
+    window.addEventListener("resize", redimensionner);
+    redimensionner();
   }
 
   async function initialiserObjetsPlanning() {
@@ -506,6 +552,11 @@
     ]);
 
     initialiserNavigationMois();
+    const filtreOuvertures = document.querySelector("[data-planning-avec-ouvertures]");
+    filtreOuvertures?.addEventListener("change", async () => {
+      avecOuverturesSeulement = Boolean(filtreOuvertures.checked);
+      await window.LCDP_TABLE_LECTURE_ADMIN.premierePage(TABLE_SLOT_ID);
+    });
     await initialiserTable();
 
     const main = document.getElementById("lcdp-main-admin");
