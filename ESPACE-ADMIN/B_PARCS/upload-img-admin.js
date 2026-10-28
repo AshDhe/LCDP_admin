@@ -36,7 +36,7 @@
   async function chargerFragmentObjet(path) {
     const response = await fetch(urlObjet(path), {
       method: "GET",
-      credentials: "omit",
+      credentials: "same-origin",
       cache: "no-cache"
     });
 

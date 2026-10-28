@@ -168,7 +168,7 @@
       async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
-          credentials: "omit",
+          credentials: "same-origin",
           cache: "no-cache"
         });
 
@@ -427,7 +427,7 @@
           chargerFragment(urlObjet(CHEMIN_OBJET_CARTE), "Objet carte dynamique"),
           fetch(urlObjet(CHEMIN_GEOJSON_CARTE), {
             method: "GET",
-            credentials: "omit",
+            credentials: "same-origin",
             cache: "no-cache"
           }),
           chargerFragment(urlObjet(CHEMIN_OBJET_CARD_PARC), "Objet Card Parc"),

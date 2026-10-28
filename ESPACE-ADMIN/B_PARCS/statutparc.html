@@ -203,7 +203,7 @@
       async function chargerFragment(url, libelle) {
         const response = await fetch(url, {
           method: "GET",
-          credentials: "omit",
+          credentials: "same-origin",
           cache: "no-cache"
         });
 
@@ -958,6 +958,11 @@
 
       initialiserPage().catch((error) => {
         console.error(error);
+        const message = document.createElement("p");
+        message.className = "lcdp-page-container";
+        message.setAttribute("role", "alert");
+        message.textContent = "Impossible de charger la page Statut des parcs. Rechargez la page. Si le problème persiste, reconnectez-vous à l’espace admin.";
+        document.getElementById("lcdp-main-admin")?.before(message);
       });
     })();
   </script>

@@ -58,7 +58,7 @@
   async function chargerFragment(url, libelle) {
     const response = await fetch(url, {
       method: "GET",
-      credentials: "omit",
+      credentials: "same-origin",
       cache: "no-cache"
     });
 
