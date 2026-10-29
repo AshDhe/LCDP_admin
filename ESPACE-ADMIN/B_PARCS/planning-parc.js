@@ -4,6 +4,9 @@ const config=window.SITE_CONFIG||{};
 const base=String(config.workerParcPlanningAdminUrl||config.WORKER_PARC_PLANNING_ADMIN_URL||window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN||'').replace(/\/+$/,'');
 const $=id=>document.getElementById(id), ia=document.body.dataset.mode==='ia';
 let jours=[], parc=null, onglet='base', dirty=new Set(), saving=null, busy=false, operations=[], proposition=null;
+let joursInitialementCharges=[];
+const modificationsCellules=new Set();
+const cleCellule=(date,k,i)=>`${date}|${k}|${i}`;
 let bases=[],moisOuverts=[],baseBrouillon=null,baseDirty=false;
 let recorder=null, stream=null, recordTimer=null;
 const selected={dptmt:'',idparc:'',mois:''};
@@ -29,7 +32,7 @@ async function enregistrer(){
   const dates=[...dirty], snapshot=jours.filter(j=>dirty.has(j.date)).map(j=>JSON.parse(JSON.stringify(j)));
   saving=(async()=>{
     busy=true;bloquer(true);boutons();statut('Enregistrement du mois…');
-    try{const d=await api('/enregistrer',{...contexte(),jours:snapshot});apres(d);dates.forEach(date=>dirty.delete(date));afficher();statut('Planning enregistré.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
+    try{const d=await api('/enregistrer',{...contexte(),jours:snapshot});apres(d);dates.forEach(date=>dirty.delete(date));joursInitialementCharges=JSON.parse(JSON.stringify(jours));modificationsCellules.clear();afficher();statut('Planning enregistré.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
     catch(e){statut(e.message+' Les modifications restent à enregistrer.',true);throw e;}
     finally{busy=false;saving=null;bloquer(false);boutons();}
   })();return saving;
@@ -38,30 +41,40 @@ function bloquer(on){document.querySelectorAll('#tableau input,#departement,#par
 function demanderSortieSansEnregistrer() {
   const dialogue=$('planning-sortie');
   if(!dialogue||typeof dialogue.showModal!=='function')return Promise.resolve('rester');
-  const message=$('planning-sortie-description');
-  message.textContent=dirty.size ? `${dirty.size} journée(s) du mois ${selected.mois} ont été modifiées sans être enregistrées.` : baseDirty ? 'La nouvelle base n’est pas enregistrée.' : 'Une proposition n’est pas enregistrée.';
+  $('planning-sortie-description').textContent=dirty.size
+    ? `${dirty.size} journée(s) du mois ${selected.mois} modifiée(s). Souhaitez-vous les enregistrer avant de continuer ?`
+    : baseDirty ? 'Une nouvelle base n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?'
+    : 'Une opération n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?';
   return new Promise(resolve=>{
-    let termine=false;
-    const actions=[['planning-sortie-rester','rester'],['planning-sortie-enregistrer','enregistrer']];
-    const fonctions=[];
+    let fini=false;
+    const handlers=[];
     const terminer=choix=>{
-      if(termine)return;termine=true;
-      actions.forEach(([id],i)=>$(id).removeEventListener('click',fonctions[i]));
-      dialogue.removeEventListener('cancel',annulation);dialogue.removeEventListener('close',fermeture);
+      if(fini)return;fini=true;
+      for(const [id,fn] of handlers)$(id).removeEventListener('click',fn);
+      dialogue.removeEventListener('cancel',annuler);dialogue.removeEventListener('close',fermer);
       if(dialogue.open)dialogue.close();resolve(choix);
     };
-    const annulation=e=>{e.preventDefault();terminer('rester');};
-    const fermeture=()=>terminer('rester');
-    actions.forEach(([id,choix])=>{const f=()=>terminer(choix);fonctions.push(f);$(id).addEventListener('click',f);});
-    dialogue.addEventListener('cancel',annulation);dialogue.addEventListener('close',fermeture);
-    dialogue.showModal();$('planning-sortie-rester').focus();
+    const annuler=e=>{e.preventDefault();terminer('rester');};
+    const fermer=()=>terminer('rester');
+    for(const [id,choix] of [['planning-sortie-rester','ignorer'],['planning-sortie-enregistrer','enregistrer']]){
+      const fn=()=>terminer(choix);handlers.push([id,fn]);$(id).addEventListener('click',fn);
+    }
+    dialogue.addEventListener('cancel',annuler);dialogue.addEventListener('close',fermer);
+    dialogue.showModal();$('planning-sortie-enregistrer').focus();
   });
+}
+function abandonnerModifications(){
+  if(dirty.size){jours=JSON.parse(JSON.stringify(joursInitialementCharges));dirty.clear();modificationsCellules.clear();}
+  if(baseDirty)annulerBase();
+  if(ia&&proposition)effacerProposition();
+  boutons();
 }
 async function navigation(action){
   if(busy||saving)throw Error('Une opération est en cours.');
   if(dirty.size||baseDirty||(ia&&proposition)){
     const choix=await demanderSortieSansEnregistrer();
     if(choix==='rester')return;
+    if(choix==='ignorer')abandonnerModifications();
     if(choix==='enregistrer'){
       if(dirty.size)await enregistrer();
       if(baseDirty)await enregistrerBase();
@@ -73,7 +86,11 @@ async function navigation(action){
 }
 function entete(){return '<thead><tr><th scope="col">'+esc(selected.mois)+'</th>'+jours.map(j=>{const dt=new Date(j.date+'T12:00:00Z');return '<th scope="col" class="'+([0,6].includes(dt.getUTCDay())?'weekend':'')+'">'+dt.getUTCDate()+(j.jour.ancien?' *':'')+'<br>'+dt.toLocaleDateString('fr-FR',{weekday:'short',timeZone:'UTC'})+'</th>';}).join('')+'</tr></thead>';}
 const horaires=['6 h – 10 h','10 h – 13 h','13 h – 17 h','17 h – 21 h','21 h – 2 h'];
-function chk(ligne,k,index,checked,disabled){return '<input type="checkbox" data-date="'+ligne.date+'" data-key="'+k+'" data-index="'+index+'" '+(checked?'checked ':'')+(disabled?'disabled ':'')+'aria-label="'+esc(k+' '+(index>=0?index+1:'')+' le '+ligne.date)+'">';}
+function chk(ligne,k,index,checked,disabled,raison=''){
+  const marque=modificationsCellules.has(cleCellule(ligne.date,k,index));
+  const titre=raison?` title="${esc(raison)}"`:'';
+  return '<input type="checkbox" data-date="'+ligne.date+'" data-key="'+k+'" data-index="'+index+'" '+(checked?'checked ':'')+(disabled?'disabled ':'')+(marque?'class="planning-case-modifiee" ':'')+titre+' aria-label="'+esc(k+' '+(index>=0?index+1:'')+' le '+ligne.date+(raison?' — '+raison:''))+'">';
+}
 function ligne(label,fn,classe=''){return '<tr class="'+classe+'"><th scope="row">'+esc(label)+'</th>'+jours.map(j=>'<td class="'+(j.jour.ferme?'closed':'')+'">'+fn(j)+'</td>').join('')+'</tr>';}
 function afficher(){
   if(!parc)return;
@@ -99,11 +116,14 @@ function afficher(){
       const prive=j.jour.operations.some(o=>o.type==='privatisation'&&o.plages.includes(p+1));
       // Les accès Famille et Coach héritent exclusivement de l'ouverture Duo,
       // y compris lorsque Duo a choisi la variante à 50 %.
-      return chk(j,mode,p,j.jour[onglet][p]===mode,
-        j.date<today||j.jour.ferme||!j.jour.ouvert[p]||prive||interdit);
+      const raison=interdit?`Exclusivité ${other==='famille'?'Famille':'Coach'}`:
+        j.date<today?'Date passée':j.jour.ferme?'Parc fermé':prive?'Plage privatisée':!j.jour.ouvert[p]?'Plage fermée dans Duo':'';
+      return interdit ? '<span class="planning-exclusivite" title="'+esc(raison)+'" aria-label="'+esc(raison)+'">'+esc(other==='famille'?'Famille excl.':'Coach excl.')+'</span>' :
+        chk(j,mode,p,j.jour[onglet][p]===mode,Boolean(raison),raison);
     });
   }
-  $('tableau').innerHTML=html+'</tbody>';boutons();
+  const zone=$('tableau').closest('.planning-scroll');const x=zone?.scrollLeft||0,y=zone?.scrollTop||0;
+  $('tableau').innerHTML=html+'</tbody>';if(zone){zone.scrollLeft=x;zone.scrollTop=y;}boutons();
 }
 function confirmerAncienneJournee(date) {
   const dialogue = $('planning-confirmation-ancien');
@@ -161,13 +181,16 @@ async function changement(e){
     const demiIndex=({0:0,3:1,4:2})[i];
     if(demiIndex!==undefined)j.demi[demiIndex]=false;
   } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
-  dirty.add(ligne.date);afficher();statut('Modifications non enregistrées.');
+  dirty.add(ligne.date);modificationsCellules.add(cleCellule(ligne.date,k,i));
+  // Le changement de version 50 % / entière affecte également la case jumelle.
+  if(k==='ouvert' || k==='demi'){const p=k==='demi'?[0,3,4][i]:i;const di=({0:0,3:1,4:2})[p];modificationsCellules.add(cleCellule(ligne.date,'ouvert',p));if(di!==undefined)modificationsCellules.add(cleCellule(ligne.date,'demi',di));}
+  afficher();statut('Modifications non enregistrées.');
   // Aucun enregistrement automatique : validation explicite par l'utilisateur.
 }
 function options(el,items,empty){el.innerHTML=empty?'<option value="">'+empty+'</option>':'';for(const [v,t]of items)el.add(new Option(t,v));}
 async function chargerMois(){
   if(!selected.idparc)return;statut('Chargement du planning…');busy=true;boutons();
-  try{const q=new URLSearchParams(contexte());const d=await api('/mois?'+q);apres(d);dirty.clear();$('edition').hidden=ia;$('ia').hidden=!ia;afficher();afficherOperations();statut(d.emailsEnAttente?'Des emails d’annulation sont en attente d’envoi.':'Planning chargé.');}
+  try{const q=new URLSearchParams(contexte());const d=await api('/mois?'+q);apres(d);dirty.clear();joursInitialementCharges=JSON.parse(JSON.stringify(jours));modificationsCellules.clear();$('edition').hidden=ia;$('ia').hidden=!ia;afficher();afficherOperations();statut(d.emailsEnAttente?'Des emails d’annulation sont en attente d’envoi.':'Planning chargé.');}
   finally{busy=false;boutons();}
 }
 function reglerVue(){
@@ -270,6 +293,13 @@ async function initialiser(){
   const initialTab=new URLSearchParams(location.search).get('onglet');
   if(['base','duo','famille','coach'].includes(initialTab)){onglet=initialTab;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===onglet)));}
   $('tableau').addEventListener('change',changement);
+  // Toute la cellule est une cible de clic, pas uniquement le petit carré.
+  $('tableau').addEventListener('click',e=>{
+    if(e.target.closest('input,button,a,label'))return;
+    const cellule=e.target.closest('td');if(!cellule)return;
+    const caseCoche=cellule.querySelector('input[type=checkbox][data-date]');
+    if(caseCoche&&!caseCoche.disabled)caseCoche.click();
+  });
   $('nouvelle-base').addEventListener('click',nouvelleBase);
   $('annuler-base').addEventListener('click',()=>{if(!busy&&confirm('Abandonner la nouvelle base ?'))annulerBase();});
   $('base-tableau').addEventListener('change',e=>{if(!baseBrouillon||busy)return;const el=e.target;if(el.dataset.baseJour===undefined)return;baseBrouillon.semaine[Number(el.dataset.baseJour)][Number(el.dataset.basePlage)]=el.checked;baseDirty=true;boutons();});

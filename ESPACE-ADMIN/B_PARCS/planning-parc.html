@@ -105,13 +105,27 @@
 .planning-shell .planning-confirmation__actions button:focus-visible{outline:3px solid #d4a24d;outline-offset:3px}
 @media(max-width:480px){.planning-confirmation__interieur{padding:22px 18px}.planning-confirmation__actions{flex-direction:column-reverse}.planning-confirmation__actions button{width:100%}}
 
-.planning-shell.planning-modifie{box-shadow:inset 0 0 0 2px #d39a3a}
-#etat-save[data-non-enregistre="true"]{color:#a4620a;font-weight:700;background:#fff4d9;padding:8px 12px;border-radius:7px}
+.planning-shell.planning-modifie{box-shadow:none}
+#etat-save[data-non-enregistre="true"]{color:#607065;font-weight:600;background:transparent;padding:0;border-radius:0}
 .planning-shell .save:not(:disabled){background:#294f3d;border-color:#294f3d;color:#fff;font-weight:700}
 .planning-confirmation__actions .planning-sortie-danger{color:#a34626;border-color:#c99b8c;background:#fff7f3}
 
 .planning-table tbody tr.group > th:first-child{position:sticky;left:0;z-index:6;background:#e5eadf;text-align:left;white-space:nowrap;min-width:185px;box-shadow:2px 0 3px -2px #859388}
 .planning-table tbody tr.group > td{background:#e5eadf}
+
+/* L’orange signale directement les cellules modifiées, pas le cadre du tableau. */
+.planning-table input[type=checkbox].planning-case-modifiee,
+.planning-table input[type=checkbox].planning-case-modifiee:checked{border:2px solid #d07c17!important;background:#e19a35!important;box-shadow:0 0 0 2px #f8e2b6!important}
+.planning-table input[type=checkbox].planning-case-modifiee:not(:checked){background:#fff5e5!important}
+.planning-table input[type=checkbox].planning-case-modifiee:checked:after{color:#fff;font-weight:700}
+.planning-exclusivite{display:inline-block;font-size:10px;font-weight:700;line-height:1.25;color:#784422;background:#fff0d9;border:1px solid #dfc19a;border-radius:4px;padding:4px 2px;white-space:nowrap}
+.planning-table td{min-width:48px}
+.planning-confirmation{border-radius:20px!important;border:1px solid #dce3d8!important;box-shadow:0 28px 100px rgba(17,37,25,.32)!important}
+.planning-confirmation__interieur{padding:32px!important}
+.planning-confirmation__entete{align-items:flex-start!important;margin-bottom:20px!important}
+.planning-confirmation__symbole{background:#fff0d8!important;color:#9b6016!important;font-weight:800}
+.planning-confirmation__actions{padding-top:12px;border-top:1px solid #e8ece5}
+.planning-confirmation__precision{background:#f7f8f4;padding:13px 14px;border-radius:9px;margin-top:12px!important}
 </style></head><body class="lcdp-page-admin-interieure lcdp-page-planning-workflow"><div class="lcdp-site-page"><div id="lcdp-bandeau-slot"></div><main class="lcdp-site-main" id="lcdp-main-admin" hidden><section class="lcdp-page-section"><div class="lcdp-page-container"><p class="planning-pc">La programmation du planning s’utilise sur PC.</p><div class="lcdp-admin-page-layout planning-layout"><div id="lcdp-menu-gauche-admin-slot"></div><div class="lcdp-admin-page-content"><section class="planning-shell">
 <h1 id="titre-page">Planning parc</h1><div class="planning-head"><label>Département<select id="departement"><option value="">Choisir</option></select></label><label>Parc<select id="parc" disabled><option value="">Choisir</option></select></label><label id="mois-zone">Mois<select id="mois"></select></label><button type="button" class="save" data-save disabled>Enregistrer</button></div>
 <p class="identite" id="identite">Choisir un département et un parc</p><div class="planning-status" id="status" role="status" aria-live="polite"></div>
@@ -138,7 +152,7 @@
 <div class="planning-confirmation__interieur">
 <div class="planning-confirmation__entete"><span class="planning-confirmation__symbole" aria-hidden="true">!</span><h2 id="planning-sortie-titre">Enregistrez vos modifications du mois</h2></div>
 <p id="planning-sortie-description"></p>
-<p class="planning-confirmation__precision">Souhaitez-vous enregistrer ces modifications avant de poursuivre ? « Pas maintenant » vous maintient sur cette page, sans enregistrer ni perdre vos modifications.</p>
+<p class="planning-confirmation__precision">« Oui » enregistre le mois puis ouvre la destination choisie. « Pas maintenant » poursuit sans enregistrer : les modifications du mois quitté seront abandonnées. Échap permet de rester sur le mois.</p>
 <div class="planning-confirmation__actions"><button type="button" id="planning-sortie-rester">Pas maintenant</button><button type="button" id="planning-sortie-enregistrer" class="planning-confirmation__valider">Oui</button></div>
 </div></dialog>
 </div></div></div></section></main></div></body></html>
