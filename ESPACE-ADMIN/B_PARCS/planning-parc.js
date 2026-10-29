@@ -60,15 +60,17 @@ async function enregistrer(){
     busy=true;bloquer(true);boutons();statut('Enregistrement et vérification des modifications…');
     try{
       const d=await api('/enregistrer',{...contexte(),jours:snapshot});
-      if(!Array.isArray(d.jours))throw Error('Le serveur ne confirme pas les journées enregistrées. Vérification impossible.');
+      // Une seconde lecture vérifie l'état réellement persisté, pas seulement la réponse d'écriture.
+      const relu=await api('/verifier?'+new URLSearchParams(contexte()));
+      if(!Array.isArray(relu.jours))throw Error('Impossible de relire le mois après enregistrement.');
       const manquantes=snapshot.filter(l=>{
-        const retour=d.jours.find(r=>r.date===l.date);
+        const retour=relu.jours.find(r=>r.date===l.date);
         return !retour||!valeursIdentiques(l.jour,retour.jour);
       });
       if(manquantes.length){
         throw Error('Enregistrement non confirmé pour '+manquantes.map(j=>j.date).join(', ')+'. Les modifications restent à l’écran et doivent être contrôlées.');
       }
-      apres(d);
+      apres(relu);
       dates.forEach(date=>dirty.delete(date));
       brouillonsMois.delete(cleBrouillon());
       joursInitialementCharges=JSON.parse(JSON.stringify(jours));
@@ -83,7 +85,7 @@ function demanderSortieSansEnregistrer() {
   const dialogue=$('planning-sortie');
   if(!dialogue||typeof dialogue.showModal!=='function')return Promise.resolve('rester');
   $('planning-sortie-description').textContent=dirty.size
-    ? `${dirty.size} journée(s) du mois ${selected.mois} modifiée(s). Souhaitez-vous les enregistrer avant de continuer ?`
+    ? `${dirty.size} journée(s) du mois ${selected.mois} modifiée(s). Les modifications seront enregistrées avant de passer au mois sélectionné.`
     : baseDirty ? 'Une nouvelle base n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?'
     : 'Une opération n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?';
   return new Promise(resolve=>{
@@ -115,19 +117,23 @@ async function navigation(action){
   if(dirty.size||baseDirty||(ia&&proposition)){
     const choix=await demanderSortieSansEnregistrer();
     if(choix==='rester')return;
-    if(choix==='ignorer'){
-      if(baseDirty||(ia&&proposition))return; // Pas de brouillon multi-mois pour les bases/IA.
-      memoriserBrouillon();
+    // Les deux validations de navigation enregistrent le mois AVANT de le quitter.
+    // En cas d'erreur, la navigation est interrompue : aucun brouillon n'est écarté.
+    if(dirty.size)await enregistrer();
+    if(baseDirty){
+      // La base possède sa propre confirmation de création ; ne pas la perdre.
+      if(choix!=='enregistrer')return;
+      await enregistrerBase();
     }
-    if(choix==='enregistrer'){
-      if(dirty.size)await enregistrer();
-      if(baseDirty)await enregistrerBase();
-      if(ia&&proposition)await appliquerIA();
-      if(dirty.size||baseDirty||(ia&&proposition))return;
+    if(ia&&proposition){
+      if(choix!=='enregistrer')return;
+      await appliquerIA();
     }
+    if(dirty.size||baseDirty||(ia&&proposition))return;
   }
   await action();
 }
+
 function entete(){return '<thead><tr><th scope="col">'+esc(selected.mois)+'</th>'+jours.map(j=>{const dt=new Date(j.date+'T12:00:00Z');return '<th scope="col" class="'+([0,6].includes(dt.getUTCDay())?'weekend':'')+'">'+dt.getUTCDate()+(j.jour.ancien?' *':'')+'<br>'+dt.toLocaleDateString('fr-FR',{weekday:'short',timeZone:'UTC'})+'</th>';}).join('')+'</tr></thead>';}
 const horaires=['6 h – 10 h','10 h – 13 h','13 h – 17 h','17 h – 21 h','21 h – 2 h'];
 function chk(ligne,k,index,checked,disabled,raison=''){
@@ -223,11 +229,16 @@ async function changement(e){
   } else if(k==='ouvert' && i>=0){
     j.ouvert[i]=el.checked;
     const demiIndex=({0:0,3:1,4:2})[i];
-    if(demiIndex!==undefined)j.demi[demiIndex]=false;
+    if(demiIndex!==undefined){
+      j.demi[demiIndex]=false;
+      // Une plage entière P1 ou P4 ne doit pas rester visuellement à 50 % par effet du mode Hiver.
+      if(el.checked && (i===0||i===3) && j.hiver){
+        j.hiver=false;
+        modificationsCellules.add(cleCellule(ligne.date,'hiver',-1));
+      }
+    }
   } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
   dirty.add(ligne.date);modificationsCellules.add(cleCellule(ligne.date,k,i));
-  // Le changement de version 50 % / entière affecte également la case jumelle.
-  if(k==='ouvert' || k==='demi'){const p=k==='demi'?[0,3,4][i]:i;const di=({0:0,3:1,4:2})[p];modificationsCellules.add(cleCellule(ligne.date,'ouvert',p));if(di!==undefined)modificationsCellules.add(cleCellule(ligne.date,'demi',di));}
   memoriserBrouillon();
   afficher();statut('Modifications non enregistrées (conservées dans ce navigateur tant que la page reste ouverte).');
   // Aucun enregistrement automatique : validation explicite par l'utilisateur.
