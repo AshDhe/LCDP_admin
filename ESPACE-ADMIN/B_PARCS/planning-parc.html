@@ -89,13 +89,33 @@
 
 <style>
 [hidden]{display:none!important}.planning-shell{background:white;padding:24px;border-radius:16px;min-width:0}.planning-head{display:flex;align-items:end;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:#fff;padding-bottom:15px;border-bottom:1px solid #ddd}.planning-head label{display:grid;gap:5px}.planning-head select{min-width:150px;padding:10px;border:1px solid #aaa;border-radius:6px}.identite{font-size:1.3rem;margin:18px 0 8px;color:#244837}.planning-shell button{padding:9px 17px;border:1px solid #778579;border-radius:6px;background:white;color:#253a2e;cursor:pointer}.planning-shell button:disabled{opacity:.45;cursor:default}.planning-shell .save{background:#294f3d;color:white}.planning-tabs{display:flex;gap:8px;margin:18px 0}.planning-tabs button[aria-selected=true]{background:#294f3d;color:white}.planning-scroll{overflow:auto;max-height:73vh;border:1px solid #ccd1cb;margin:12px 0 18px}.planning-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;text-align:center}.planning-table th,.planning-table td{border-right:1px solid #d6dad4;border-bottom:1px solid #d6dad4;min-width:40px;height:34px;padding:3px}.planning-table thead th{position:sticky;top:0;background:#edf1ea;z-index:3}.planning-table th:first-child{position:sticky;left:0;min-width:185px;text-align:left;background:#f3f5f0;z-index:2;padding-left:10px;font-weight:500}.planning-table thead th:first-child{z-index:4}.planning-table input[type=checkbox]{appearance:none;width:21px;height:21px;border:1px solid #8a9489;border-radius:3px;background:#fff;cursor:pointer;vertical-align:middle;margin:0}.planning-table input[type=checkbox]:checked{background:#969e98;box-shadow:inset 0 0 0 3px #969e98}.planning-table input[type=checkbox]:checked:after{content:'✓';color:white;display:block;font-size:16px;line-height:18px}.planning-table input:focus-visible{outline:3px solid #386dbe;outline-offset:1px}.planning-table input:disabled{cursor:default;opacity:.65}.planning-table input[type=number]{width:44px;padding:3px;font-size:12px;border:1px solid #b8c1b5;border-radius:3px}.planning-table .closed{background:#d7dbd7}.planning-table .winter td{background:#edf4e8}.planning-table .weekend{background:#e0e6d9}.planning-table .group th,.planning-table .group td{background:#e5eadf;font-weight:600;height:26px}.planning-note{font-size:13px;color:#506051;line-height:1.5}.planning-status{min-height:24px;margin:12px 0;white-space:pre-line}.planning-status[data-error=true]{color:#a22b23}.planning-footer{display:flex;gap:16px;align-items:center}.operation{padding:14px;border:1px solid #d1d8cd;border-radius:8px;margin:10px 0}.operation button{float:right}.dictee{background:#f2f5ee;padding:22px;border-radius:12px;margin:18px 0}.dictee pre{white-space:pre-wrap;font-family:inherit}.planning-pc{display:none}@media(max-width:900px){.planning-pc{display:block;padding:30px}.planning-layout{display:none!important}}
+
+/* Confirmation intégrée : aucune boîte native du navigateur. */
+.planning-confirmation{box-sizing:border-box;width:min(92vw,470px);max-width:470px;max-height:calc(100dvh - 28px);overflow:auto;margin:auto;padding:0;border:1px solid #d2dace;border-radius:16px;background:#fff;color:#23392c;box-shadow:0 22px 70px rgba(20,36,25,.24)}
+.planning-confirmation::backdrop{background:rgba(18,33,25,.5)}
+.planning-confirmation__interieur{padding:26px 28px 24px}
+.planning-confirmation__entete{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.planning-confirmation__symbole{display:grid;place-items:center;flex:none;width:40px;height:40px;background:#edf2e9;border-radius:50%;color:#526f43;font-size:22px}
+.planning-confirmation h2{font-size:21px;line-height:1.25;margin:0;color:#263e31}
+.planning-confirmation p{font-size:15px;line-height:1.55;margin:0 0 12px}
+.planning-confirmation__precision{color:#617164;font-size:13px!important}
+.planning-confirmation__actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+.planning-shell .planning-confirmation__actions button{padding:11px 15px;font-size:14px;font-weight:600;border-radius:8px}
+.planning-shell .planning-confirmation__actions .planning-confirmation__valider{background:#294f3d;color:#fff;border-color:#294f3d}
+.planning-shell .planning-confirmation__actions button:focus-visible{outline:3px solid #d4a24d;outline-offset:3px}
+@media(max-width:480px){.planning-confirmation__interieur{padding:22px 18px}.planning-confirmation__actions{flex-direction:column-reverse}.planning-confirmation__actions button{width:100%}}
+
+.planning-shell.planning-modifie{box-shadow:inset 0 0 0 2px #d39a3a}
+#etat-save[data-non-enregistre="true"]{color:#a4620a;font-weight:700;background:#fff4d9;padding:8px 12px;border-radius:7px}
+.planning-shell .save:not(:disabled){background:#294f3d;border-color:#294f3d;color:#fff;font-weight:700}
+.planning-confirmation__actions .planning-sortie-danger{color:#a34626;border-color:#c99b8c;background:#fff7f3}
 </style></head><body class="lcdp-page-admin-interieure lcdp-page-planning-workflow"><div class="lcdp-site-page"><div id="lcdp-bandeau-slot"></div><main class="lcdp-site-main" id="lcdp-main-admin" hidden><section class="lcdp-page-section"><div class="lcdp-page-container"><p class="planning-pc">La programmation du planning s’utilise sur PC.</p><div class="lcdp-admin-page-layout planning-layout"><div id="lcdp-menu-gauche-admin-slot"></div><div class="lcdp-admin-page-content"><section class="planning-shell">
 <h1 id="titre-page">Planning parc</h1><div class="planning-head"><label>Département<select id="departement"><option value="">Choisir</option></select></label><label>Parc<select id="parc" disabled><option value="">Choisir</option></select></label><label id="mois-zone">Mois<select id="mois"></select></label><button type="button" class="save" data-save disabled>Enregistrer</button></div>
 <p class="identite" id="identite">Choisir un département et un parc</p><div class="planning-status" id="status" role="status" aria-live="polite"></div>
 <div id="edition" hidden><div class="planning-tabs" role="tablist" aria-label="Programmation"><button type="button" role="tab" data-tab="base" aria-selected="true">Base</button><button type="button" role="tab" data-tab="duo" aria-selected="false">Duo</button><button type="button" role="tab" data-tab="famille" aria-selected="false">Famille</button><button type="button" role="tab" data-tab="coach" aria-selected="false">Coach</button></div>
 <div id="base-panel" hidden>
 <p class="planning-note">Une trame hebdomadaire propre au parc. Elle sert uniquement à créer de nouveaux mois, à compter de sa date d’application. Les mois déjà ouverts restent inchangés, même s’ils sont futurs.</p>
-<div class="planning-footer"><button type="button" id="nouvelle-base">Nouveau</button><button type="button" id="recharger-bases">Recharger les références</button></div>
+<div class="planning-footer"><button type="button" id="nouvelle-base">Nouveau</button></div>
 <div id="base-courante"></div>
 <div id="base-editeur" hidden><h2>Nouvelle base</h2><label>Applicable à partir du premier jour de <input type="month" id="base-date" required></label><p class="planning-note">Cocher uniquement les plages ouvertes. Cette trame ne contient ni capacité, ni Hiver, ni demi-plages, ni accès Famille ou Coach.</p><div class="planning-scroll"><table class="planning-table" id="base-tableau"></table></div><button type="button" id="annuler-base">Annuler la nouvelle base</button></div>
 <h2>Références et historique</h2><div id="base-historique"></div><p class="planning-note" id="base-mois-ouverts"></p>
@@ -104,4 +124,18 @@
 <div class="planning-scroll" tabindex="0" aria-label="Tableau mensuel du parc"><table class="planning-table" id="tableau"></table></div><p class="planning-note">Une étoile signale une ancienne journée conservée à l’identique jusqu’à sa modification. Toute réduction d’accès annule les réservations des plages touchées et leurs invitations liées.</p></div></div>
 <div id="ia" hidden><p>Dicter un boost de capacité ou une privatisation pour le parc affiché ci-dessus.</p><div class="dictee"><button type="button" id="micro">Démarrer la dictée</button><p class="planning-note">Exemple — Le 26 avril 2027, plages 4 et 5, la capacité passe à 50 personnes.</p><p id="transcription"></p><pre id="proposition"></pre><button type="button" id="rejeter" hidden>Effacer la proposition</button></div><h2>Opérations ponctuelles</h2><p class="planning-note">La suppression rétablit le planning ordinaire. Les réservations déjà annulées restent annulées.</p><div id="operations"></div></div>
 <div class="planning-footer"><button type="button" class="save" data-save disabled>Enregistrer</button><span id="etat-save"></span></div>
-</section></div></div></div></section></main></div></body></html>
+</section><dialog id="planning-confirmation-ancien" class="planning-confirmation" aria-labelledby="planning-confirmation-titre" aria-describedby="planning-confirmation-description">
+<div class="planning-confirmation__interieur">
+<div class="planning-confirmation__entete"><span class="planning-confirmation__symbole" aria-hidden="true">↻</span><h2 id="planning-confirmation-titre">Modifier une journée existante</h2></div>
+<p id="planning-confirmation-description">La journée du <strong id="planning-confirmation-date"></strong> utilise une ancienne programmation. La modification demandée remplacera les anciens réglages de cette journée par les réglages affichés.</p>
+<p class="planning-confirmation__precision">Les autres journées ne seront pas modifiées. Tu devras ensuite cliquer sur Enregistrer pour sauvegarder cette modification.</p>
+<div class="planning-confirmation__actions"><button type="button" id="planning-confirmation-annuler">Annuler</button><button type="button" id="planning-confirmation-valider" class="planning-confirmation__valider">Confirmer la modification</button></div>
+</div></dialog>
+<dialog id="planning-sortie" class="planning-confirmation" aria-labelledby="planning-sortie-titre" aria-describedby="planning-sortie-description">
+<div class="planning-confirmation__interieur">
+<div class="planning-confirmation__entete"><span class="planning-confirmation__symbole" aria-hidden="true">!</span><h2 id="planning-sortie-titre">Modifications non enregistrées</h2></div>
+<p id="planning-sortie-description"></p>
+<p class="planning-confirmation__precision">Que souhaites-tu faire avant de quitter ce mois ou ce parc ?</p>
+<div class="planning-confirmation__actions"><button type="button" id="planning-sortie-rester">Rester</button><button type="button" id="planning-sortie-ignorer" class="planning-sortie-danger">Ignorer les modifications</button><button type="button" id="planning-sortie-enregistrer" class="planning-confirmation__valider">Enregistrer</button></div>
+</div></dialog>
+</div></div></div></section></main></div></body></html>

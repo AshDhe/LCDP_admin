@@ -3,14 +3,20 @@
 const config=window.SITE_CONFIG||{};
 const base=String(config.workerParcPlanningAdminUrl||config.WORKER_PARC_PLANNING_ADMIN_URL||window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN||'').replace(/\/+$/,'');
 const $=id=>document.getElementById(id), ia=document.body.dataset.mode==='ia';
-let jours=[], parc=null, onglet='base', dirty=new Set(), saving=null, timer=null, busy=false, operations=[], proposition=null;
+let jours=[], parc=null, onglet='base', dirty=new Set(), saving=null, busy=false, operations=[], proposition=null;
 let bases=[],moisOuverts=[],baseBrouillon=null,baseDirty=false;
 let recorder=null, stream=null, recordTimer=null;
 const selected={dptmt:'',idparc:'',mois:''};
 const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function statut(msg,erreur=false){$('status').textContent=msg;$('status').dataset.error=String(erreur);}
-function boutons(){ document.querySelectorAll('[data-save]').forEach(b=>b.disabled=busy||!!saving||!parc||(ia?!proposition:onglet==='base'?!baseBrouillon:!dirty.size));$('etat-save').textContent=saving?'Enregistrement…':busy?'Traitement en cours…':ia&&proposition?'Proposition non enregistrée':baseDirty?'Nouvelle base non enregistrée':dirty.size?'Modifications non enregistrées':parc?'Enregistré':''; }
+function boutons(){
+  document.querySelectorAll('[data-save]').forEach(b=>b.disabled=busy||!!saving||!parc||(ia?!proposition:onglet==='base'?!baseBrouillon:!dirty.size));
+  const etat=$('etat-save');
+  etat.textContent=saving?'Enregistrement…':busy?'Traitement en cours…':ia&&proposition?'Proposition non enregistrée':baseDirty?'Nouvelle base non enregistrée':dirty.size?'Modifications non enregistrées':parc?'Enregistré':'';
+  etat.dataset.nonEnregistre=String(Boolean(dirty.size||baseDirty||proposition));
+  const shell=document.querySelector('.planning-shell');if(shell)shell.classList.toggle('planning-modifie',Boolean(dirty.size||baseDirty||proposition));
+}
 async function api(path,body,method){
   if(!base) throw Error('API Planning parc non configurée.');
   const response=await fetch(base+path,{credentials:'include',cache:'no-store',method:method||(body?'POST':'GET'),headers:body instanceof FormData?{Accept:'application/json'}:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
@@ -19,7 +25,7 @@ async function api(path,body,method){
 const contexte=()=>({idparc:selected.idparc,dptmt:selected.dptmt,mois:selected.mois});
 function apres(d){if(d.jours)jours=d.jours;if(d.operations)operations=d.operations;if(d.bases)bases=d.bases;if(d.moisOuverts)moisOuverts=d.moisOuverts;if(d.parc)parc=d.parc;$('identite').textContent=parc?parc.nom+' — Département '+parc.dptmt:'Choisir un département et un parc';}
 async function enregistrer(){
-  clearTimeout(timer);if(saving)return saving;if(!dirty.size)return;
+  if(saving)return saving;if(!dirty.size)return;
   const dates=[...dirty], snapshot=jours.filter(j=>dirty.has(j.date)).map(j=>JSON.parse(JSON.stringify(j)));
   saving=(async()=>{
     busy=true;bloquer(true);boutons();statut('Enregistrement du mois…');
@@ -29,7 +35,47 @@ async function enregistrer(){
   })();return saving;
 }
 function bloquer(on){document.querySelectorAll('#tableau input,#departement,#parc,#mois,[data-tab]').forEach(e=>{if(on){e.dataset.disabledBefore=e.disabled?'1':'0';e.disabled=true;}else if(e.dataset.disabledBefore!==undefined){e.disabled=e.dataset.disabledBefore==='1';delete e.dataset.disabledBefore;}});}
-async function navigation(action){if(busy)throw Error('Une opération est en cours.');await enregistrer();if(baseDirty){if(!confirm('Abandonner la nouvelle base non enregistrée et continuer ?'))return;annulerBase();}if(ia && proposition){if(!confirm('Effacer la proposition IA non enregistrée et continuer ?'))return;effacerProposition();}await action();}
+function demanderSortieSansEnregistrer() {
+  const dialogue=$('planning-sortie');
+  if(!dialogue||typeof dialogue.showModal!=='function')return Promise.resolve('rester');
+  const message=$('planning-sortie-description');
+  message.textContent=dirty.size ? `${dirty.size} journée(s) du mois ${selected.mois} ont été modifiées sans être enregistrées.` : baseDirty ? 'La nouvelle base n’est pas enregistrée.' : 'Une proposition n’est pas enregistrée.';
+  return new Promise(resolve=>{
+    let termine=false;
+    const actions=[['planning-sortie-rester','rester'],['planning-sortie-ignorer','ignorer'],['planning-sortie-enregistrer','enregistrer']];
+    const fonctions=[];
+    const terminer=choix=>{
+      if(termine)return;termine=true;
+      actions.forEach(([id],i)=>$(id).removeEventListener('click',fonctions[i]));
+      dialogue.removeEventListener('cancel',annulation);dialogue.removeEventListener('close',fermeture);
+      if(dialogue.open)dialogue.close();resolve(choix);
+    };
+    const annulation=e=>{e.preventDefault();terminer('rester');};
+    const fermeture=()=>terminer('rester');
+    actions.forEach(([id,choix])=>{const f=()=>terminer(choix);fonctions.push(f);$(id).addEventListener('click',f);});
+    dialogue.addEventListener('cancel',annulation);dialogue.addEventListener('close',fermeture);
+    dialogue.showModal();$('planning-sortie-rester').focus();
+  });
+}
+async function navigation(action){
+  if(busy||saving)throw Error('Une opération est en cours.');
+  if(dirty.size||baseDirty||(ia&&proposition)){
+    const choix=await demanderSortieSansEnregistrer();
+    if(choix==='rester')return;
+    if(choix==='enregistrer'){
+      if(dirty.size)await enregistrer();
+      if(baseDirty)await enregistrerBase();
+      if(ia&&proposition)await appliquerIA();
+      if(dirty.size||baseDirty||(ia&&proposition))return;
+    }else{
+      if(dirty.size){dirty.clear();}
+      if(baseDirty)annulerBase();
+      if(ia&&proposition)effacerProposition();
+      boutons();
+    }
+  }
+  await action();
+}
 function entete(){return '<thead><tr><th scope="col">'+esc(selected.mois)+'</th>'+jours.map(j=>{const dt=new Date(j.date+'T12:00:00Z');return '<th scope="col" class="'+([0,6].includes(dt.getUTCDay())?'weekend':'')+'">'+dt.getUTCDate()+(j.jour.ancien?' *':'')+'<br>'+dt.toLocaleDateString('fr-FR',{weekday:'short',timeZone:'UTC'})+'</th>';}).join('')+'</tr></thead>';}
 const horaires=['6 h – 10 h','10 h – 13 h','13 h – 17 h','17 h – 21 h','21 h – 2 h'];
 function chk(ligne,k,index,checked,disabled){return '<input type="checkbox" data-date="'+ligne.date+'" data-key="'+k+'" data-index="'+index+'" '+(checked?'checked ':'')+(disabled?'disabled ':'')+'aria-label="'+esc(k+' '+(index>=0?index+1:'')+' le '+ligne.date)+'">';}
@@ -58,17 +104,52 @@ function afficher(){
   }
   $('tableau').innerHTML=html+'</tbody>';boutons();
 }
+function confirmerAncienneJournee(date) {
+  const dialogue = $('planning-confirmation-ancien');
+  const dateCible = $('planning-confirmation-date');
+  if (!dialogue || typeof dialogue.showModal !== 'function') {
+    // Ne jamais modifier un ancien planning sans confirmation explicite.
+    return Promise.resolve(false);
+  }
+  dateCible.textContent = dateLisible(date);
+  return new Promise(resolve => {
+    const annuler = $('planning-confirmation-annuler');
+    const confirmer = $('planning-confirmation-valider');
+    let termine = false;
+    const terminer = accepte => {
+      if (termine) return;
+      termine = true;
+      dialogue.removeEventListener('cancel', surAnnulation);
+      dialogue.removeEventListener('close', surFermeture);
+      annuler.removeEventListener('click', surRefus);
+      confirmer.removeEventListener('click', surAccord);
+      if (dialogue.open) dialogue.close();
+      resolve(accepte);
+    };
+    const surAnnulation = event => { event.preventDefault(); terminer(false); };
+    const surFermeture = () => terminer(false);
+    const surRefus = () => terminer(false);
+    const surAccord = () => terminer(true);
+    dialogue.addEventListener('cancel', surAnnulation);
+    dialogue.addEventListener('close', surFermeture);
+    annuler.addEventListener('click', surRefus);
+    confirmer.addEventListener('click', surAccord);
+    dialogue.showModal();
+    annuler.focus();
+  });
+}
+
 async function changement(e){
   const el=e.target;if(!el.matches('input[data-date]'))return;
   const ligne=jours.find(j=>j.date===el.dataset.date),j=ligne.jour,k=el.dataset.key,i=Number(el.dataset.index);
-  if(j.ancien){if(!confirm('Cette journée utilise les anciens horaires. La modification la remplace par les réglages affichés. Continuer ?')){afficher();return;}delete j.ancien;}
+  if(j.ancien){if(!await confirmerAncienneJournee(ligne.date)){afficher();return;}delete j.ancien;}
   if(k==='capacite'||k==='capacite_lcdp'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>100000){statut('Capacité entière entre 1 et 100000.',true);afficher();return;}j[k]=n;}
   else if(k==='partage'||k==='exclusif'){
     j[onglet][i]=el.checked?k:'';
     if(el.checked&&k==='exclusif')j[onglet==='famille'?'coach':'famille'][i]='';
   } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
   dirty.add(ligne.date);afficher();statut('Modifications non enregistrées.');
-  clearTimeout(timer);timer=setTimeout(()=>enregistrer().catch(()=>{}),1800);
+  // Aucun enregistrement automatique : validation explicite par l'utilisateur.
 }
 function options(el,items,empty){el.innerHTML=empty?'<option value="">'+empty+'</option>':'';for(const [v,t]of items)el.add(new Option(t,v));}
 async function chargerMois(){
@@ -178,7 +259,6 @@ async function initialiser(){
   $('tableau').addEventListener('change',changement);
   $('nouvelle-base').addEventListener('click',nouvelleBase);
   $('annuler-base').addEventListener('click',()=>{if(!busy&&confirm('Abandonner la nouvelle base ?'))annulerBase();});
-  $('recharger-bases').addEventListener('click',()=>navigation(chargerBases).catch(e=>statut(e.message,true)));
   $('base-tableau').addEventListener('change',e=>{if(!baseBrouillon||busy)return;const el=e.target;if(el.dataset.baseJour===undefined)return;baseBrouillon.semaine[Number(el.dataset.baseJour)][Number(el.dataset.basePlage)]=el.checked;baseDirty=true;boutons();});
   $('base-date').addEventListener('change',()=>{if(baseBrouillon){baseBrouillon.applicable=$('base-date').value+'-01';baseDirty=true;boutons();}});
 
@@ -192,7 +272,7 @@ async function initialiser(){
   document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||e.defaultPrevented||a.target==='_blank'||(!dirty.size&&!saving&&!proposition&&!baseDirty&&!busy))return;
     e.preventDefault();e.stopImmediatePropagation();navigation(async()=>{location.href=a.href;}).catch(e=>statut(e.message,true));},true);
   window.addEventListener('beforeunload',e=>{if(dirty.size||saving||proposition||baseDirty||busy){e.preventDefault();e.returnValue='';}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden&&dirty.size&&!saving)enregistrer().catch(()=>{});});
+  // Ne jamais enregistrer implicitement lors d'un changement d'onglet ou d'une mise en arrière-plan.
   const deps=await api('/departements');options($('departement'),deps.departements.map(d=>[d,d]),'Choisir un département');
   const params=new URLSearchParams(location.search);if(params.get('dptmt')&&deps.departements.includes(params.get('dptmt'))){selected.dptmt=params.get('dptmt');$('departement').value=selected.dptmt;await chargerParcs(selected.dptmt);if([...$('parc').options].some(o=>o.value===params.get('idparc'))){selected.idparc=params.get('idparc');$('parc').value=selected.idparc;await chargerSelection();}}
   if(window.LCDP_MENU_GAUCHE_ADMIN)await window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'parcs'});
