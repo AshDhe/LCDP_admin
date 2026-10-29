@@ -3,7 +3,7 @@
 const config=window.SITE_CONFIG||{};
 const base=String(config.workerParcPlanningAdminUrl||config.WORKER_PARC_PLANNING_ADMIN_URL||window.ADMIN_CONFIG?.API_PARC_PLANNING_ADMIN||'').replace(/\/+$/,'');
 const $=id=>document.getElementById(id), ia=document.body.dataset.mode==='ia';
-let jours=[], parc=null, onglet='base', dirty=new Set(), saving=null, busy=false, operations=[], proposition=null;
+let jours=[], parc=null, onglet='duo', dirty=new Set(), saving=null, busy=false, operations=[], proposition=null;
 let joursInitialementCharges=[];
 const modificationsCellules=new Set();
 const cleCellule=(date,k,i)=>`${date}|${k}|${i}`;
@@ -27,13 +27,31 @@ async function api(path,body,method){
 }
 const contexte=()=>({idparc:selected.idparc,dptmt:selected.dptmt,mois:selected.mois});
 function apres(d){if(d.jours)jours=d.jours;if(d.operations)operations=d.operations;if(d.bases)bases=d.bases;if(d.moisOuverts)moisOuverts=d.moisOuverts;if(d.parc)parc=d.parc;$('identite').textContent=parc?parc.nom+' — Département '+parc.dptmt:'Choisir un département et un parc';}
+// Ne jamais annoncer une sauvegarde réussie sans vérifier les valeurs relues.
+const CHAMPS_A_VERIFIER=['capacite','capacite_lcdp','ferme','ouvert','demi','hiver','famille','coach'];
+function valeursIdentiques(attendu,relus){return CHAMPS_A_VERIFIER.every(k=>JSON.stringify(attendu[k])===JSON.stringify(relus[k]));}
 async function enregistrer(){
-  if(saving)return saving;if(!dirty.size)return;
+  if(saving)return saving;
+  if(!dirty.size)return;
   const dates=[...dirty], snapshot=jours.filter(j=>dirty.has(j.date)).map(j=>JSON.parse(JSON.stringify(j)));
   saving=(async()=>{
-    busy=true;bloquer(true);boutons();statut('Enregistrement du mois…');
-    try{const d=await api('/enregistrer',{...contexte(),jours:snapshot});apres(d);dates.forEach(date=>dirty.delete(date));joursInitialementCharges=JSON.parse(JSON.stringify(jours));modificationsCellules.clear();afficher();statut('Planning enregistré.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
-    catch(e){statut(e.message+' Les modifications restent à enregistrer.',true);throw e;}
+    busy=true;bloquer(true);boutons();statut('Enregistrement et vérification des modifications…');
+    try{
+      const d=await api('/enregistrer',{...contexte(),jours:snapshot});
+      if(!Array.isArray(d.jours))throw Error('Le serveur ne confirme pas les journées enregistrées. Vérification impossible.');
+      const manquantes=snapshot.filter(l=>{
+        const retour=d.jours.find(r=>r.date===l.date);
+        return !retour||!valeursIdentiques(l.jour,retour.jour);
+      });
+      if(manquantes.length){
+        throw Error('Enregistrement non confirmé pour '+manquantes.map(j=>j.date).join(', ')+'. Les modifications restent à l’écran et doivent être contrôlées.');
+      }
+      apres(d);
+      dates.forEach(date=>dirty.delete(date));
+      joursInitialementCharges=JSON.parse(JSON.stringify(jours));
+      modificationsCellules.clear();afficher();
+      statut('Modifications enregistrées et vérifiées.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));
+    }catch(e){statut(e.message+' Aucune modification locale n’a été effacée.',true);throw e;}
     finally{busy=false;saving=null;bloquer(false);boutons();}
   })();return saving;
 }
