@@ -34,7 +34,7 @@ function restaurerBrouillon(){
 }
 function existeBrouillon(){return [...brouillonsMois.values()].some(b=>b.dates.length>0);}
 
-const cleCellule=(date,k,i)=>`${date}|${k}|${i}`;
+const cleCellule=(date,k,i,tab=onglet)=>`${date}|${(k==='partage'||k==='exclusif')?tab:'duo'}|${k}|${i}`;
 let bases=[],moisOuverts=[],baseBrouillon=null,baseDirty=false;
 let recorder=null, stream=null, recordTimer=null;
 const selected={dptmt:'',idparc:'',mois:''};
@@ -107,9 +107,12 @@ async function enregistrer(){
       if(relu.parc)parc=relu.parc;
       dates.forEach(date=>dirtyParOnglet[cible].delete(date));
       reconstruireDirty();
+      // Retirer les marques visuelles uniquement pour l'onglet réellement sauvegardé.
+      // Les clés d'accès incluent l'onglet (Famille ou Coach), contrairement
+      // aux champs Duo, pour ne pas effacer les brouillons de l'autre catégorie.
       for(const marque of [...modificationsCellules]){
-        const [,key]=marque.split('|');
-        if(champs.includes(key))modificationsCellules.delete(marque);
+        const [,tab,key]=marque.split('|');
+        if(tab===cible)modificationsCellules.delete(marque);
       }
       memoriserBrouillon();afficher();
       statut('Onglet '+cible+' enregistré et vérifié.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':''));

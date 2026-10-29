@@ -8,7 +8,7 @@
   let templateJourMois = null;
   let templateHeureJour = null;
   let planningOuvert = null;
-  let avecOuverturesSeulement = false;
+  let avecOuverturesSeulement = true;
   const moisSelectionne = (() => {
     const parties = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit"}).formatToParts(new Date());
     return {annee:Number(parties.find(p=>p.type==="year").value),mois:Number(parties.find(p=>p.type==="month").value)};
@@ -114,6 +114,20 @@
   }
 
   function chargerFragmentObjet(path) {
+    if (path === "/BOX/02-box-alerte.html") {
+      return chargerFragment(urlObjet(path), "Fragment OBJET " + path)
+        .catch(() => {
+          const template = document.createElement("template");
+          template.innerHTML = `<div class="lcdp-box-alerte" role="alertdialog" aria-modal="true" data-lcdp-box-alerte>
+            <div class="lcdp-box-alerte__card">
+              <button class="lcdp-box-alerte__close" type="button" aria-label="Fermer" data-lcdp-alerte-close>×</button>
+              <p class="lcdp-box-alerte__message" data-lcdp-alerte-message></p>
+              <button class="lcdp-button lcdp-button-primary" type="button" data-lcdp-alerte-ok>OK</button>
+            </div>
+          </div>`;
+          return template.content.cloneNode(true);
+        });
+    }
     return chargerFragment(
       urlObjet(path),
       "Fragment OBJET " + path
