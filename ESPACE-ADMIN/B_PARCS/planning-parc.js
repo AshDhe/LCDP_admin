@@ -85,8 +85,11 @@ function afficher(){
   html+=ligne('Accueil IA',j=>esc(j.jour.operations.filter(o=>o.type==='boost').map(o=>'P'+o.plages.join(', P')+' → '+o.capacite).join(' · ')||'—'));
   html+=ligne('Privatisé',j=>esc(j.jour.operations.filter(o=>o.type==='privatisation').map(o=>'P'+o.plages.join(', P')).join(' · ')||(j.jour.ancien && Object.values(j.jour.ancien.PRIVATISATION||{}).some(Boolean)?'Ancien planning':'—')));
   html+=ligne('Fermé',j=>chk(j,'ferme',-1,j.jour.ferme,lecture||j.date<today));
-  for(let p=0;p<5;p++)html+=ligne('Plage '+(p+1)+' · '+horaires[p],j=>chk(j,'ouvert',p,j.jour.ouvert[p],lecture||j.date<today));
-  for(const [i,p] of [[0,1],[1,4],[2,5]])html+=ligne('50 % plage '+p,j=>chk(j,'demi',i,j.jour.demi[i]||(j.jour.hiver && p!==5),lecture||j.date<today||(j.jour.hiver&&p!==5)));
+  // Une plage complète et sa version à 50 % sont deux choix exclusifs.
+  // Le mode Hiver réduit P1/P4 uniquement lorsqu'elles sont ouvertes.
+  const estDemi=(j,p)=>(p===0&&(j.jour.demi[0]||j.jour.hiver))||(p===3&&(j.jour.demi[1]||j.jour.hiver))||(p===4&&j.jour.demi[2]);
+  for(let p=0;p<5;p++)html+=ligne('Plage '+(p+1)+' · '+horaires[p],j=>chk(j,'ouvert',p,j.jour.ouvert[p]&&!estDemi(j,p),lecture||j.date<today));
+  for(const [i,p] of [[0,1],[1,4],[2,5]])html+=ligne('50 % plage '+p,j=>chk(j,'demi',i,j.jour.ouvert[p]&&estDemi(j,p),lecture||j.date<today));
   html+=ligne('Hiver',j=>chk(j,'hiver',-1,j.jour.hiver,lecture||j.date<today),'winter');
   if(lecture)for(const mode of ['partage','exclusif']){
     html+='<tr class="group"><th scope="row">'+(mode==='partage'?'Partagé':'Exclusif')+' '+(onglet==='famille'?'Famille':'Coach')+'</th><td colspan="'+jours.length+'" aria-hidden="true"></td></tr>';
@@ -94,7 +97,10 @@ function afficher(){
       const other=onglet==='famille'?'coach':'famille';
       const interdit=j.jour[other][p]==='exclusif';
       const prive=j.jour.operations.some(o=>o.type==='privatisation'&&o.plages.includes(p+1));
-      return chk(j,mode,p,j.jour[onglet][p]===mode,j.date<today||j.jour.ferme||!j.jour.ouvert[p]||prive||interdit);
+      // Les accès Famille et Coach héritent exclusivement de l'ouverture Duo,
+      // y compris lorsque Duo a choisi la variante à 50 %.
+      return chk(j,mode,p,j.jour[onglet][p]===mode,
+        j.date<today||j.jour.ferme||!j.jour.ouvert[p]||prive||interdit);
     });
   }
   $('tableau').innerHTML=html+'</tbody>';boutons();
@@ -141,7 +147,19 @@ async function changement(e){
   if(k==='capacite'||k==='capacite_lcdp'){const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>100000){statut('Capacité entière entre 1 et 100000.',true);afficher();return;}j[k]=n;}
   else if(k==='partage'||k==='exclusif'){
     j[onglet][i]=el.checked?k:'';
+    // Famille/Coach ne sont jamais autorisés à ouvrir une plage.
+    if(!j.ouvert[i]){afficher();return;}
     if(el.checked&&k==='exclusif')j[onglet==='famille'?'coach':'famille'][i]='';
+  } else if(k==='demi' && i>=0){
+    const plage=[0,3,4][i];
+    j.demi[i]=el.checked;
+    // Cocher 50 % dans Duo ouvre directement cette plage en durée réduite.
+    // Décocher 50 % ferme cette plage ; la plage complète reste un choix séparé.
+    j.ouvert[plage]=el.checked;
+  } else if(k==='ouvert' && i>=0){
+    j.ouvert[i]=el.checked;
+    const demiIndex=({0:0,3:1,4:2})[i];
+    if(demiIndex!==undefined)j.demi[demiIndex]=false;
   } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
   dirty.add(ligne.date);afficher();statut('Modifications non enregistrées.');
   // Aucun enregistrement automatique : validation explicite par l'utilisateur.
