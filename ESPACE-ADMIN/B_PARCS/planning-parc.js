@@ -42,7 +42,7 @@ function demanderSortieSansEnregistrer() {
   message.textContent=dirty.size ? `${dirty.size} journée(s) du mois ${selected.mois} ont été modifiées sans être enregistrées.` : baseDirty ? 'La nouvelle base n’est pas enregistrée.' : 'Une proposition n’est pas enregistrée.';
   return new Promise(resolve=>{
     let termine=false;
-    const actions=[['planning-sortie-rester','rester'],['planning-sortie-ignorer','ignorer'],['planning-sortie-enregistrer','enregistrer']];
+    const actions=[['planning-sortie-rester','rester'],['planning-sortie-enregistrer','enregistrer']];
     const fonctions=[];
     const terminer=choix=>{
       if(termine)return;termine=true;
@@ -67,11 +67,6 @@ async function navigation(action){
       if(baseDirty)await enregistrerBase();
       if(ia&&proposition)await appliquerIA();
       if(dirty.size||baseDirty||(ia&&proposition))return;
-    }else{
-      if(dirty.size){dirty.clear();}
-      if(baseDirty)annulerBase();
-      if(ia&&proposition)effacerProposition();
-      boutons();
     }
   }
   await action();
@@ -94,7 +89,7 @@ function afficher(){
   for(const [i,p] of [[0,1],[1,4],[2,5]])html+=ligne('50 % plage '+p,j=>chk(j,'demi',i,j.jour.demi[i]||(j.jour.hiver && p!==5),lecture||j.date<today||(j.jour.hiver&&p!==5)));
   html+=ligne('Hiver',j=>chk(j,'hiver',-1,j.jour.hiver,lecture||j.date<today),'winter');
   if(lecture)for(const mode of ['partage','exclusif']){
-    html+='<tr class="group"><th colspan="'+(jours.length+1)+'">'+(mode==='partage'?'Partagé':'Exclusif')+' '+(onglet==='famille'?'Famille':'Coach')+'</th></tr>';
+    html+='<tr class="group"><th scope="row">'+(mode==='partage'?'Partagé':'Exclusif')+' '+(onglet==='famille'?'Famille':'Coach')+'</th><td colspan="'+jours.length+'" aria-hidden="true"></td></tr>';
     for(let p=0;p<5;p++)html+=ligne('Plage '+(p+1)+' · '+horaires[p],j=>{
       const other=onglet==='famille'?'coach':'famille';
       const interdit=j.jour[other][p]==='exclusif';
