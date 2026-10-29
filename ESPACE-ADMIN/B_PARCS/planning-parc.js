@@ -5,6 +5,12 @@ const base=String(config.workerParcPlanningAdminUrl||config.WORKER_PARC_PLANNING
 const $=id=>document.getElementById(id), ia=document.body.dataset.mode==='ia';
 let jours=[], parc=null, onglet='duo', dirty=new Set(), saving=null, busy=false, operations=[], proposition=null;
 let joursInitialementCharges=[];
+const dirtyParOnglet={duo:new Set(),famille:new Set(),coach:new Set()};
+const champsOnglet={duo:['capacite','capacite_lcdp','ferme','ouvert','demi','hiver'],famille:['famille'],coach:['coach']};
+function reconstruireDirty(){dirty=new Set([...dirtyParOnglet.duo,...dirtyParOnglet.famille,...dirtyParOnglet.coach]);}
+function datesOnglet(){return dirtyParOnglet[onglet]||new Set();}
+function nettoyerEtats(){for(const t of Object.keys(dirtyParOnglet))dirtyParOnglet[t].clear();reconstruireDirty();}
+
 const modificationsCellules=new Set();
 // Brouillons non enregistrés, isolés par parc et par mois pendant cette session.
 const brouillonsMois=new Map();
@@ -14,14 +20,14 @@ function memoriserBrouillon(){
   if(!dirty.size){brouillonsMois.delete(cleBrouillon());return;}
   brouillonsMois.set(cleBrouillon(),{
     jours:JSON.parse(JSON.stringify(jours)),
-    dates:[...dirty],cellules:[...modificationsCellules]
+    dates:[...dirty],parOnglet:Object.fromEntries(Object.entries(dirtyParOnglet).map(([t,set])=>[t,[...set]])),cellules:[...modificationsCellules]
   });
 }
 function restaurerBrouillon(){
   const brouillon=brouillonsMois.get(cleBrouillon());
   if(!brouillon)return false;
   jours=JSON.parse(JSON.stringify(brouillon.jours));
-  dirty=new Set(brouillon.dates);
+  for(const t of Object.keys(dirtyParOnglet)){dirtyParOnglet[t]=new Set(brouillon.parOnglet?.[t]||[]);}reconstruireDirty();
   modificationsCellules.clear();
   brouillon.cellules.forEach(c=>modificationsCellules.add(c));
   return true;
@@ -36,9 +42,9 @@ const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(ne
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function statut(msg,erreur=false){$('status').textContent=msg;$('status').dataset.error=String(erreur);}
 function boutons(){
-  document.querySelectorAll('[data-save]').forEach(b=>b.disabled=busy||!!saving||!parc||(ia?!proposition:onglet==='base'?!baseBrouillon:!dirty.size));
+  document.querySelectorAll('[data-save]').forEach(b=>{b.disabled=busy||!!saving||!parc||(ia?!proposition:onglet==='base'?!baseBrouillon:!datesOnglet().size);b.textContent=ia||onglet==='base'?'Enregistrer':'Enregistrer '+(onglet==='duo'?'Duo':onglet==='famille'?'Famille':'Coach');});
   const etat=$('etat-save');
-  etat.textContent=saving?'Enregistrement…':busy?'Traitement en cours…':ia&&proposition?'Proposition non enregistrée':baseDirty?'Nouvelle base non enregistrée':dirty.size?'Modifications non enregistrées':parc?'Enregistré':'';
+  etat.textContent=saving?'Enregistrement…':busy?'Traitement en cours…':ia&&proposition?'Proposition non enregistrée':baseDirty?'Nouvelle base non enregistrée':dirty.size?'Brouillon : '+[...Object.entries(dirtyParOnglet)].filter(([,v])=>v.size).map(([k])=>k).join(', '):parc?'Enregistré':'';
   etat.dataset.nonEnregistre=String(Boolean(dirty.size||baseDirty||proposition));
   const shell=document.querySelector('.planning-shell');if(shell)shell.classList.toggle('planning-modifie',Boolean(dirty.size||baseDirty||proposition));
 }
@@ -54,29 +60,60 @@ const CHAMPS_A_VERIFIER=['capacite','capacite_lcdp','ferme','ouvert','demi','hiv
 function valeursIdentiques(attendu,relus){return CHAMPS_A_VERIFIER.every(k=>JSON.stringify(attendu[k])===JSON.stringify(relus[k]));}
 async function enregistrer(){
   if(saving)return saving;
-  if(!dirty.size)return;
-  const dates=[...dirty], snapshot=jours.filter(j=>dirty.has(j.date)).map(j=>JSON.parse(JSON.stringify(j)));
+  const cible=onglet;
+  if(cible==='base'||!dirtyParOnglet[cible]?.size)return;
+  const dates=[...dirtyParOnglet[cible]];
+  // Duo gouverne toutes les ouvertures : les autres onglets ne peuvent
+  // enregistrer leurs accès tant qu'une ouverture Duo du mois est en brouillon.
+  if(cible!=='duo'&&dirtyParOnglet.duo.size){
+    throw Error('Enregistrez d’abord les modifications Duo de ce mois, puis celles de '+cible+'.');
+  }
+  const champs=champsOnglet[cible];
+  const snapshot=dates.map(date=>{
+    const courant=jours.find(j=>j.date===date);
+    const original=joursInitialementCharges.find(j=>j.date===date);
+    if(!courant||!original)throw Error('Journée introuvable : '+date);
+    const clone=JSON.parse(JSON.stringify(original));
+    for(const champ of champs)clone.jour[champ]=JSON.parse(JSON.stringify(courant.jour[champ]));
+    // Ancienne journée explicitement modifiée : seulement pour l'onglet enregistré.
+    if(courant.jour.ancien===undefined)delete clone.jour.ancien;
+    return clone;
+  });
   saving=(async()=>{
-    busy=true;bloquer(true);boutons();statut('Enregistrement et vérification des modifications…');
+    busy=true;bloquer(true);boutons();statut('Enregistrement de '+cible+' et vérification…');
     try{
       const d=await api('/enregistrer',{...contexte(),jours:snapshot});
-      // Une seconde lecture vérifie l'état réellement persisté, pas seulement la réponse d'écriture.
       const relu=await api('/verifier?'+new URLSearchParams(contexte()));
-      if(!Array.isArray(relu.jours))throw Error('Impossible de relire le mois après enregistrement.');
+      if(!Array.isArray(relu.jours))throw Error('Relecture impossible après enregistrement.');
       const manquantes=snapshot.filter(l=>{
         const retour=relu.jours.find(r=>r.date===l.date);
-        return !retour||!valeursIdentiques(l.jour,retour.jour);
+        return !retour||!champs.every(k=>JSON.stringify(l.jour[k])===JSON.stringify(retour.jour[k]));
       });
-      if(manquantes.length){
-        throw Error('Enregistrement non confirmé pour '+manquantes.map(j=>j.date).join(', ')+'. Les modifications restent à l’écran et doivent être contrôlées.');
+      if(manquantes.length)throw Error('Sauvegarde '+cible+' non confirmée : '+manquantes.map(j=>j.date).join(', '));
+      // La réponse serveur devient la référence persistée. On préserve
+      // tous les autres onglets non enregistrés dans la vue locale.
+      const locaux=jours;
+      const restants=Object.keys(dirtyParOnglet).filter(t=>t!==cible);
+      const fusion=JSON.parse(JSON.stringify(relu.jours));
+      for(const t of restants){
+        for(const date of dirtyParOnglet[t]){
+          const cibleJour=fusion.find(j=>j.date===date), local=locaux.find(j=>j.date===date);
+          if(cibleJour&&local)for(const champ of champsOnglet[t])cibleJour.jour[champ]=JSON.parse(JSON.stringify(local.jour[champ]));
+        }
       }
-      apres(relu);
-      dates.forEach(date=>dirty.delete(date));
-      brouillonsMois.delete(cleBrouillon());
-      joursInitialementCharges=JSON.parse(JSON.stringify(jours));
-      modificationsCellules.clear();afficher();
-      statut('Modifications enregistrées et vérifiées.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));
-    }catch(e){statut(e.message+' Aucune modification locale n’a été effacée.',true);throw e;}
+      joursInitialementCharges=JSON.parse(JSON.stringify(relu.jours));
+      jours=fusion;
+      if(relu.operations)operations=relu.operations;
+      if(relu.parc)parc=relu.parc;
+      dates.forEach(date=>dirtyParOnglet[cible].delete(date));
+      reconstruireDirty();
+      for(const marque of [...modificationsCellules]){
+        const [,key]=marque.split('|');
+        if(champs.includes(key))modificationsCellules.delete(marque);
+      }
+      memoriserBrouillon();afficher();
+      statut('Onglet '+cible+' enregistré et vérifié.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':''));
+    }catch(e){statut(e.message+' Les modifications restent en brouillon.',true);throw e;}
     finally{busy=false;saving=null;bloquer(false);boutons();}
   })();return saving;
 }
@@ -85,7 +122,7 @@ function demanderSortieSansEnregistrer() {
   const dialogue=$('planning-sortie');
   if(!dialogue||typeof dialogue.showModal!=='function')return Promise.resolve('rester');
   $('planning-sortie-description').textContent=dirty.size
-    ? `${dirty.size} journée(s) du mois ${selected.mois} modifiée(s). Les modifications seront enregistrées avant de passer au mois sélectionné.`
+    ? `${dirty.size} journée(s) modifiée(s) pour ${selected.mois}. « Oui » enregistre l’onglet actif ; « Pas maintenant » continue sans enregistrer et conserve les brouillons jusqu’à fermeture de la page.`
     : baseDirty ? 'Une nouvelle base n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?'
     : 'Une opération n’a pas été enregistrée. Souhaitez-vous l’enregistrer ?';
   return new Promise(resolve=>{
@@ -117,19 +154,19 @@ async function navigation(action){
   if(dirty.size||baseDirty||(ia&&proposition)){
     const choix=await demanderSortieSansEnregistrer();
     if(choix==='rester')return;
-    // Les deux validations de navigation enregistrent le mois AVANT de le quitter.
-    // En cas d'erreur, la navigation est interrompue : aucun brouillon n'est écarté.
-    if(dirty.size)await enregistrer();
-    if(baseDirty){
-      // La base possède sa propre confirmation de création ; ne pas la perdre.
-      if(choix!=='enregistrer')return;
-      await enregistrerBase();
+    if(choix==='enregistrer'){
+      if(dirty.size){
+        if(dirtyParOnglet[onglet]?.size)await enregistrer();
+        // Ne pas perdre les changements des autres onglets.
+        if(dirty.size)memoriserBrouillon();
+      }
+      if(baseDirty)await enregistrerBase();
+      if(ia&&proposition)await appliquerIA();
+    }else{
+      // Aucune écriture serveur : conserver le brouillon du mois quitté.
+      if(dirty.size)memoriserBrouillon();
+      if(baseDirty||ia&&proposition)return;
     }
-    if(ia&&proposition){
-      if(choix!=='enregistrer')return;
-      await appliquerIA();
-    }
-    if(dirty.size||baseDirty||(ia&&proposition))return;
   }
   await action();
 }
@@ -219,7 +256,7 @@ async function changement(e){
     j[onglet][i]=el.checked?k:'';
     // Famille/Coach ne sont jamais autorisés à ouvrir une plage.
     if(!j.ouvert[i]){afficher();return;}
-    if(el.checked&&k==='exclusif')j[onglet==='famille'?'coach':'famille'][i]='';
+    if(el.checked&&k==='exclusif'&&j[onglet==='famille'?'coach':'famille'][i]==='exclusif'){j[onglet][i]='';statut('Exclusivité déjà attribuée à l’autre catégorie : annulez-la dans son onglet.',true);afficher();return;}
   } else if(k==='demi' && i>=0){
     const plage=[0,3,4][i];
     j.demi[i]=el.checked;
@@ -238,7 +275,7 @@ async function changement(e){
       }
     }
   } else if(i>=0)j[k][i]=el.checked;else j[k]=el.checked;
-  dirty.add(ligne.date);modificationsCellules.add(cleCellule(ligne.date,k,i));
+  dirtyParOnglet[onglet].add(ligne.date);reconstruireDirty();modificationsCellules.add(cleCellule(ligne.date,k,i));
   memoriserBrouillon();
   afficher();statut('Modifications non enregistrées (conservées dans ce navigateur tant que la page reste ouverte).');
   // Aucun enregistrement automatique : validation explicite par l'utilisateur.
@@ -246,7 +283,7 @@ async function changement(e){
 function options(el,items,empty){el.innerHTML=empty?'<option value="">'+empty+'</option>':'';for(const [v,t]of items)el.add(new Option(t,v));}
 async function chargerMois(){
   if(!selected.idparc)return;statut('Chargement du planning…');busy=true;boutons();
-  try{const q=new URLSearchParams(contexte());const d=await api('/mois?'+q);apres(d);dirty.clear();joursInitialementCharges=JSON.parse(JSON.stringify(jours));modificationsCellules.clear();const repris=restaurerBrouillon();$('edition').hidden=ia;$('ia').hidden=!ia;afficher();afficherOperations();statut(repris?'Brouillon non enregistré retrouvé pour ce mois. Cliquez sur Enregistrer pour le sauvegarder.':d.emailsEnAttente?'Des emails d’annulation sont en attente d’envoi.':'Planning chargé.');}
+  try{const q=new URLSearchParams(contexte());const d=await api('/mois?'+q);apres(d);nettoyerEtats();joursInitialementCharges=JSON.parse(JSON.stringify(jours));modificationsCellules.clear();const repris=restaurerBrouillon();$('edition').hidden=ia;$('ia').hidden=!ia;afficher();afficherOperations();statut(repris?'Brouillon non enregistré retrouvé pour ce mois. Cliquez sur Enregistrer pour le sauvegarder.':d.emailsEnAttente?'Des emails d’annulation sont en attente d’envoi.':'Planning chargé.');}
   finally{busy=false;boutons();}
 }
 function reglerVue(){
@@ -362,7 +399,7 @@ async function initialiser(){
   $('base-date').addEventListener('change',()=>{if(baseBrouillon){baseBrouillon.applicable=$('base-date').value+'-01';baseDirty=true;boutons();}});
 
   document.querySelectorAll('[data-save]').forEach(b=>b.addEventListener('click',()=>{(ia?appliquerIA():onglet==='base'?enregistrerBase():enregistrer()).catch(e=>statut(e.message,true));}));
-  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>navigation(async()=>{const precedent=onglet;onglet=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));if(onglet==='base')await chargerBases();else if(precedent==='base'||!jours.length)await chargerMois();else afficher();}).catch(e=>statut(e.message,true))));
+  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',async()=>{if(busy)return;onglet=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));try{if(onglet==='base'&&!bases.length)await chargerBases();else if(onglet!=='base'&&!jours.length)await chargerMois();else afficher();}catch(e){statut(e.message,true);}}));
   $('mois').addEventListener('change',()=>{const next=$('mois').value;$('mois').value=selected.mois;navigation(async()=>{selected.mois=next;$('mois').value=next;await chargerMois();}).catch(e=>statut(e.message,true));});
   $('departement').addEventListener('change',()=>{const next=$('departement').value;$('departement').value=selected.dptmt;navigation(async()=>{selected.dptmt=next;selected.idparc='';parc=null;jours=[];$('departement').value=next;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc — Département '+next;options($('parc'),[],'Choisir un parc');$('parc').disabled=true;if(next)await chargerParcs(next);boutons();}).catch(e=>statut(e.message,true));});
   $('parc').addEventListener('change',()=>{const next=$('parc').value;$('parc').value=selected.idparc;navigation(async()=>{selected.idparc=next;$('parc').value=next;selected.mois=today.slice(0,7);$('mois').value=selected.mois;parc=null;jours=[];bases=[];moisOuverts=[];$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent=next?'Chargement du parc…':'Choisir un parc';boutons();if(next)await chargerSelection();else{parc=null;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc';boutons();}}).catch(e=>statut(e.message,true));});
