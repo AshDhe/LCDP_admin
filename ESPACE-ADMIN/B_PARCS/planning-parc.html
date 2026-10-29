@@ -126,13 +126,17 @@
 .planning-confirmation__symbole{background:#fff0d8!important;color:#9b6016!important;font-weight:800}
 .planning-confirmation__actions{padding-top:12px;border-top:1px solid #e8ece5}
 .planning-confirmation__precision{background:#f7f8f4;padding:13px 14px;border-radius:9px;margin-top:12px!important}
+
+/* Le bouton Nouveau appartient exclusivement à Base. */
+#nouvelle-base{display:none!important}
+#edition:has([data-tab="base"][aria-selected="true"]) #base-panel:not([hidden]) #nouvelle-base:not([hidden]){display:inline-block!important}
 </style></head><body class="lcdp-page-admin-interieure lcdp-page-planning-workflow"><div class="lcdp-site-page"><div id="lcdp-bandeau-slot"></div><main class="lcdp-site-main" id="lcdp-main-admin" hidden><section class="lcdp-page-section"><div class="lcdp-page-container"><p class="planning-pc">La programmation du planning s’utilise sur PC.</p><div class="lcdp-admin-page-layout planning-layout"><div id="lcdp-menu-gauche-admin-slot"></div><div class="lcdp-admin-page-content"><section class="planning-shell">
 <h1 id="titre-page">Planning parc</h1><div class="planning-head"><label>Département<select id="departement"><option value="">Choisir</option></select></label><label>Parc<select id="parc" disabled><option value="">Choisir</option></select></label><label id="mois-zone">Mois<select id="mois"></select></label><button type="button" class="save" data-save disabled>Enregistrer</button></div>
 <p class="identite" id="identite">Choisir un département et un parc</p><div class="planning-status" id="status" role="status" aria-live="polite"></div>
 <div id="edition" hidden><div class="planning-tabs" role="tablist" aria-label="Programmation"><button type="button" role="tab" data-tab="duo" aria-selected="true">Duo</button><button type="button" role="tab" data-tab="famille" aria-selected="false">Famille</button><button type="button" role="tab" data-tab="coach" aria-selected="false">Coach</button><button type="button" role="tab" data-tab="base" aria-selected="false">Base</button></div>
 <div id="base-panel" hidden>
 <p class="planning-note">Une trame hebdomadaire propre au parc. Elle sert uniquement à créer de nouveaux mois, à compter de sa date d’application. Les mois déjà ouverts restent inchangés, même s’ils sont futurs.</p>
-<div class="planning-footer"><button type="button" id="nouvelle-base">Nouveau</button></div>
+<div class="planning-footer"><button type="button" id="nouvelle-base" hidden>Nouveau</button></div>
 <div id="base-courante"></div>
 <div id="base-editeur" hidden><h2>Nouvelle base</h2><label>Applicable à partir du premier jour de <input type="month" id="base-date" required></label><p class="planning-note">Cocher uniquement les plages ouvertes. Cette trame ne contient ni capacité, ni Hiver, ni demi-plages, ni accès Famille ou Coach.</p><div class="planning-scroll"><table class="planning-table" id="base-tableau"></table></div><button type="button" id="annuler-base">Annuler la nouvelle base</button></div>
 <h2>Références et historique</h2><div id="base-historique"></div><p class="planning-note" id="base-mois-ouverts"></p>
@@ -150,9 +154,9 @@
 </div></dialog>
 <dialog id="planning-sortie" class="planning-confirmation" aria-labelledby="planning-sortie-titre" aria-describedby="planning-sortie-description">
 <div class="planning-confirmation__interieur">
-<div class="planning-confirmation__entete"><span class="planning-confirmation__symbole" aria-hidden="true">!</span><h2 id="planning-sortie-titre">Enregistrez vos modifications du mois</h2></div>
+<div class="planning-confirmation__entete"><span class="planning-confirmation__symbole" aria-hidden="true">!</span><h2 id="planning-sortie-titre">Enregistrer les modifications du mois ?</h2></div>
 <p id="planning-sortie-description"></p>
-<p class="planning-confirmation__precision">« Oui » enregistre le mois puis ouvre la destination choisie. « Pas maintenant » poursuit sans enregistrer : les modifications du mois quitté seront abandonnées. Échap permet de rester sur le mois.</p>
+<p class="planning-confirmation__precision">« Oui » enregistre le mois puis ouvre la destination choisie. « Pas maintenant » ouvre le mois choisi sans enregistrer. Vos modifications restent dans un brouillon et seront retrouvées si vous revenez sur ce mois, tant que cette page reste ouverte. Échap permet de rester sur le mois.</p>
 <div class="planning-confirmation__actions"><button type="button" id="planning-sortie-rester">Pas maintenant</button><button type="button" id="planning-sortie-enregistrer" class="planning-confirmation__valider">Oui</button></div>
 </div></dialog>
 </div></div></div></section></main></div></body></html>
