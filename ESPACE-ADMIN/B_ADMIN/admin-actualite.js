@@ -507,7 +507,7 @@
         im.width=72;im.height=48;im.src=urlImage(a.image);
         im.onerror=()=>{im.hidden=true;};miniature.append(im);
       }
-      tr.append(el('td',a.titre || 'Sans titre'),miniature,groupe,el('td',popupId===a.id?'Oui':'Non'));
+      tr.append(el('td',a.titre || 'Sans titre'),miniature,groupe,el('td',popupId===a.id?'Oui':'Non'),el('td',a.bandeau===true?'Oui':'Non'));
       const actions=el('td'), wrap=el('div');wrap.className='lcdp-box-formulaire__actions';wrap.style.cssText='display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:.4rem;margin:0';actions.style.whiteSpace='nowrap';
       const modifier=el('a','Modifier');modifier.className='lcdp-button';modifier.href='./admin-actualite-edition.html?id='+encodeURIComponent(a.id);picto(modifier,'crayon','Modifier l’article');wrap.append(modifier);
       const publication = bouton(p?'Dépublier':'Publier',async()=>{
@@ -559,6 +559,7 @@
     form.elements.groupe.addEventListener('change',()=>{apercuGroupe();modificationsLocales=true;});apercuGroupe();
     for(const key of ['titre','alt','texte','contact'])form.elements[key].value=article[key]||'';
     const checkbox=form.elements.popup;checkbox.checked=popupId===article.id;checkbox.disabled=false;
+    const checkboxBandeau=form.elements.bandeau;checkboxBandeau.checked=article.bandeau===true;checkboxBandeau.disabled=false;
     q('[data-popup-aide]').textContent='La pop-up apparaît uniquement si cet article est en ligne. Cocher cette case ne publie pas l’article.';
     const preview=q('[data-image-preview]');if(article.image){preview.src=urlImage(article.image);preview.alt=article.alt||'';q('[data-image-frame]').hidden=false;}
     form.oninput=()=>{modificationsLocales=true;};
@@ -570,7 +571,7 @@
     form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;operation(async()=>{
       const selectionChange = checkbox.checked ? popupId!==article.id : popupId===article.id;
       if(selectionChange && !await demanderConfirmation({titre:'Pop-up',texte:checkbox.checked?'Sélectionner cet article pour la pop-up ? Elle apparaît uniquement lorsque l’article est en ligne.':'Retirer cet article de la pop-up ?',confirmer:'Confirmer'}))return;
-      const next={...article,groupe:form.elements.groupe.value};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
+      const next={...article,groupe:form.elements.groupe.value,bandeau:checkboxBandeau.checked};for(const key of ['titre','alt','texte','contact'])next[key]=form.elements[key].value.trim();
       if(!next.titre||!next.texte||!next.alt)throw Error('Titre, texte et description de l’image obligatoires.');
       if(fichier){afficherStatus('Enregistrement de l’image…');await verifierImage(fichier);const data=await appelerUpload([fichier]);if(!data.slides?.[0]?.image)throw Error('Image non enregistrée.');next.image=data.slides[0].image;article.image=next.image;fichier=null;}
       if(!next.image)throw Error('Ajoutez une image WebP.');
