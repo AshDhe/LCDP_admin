@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suivi des paiements — Administration La Clé du Parc</title>
+  <meta name="description" content="Suivi des règlements Stripe, des confirmations et des incidents Supabase.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c=window.SITE_CONFIG||{};
+      const base=v=>String(v||'').replace(/\/+$/,'');
+      const lien=(b,p)=>base(b)+'/'+String(p||'').replace(/^\/+/, '');
+      const a=base(c.adminBaseUrl||c.ADMIN_BASE||c.siteBase||'');
+      const p=base(c.publicBaseUrl||c.PUBLIC_BASE||'');
+      const o=base(c.objetBaseUrl||c.OBJET_BASE||lien(p,'/OBJET'));
+      window.LCDP_urlAdmin=x=>typeof c.adminUrl==='function'?c.adminUrl(x):lien(a,x);
+      window.LCDP_urlObjet=x=>typeof c.objetUrl==='function'?c.objetUrl(x):lien(o,x);
+      [
+        '/CSSBASE/cssbase.css',
+        '/BOX/02-box-bandeau-nav.css',
+        '/BOX/02-box-alerte.css',
+        '/BOX/03-box-formulaire.css'
+      ].forEach(x=>document.write('<link rel="stylesheet" href="'+window.LCDP_urlObjet(x)+'">'));
+      [
+        '/ESPACE-ADMIN/A_STRUCTURE/css-admin.css',
+        // Reprise des classes du tableau d'administration existant : zéro nouveau CSS.
+        '/ESPACE-ADMIN/B_ADMIN/admin-actualite.css'
+      ].forEach(x=>document.write('<link rel="stylesheet" href="'+window.LCDP_urlAdmin(x)+'">'));
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure">
+<div class="lcdp-site-page">
+  <div id="lcdp-bandeau-slot"></div>
+  <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+    <section class="lcdp-page-section" aria-label="Suivi des paiements">
+      <div class="lcdp-page-container">
+        <div class="lcdp-admin-page-layout">
+          <div id="lcdp-menu-gauche-admin-slot"></div>
+          <div class="lcdp-admin-page-content lcdp-stack-large">
+            <h1>Suivi des paiements</h1>
+            <p>Stripe, commandes et accès réservés. Les contrôles sont en lecture seule : ils n'activent aucun accès.</p>
+            <p id="paiements-statut" role="status" aria-live="polite">Chargement des commandes…</p>
+            <p id="paiements-synthese" class="lcdp-text-strong-lead" aria-live="polite"></p>
+            <div class="lcdp-actualite-actions">
+              <label for="paiements-recherche">Rechercher une commande
+                <input id="paiements-recherche" class="lcdp-table-lecture-admin__filter-input" type="search" placeholder="Numéro de commande…" autocomplete="off">
+              </label>
+              <label for="paiements-filtre">Afficher
+                <select id="paiements-filtre" class="lcdp-table-lecture-admin__filter-input">
+                  <option value="tous">Toutes</option>
+                  <option value="alerte">À vérifier</option>
+                  <option value="attente">En attente</option>
+                  <option value="paye">Confirmées</option>
+                </select>
+              </label>
+              <button type="button" class="lcdp-button lcdp-button-secondary" id="paiements-rafraichir">Actualiser la liste</button>
+            </div>
+            <div class="lcdp-table-lecture-admin">
+              <div class="lcdp-table-lecture-admin__scroll">
+                <table class="lcdp-table-lecture-admin__table">
+                  <caption>Dernières commandes — les 100 plus récentes</caption>
+                  <thead>
+                    <tr><th>Créée le</th><th>Commande</th><th>Montant</th><th>Supabase</th><th>Stripe</th><th>Suivi</th><th>Consulter</th></tr>
+                  </thead>
+                  <tbody id="paiements-lignes"></tbody>
+                </table>
+              </div>
+              <p id="paiements-vide" class="lcdp-table-lecture-admin__status" hidden>Aucune commande pour ce filtre.</p>
+            </div>
+            <section id="paiements-detail" class="lcdp-stack-large" aria-label="Détails de la commande" hidden>
+              <h2 id="paiements-detail-titre">Détail de commande</h2>
+              <div class="lcdp-actualite-actions">
+                <button type="button" class="lcdp-button lcdp-button-secondary" id="paiements-retour">Fermer les détails</button>
+                <button type="button" class="lcdp-button lcdp-button-primary" id="paiements-verifier">Vérifier maintenant chez Stripe</button>
+              </div>
+              <p id="paiements-detail-message" role="status" aria-live="polite"></p>
+              <div class="lcdp-table-lecture-admin"><div class="lcdp-table-lecture-admin__scroll">
+                <table class="lcdp-table-lecture-admin__table"><tbody id="paiements-identite"></tbody></table>
+              </div></div>
+              <h3>Historique des vérifications</h3>
+              <div class="lcdp-table-lecture-admin"><div class="lcdp-table-lecture-admin__scroll">
+                <table class="lcdp-table-lecture-admin__table">
+                  <thead><tr><th>Date</th><th>Origine</th><th>Stripe</th><th>Analyse</th><th>Accès</th></tr></thead>
+                  <tbody id="paiements-controles"></tbody>
+                </table>
+              </div></div>
+              <h3>Événements reçus de Stripe</h3>
+              <div class="lcdp-table-lecture-admin"><div class="lcdp-table-lecture-admin__scroll">
+                <table class="lcdp-table-lecture-admin__table">
+                  <thead><tr><th>Date</th><th>Événement</th><th>Traitement</th><th>Essais</th><th>Erreur</th></tr></thead>
+                  <tbody id="paiements-evenements"></tbody>
+                </table>
+              </div></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="./SuiviPaiements.js"></script>
+</body>
+</html>
