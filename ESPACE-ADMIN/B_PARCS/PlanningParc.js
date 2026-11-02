@@ -210,7 +210,7 @@
     );
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261102-multi"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
@@ -219,7 +219,48 @@
       throw new Error("Objet table lecture admin indisponible.");
     }
 
+    await chargerScriptUneFois(urlObjet("/BOX/07-box-diginum.js"), "data-lcdp-script-objet", "diginum");
+    const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
+    const storageKey = "lcdp-planning-parc-filtres";
+    let initialFilters = { statut: "enligne" };
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (sessionId && saved?.sessionId === sessionId) initialFilters = saved.filters || initialFilters;
+      else localStorage.removeItem(storageKey);
+    } catch (_) {}
     await table.initialiser({
+      initialFilters,
+      multipleFilterColumns: ["dptmt"],
+      onFiltersChange: filters => {
+        if (sessionId) {
+          try { localStorage.setItem(storageKey, JSON.stringify({ sessionId, filters })); } catch (_) {}
+        }
+      },
+          filterOpeners: {
+            dptmt: () => window.LCDP_diginum.ouvrir({
+              titre: "Ajouter un département",
+              placeholder: "exemple 08",
+              longueurMax: 3,
+              autoValider: code => (code.length === 2 && !code.startsWith("97")) ||
+                (code.length === 3 && code.startsWith("97")),
+              verifier: code => /^(?:0[1-9]|1[0-9]|2[1-9]|[3-8][0-9]|9[0-5]|97[1-6])$/.test(code)
+                ? null : "Code de département invalide. Exemple : 08."
+            })
+          },
+          filterOptions: {
+            statut: [
+              { value: "", label: "Tous" },
+              { value: "1-basebrute", label: "1-basebrute" },
+              { value: "2-aqualifier", label: "2-aqualifier" },
+              { value: "3-nonqualifié", label: "3-nonqualifié" },
+              { value: "3-encours", label: "3-encours" },
+              { value: "3-refus", label: "3-refus" },
+              { value: "prepa", label: "prepa" },
+              { value: "enligne", label: "enligne" },
+              { value: "horsligne", label: "horsligne" }
+            ]
+          },
+
       slotId: TABLE_SLOT_ID,
       endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
