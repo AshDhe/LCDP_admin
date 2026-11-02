@@ -104,6 +104,22 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <style>
+    #lcdp-parc-edition-form #lcdp-parc-edition-enregistrer,
+    #lcdp-parc-edition-form #lcdp-parc-edition-retour {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 154px;
+      max-width: 100%;
+      height: 48px;
+      min-height: 48px;
+      padding: 0 12px;
+      margin: 0;
+      line-height: 1.2;
+    }
+  </style>
 </head>
 <body class="lcdp-page-admin-interieure lcdp-page-statutparc">
   <div class="lcdp-site-page">
@@ -488,6 +504,26 @@
           note.dataset.state = etat;
         }
 
+        const nomParc = form.elements.namedItem("nom");
+        if (nomParc) {
+          const convertirNomEnMajuscules = () => {
+            const debut = nomParc.selectionStart;
+            const fin = nomParc.selectionEnd;
+            const valeur = nomParc.value;
+            const nouvelleValeur = valeur.toLocaleUpperCase("fr-FR");
+            if (valeur === nouvelleValeur) return;
+            nomParc.value = nouvelleValeur;
+            if (debut !== null && fin !== null) {
+              nomParc.setSelectionRange(
+                valeur.slice(0, debut).toLocaleUpperCase("fr-FR").length,
+                valeur.slice(0, fin).toLocaleUpperCase("fr-FR").length
+              );
+            }
+          };
+          convertirNomEnMajuscules();
+          nomParc.addEventListener("input", convertirNomEnMajuscules);
+        }
+
         form.addEventListener("submit", enregistrerEditionParc);
 
         form.querySelector("#lcdp-parc-edition-retour")
@@ -716,6 +752,8 @@
           "[data-lcdp-formulaire-note]"
         );
 
+        const nomParc = form.elements.namedItem("nom");
+        if (nomParc) nomParc.value = nomParc.value.toLocaleUpperCase("fr-FR");
         validerChampTikTok(form);
 
         if (!form.reportValidity()) return;
