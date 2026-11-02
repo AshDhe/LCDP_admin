@@ -320,7 +320,7 @@
 
   async function initialiserObjetsPlanning() {
     await chargerScriptPublicUneFois(
-      "/ESPACE-PUBLIC/fiche-parc.js?v=20261102-planifier-admin-v2"
+      "/ESPACE-PUBLIC/fiche-parc.js?v=20261102-admin-restaure-v3"
     );
 
     if (
