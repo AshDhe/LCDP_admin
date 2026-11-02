@@ -741,6 +741,7 @@
       }
     }
 
+    if (column.format === "pourcentage") return String(valeur) + " %";
     return String(valeur);
   }
 

@@ -9,6 +9,7 @@
   let templateHeureJour = null;
   let planningOuvert = null;
   let avecOuverturesSeulement = true;
+  let categorieSelectionnee = "total";
   const moisSelectionne = (() => {
     const parties = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit"}).formatToParts(new Date());
     return {annee:Number(parties.find(p=>p.type==="year").value),mois:Number(parties.find(p=>p.type==="month").value)};
@@ -210,7 +211,7 @@
     );
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261102-multi"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261102-taux"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
@@ -264,7 +265,7 @@
       slotId: TABLE_SLOT_ID,
       endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
-      extraParams: () => ({ mois: cleMoisSelectionne(), avec_ouvertures: avecOuverturesSeulement ? "1" : "0" }),
+      extraParams: () => ({ categorie: categorieSelectionnee, mois: cleMoisSelectionne(), avec_ouvertures: avecOuverturesSeulement ? "1" : "0" }),
       interactiveColumns: ["nom"],
       onCellActivate: ({ row }) => {
         ouvrirPlanningParc(row).catch(console.error);
@@ -607,6 +608,20 @@
     ]);
 
     initialiserNavigationMois();
+    document.querySelectorAll("[data-planning-categorie]").forEach(bouton => {
+      bouton.addEventListener("click", async () => {
+        const categorie = bouton.dataset.planningCategorie;
+        if (categorie === categorieSelectionnee) return;
+        categorieSelectionnee = categorie;
+        document.querySelectorAll("[data-planning-categorie]").forEach(b => {
+          const actif = b.dataset.planningCategorie === categorie;
+          b.setAttribute("aria-pressed", String(actif));
+          b.classList.toggle("lcdp-button-primary", actif);
+          b.classList.toggle("lcdp-button-secondary", !actif);
+        });
+        await window.LCDP_TABLE_LECTURE_ADMIN.premierePage(TABLE_SLOT_ID);
+      });
+    });
     const filtreOuvertures = document.querySelector("[data-planning-avec-ouvertures]");
     filtreOuvertures?.addEventListener("change", async () => {
       avecOuverturesSeulement = Boolean(filtreOuvertures.checked);

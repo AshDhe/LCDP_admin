@@ -122,6 +122,13 @@
                 <h1 class="lcdp-planning-parc-admin__titre">Planning Parc</h1>
               </header>
 
+              <nav aria-label="Catégorie de planning">
+                <button type="button" class="lcdp-button lcdp-button-primary" data-planning-categorie="total" aria-pressed="true">Total</button>
+                <button type="button" class="lcdp-button lcdp-button-secondary" data-planning-categorie="duo" aria-pressed="false">Duo seul</button>
+                <button type="button" class="lcdp-button lcdp-button-secondary" data-planning-categorie="famille" aria-pressed="false">Famille</button>
+                <button type="button" class="lcdp-button lcdp-button-secondary" data-planning-categorie="coach" aria-pressed="false">Coach</button>
+                <button type="button" class="lcdp-button lcdp-button-secondary" data-planning-categorie="famillecoach" aria-pressed="false">Famille + Coach</button>
+              </nav>
               <nav class="lcdp-planning-parc-admin__mois-nav" aria-label="Mois de synthèse">
                 <button type="button" data-planning-mois-prev aria-label="Mois précédent">‹</button>
                 <strong data-planning-mois-label></strong>
@@ -145,6 +152,6 @@
     <div id="lcdp-lightbox-slot"></div>
   </div>
 
-  <script src="./PlanningParc.js?v=20261102-filtres-v27"></script>
+  <script src="./PlanningParc.js?v=20261102-onglets-v28"></script>
 </body>
 </html>
