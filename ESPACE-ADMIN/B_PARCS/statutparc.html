@@ -660,9 +660,13 @@
 
       function texteOuvertureParc(parc) {
         const ouverture = parc?.ouverture_parc;
-        return ouverture && Number.isInteger(ouverture.taux)
-          ? "Le taux d’ouverture du parc est de " + ouverture.taux + " % entre 10 h et 17 h ce mois-ci."
-          : "Le taux d’ouverture du mois en cours n’est pas encore renseigné.";
+        const taux = valeur => Number.isInteger(valeur) ? valeur + " %" : "Non renseigné";
+        return [
+          "Taux d’ouverture du parc de 10h à 17h ce mois-ci : " + taux(ouverture?.taux),
+          "Invités FAMILLE autorisés : " + taux(ouverture?.tauxFamille),
+          "Invités COACH autorisés : " + taux(ouverture?.tauxCoach),
+          "Connectez-vous à votre compte membre pour le planning détaillé du parc sur le mois et les mois suivants. Consultez les horaires d’accès en dehors de la plage 10h-17h."
+        ].join("\n");
       }
 
       function champTexte(name, label, value) {

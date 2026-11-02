@@ -320,7 +320,7 @@
 
   async function initialiserObjetsPlanning() {
     await chargerScriptPublicUneFois(
-      "/ESPACE-PUBLIC/fiche-parc.js"
+      "/ESPACE-PUBLIC/fiche-parc.js?v=20261102-consultation-admin"
     );
 
     if (
@@ -426,7 +426,7 @@
           dptmt
         },
         {
-          modeUsage: "consultation-publique",
+          modeUsage: "consultation-admin",
           chargerFragmentObjet,
           construireUrlObjet: urlObjet,
           appliquerRoutes,
