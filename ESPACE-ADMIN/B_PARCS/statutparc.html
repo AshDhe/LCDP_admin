@@ -338,12 +338,13 @@
         } catch (_) { /* Le filtrage reste disponible sans stockage navigateur. */ }
         await table.initialiser({
           initialFilters,
+          multipleFilterColumns: ["dptmt"],
           onFiltersChange: filters => {
             try { localStorage.setItem(cleFiltres, JSON.stringify({ sessionId, filters })); } catch (_) {}
           },
           filterOpeners: {
             dptmt: () => window.LCDP_diginum.ouvrir({
-              titre: "Changer de département",
+              titre: "Ajouter un département",
               placeholder: "exemple 08",
               longueurMax: 3,
               autoValider: code => (code.length === 2 && !code.startsWith("97")) ||

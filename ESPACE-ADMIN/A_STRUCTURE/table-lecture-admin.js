@@ -157,6 +157,7 @@
 
     async function chargerDonnees() {
       if (etat.chargement) {
+        etat.rechargementDemande = true;
         return false;
       }
 
@@ -327,6 +328,10 @@
         return false;
       } finally {
         etat.chargement = false;
+        if (etat.rechargementDemande) {
+          etat.rechargementDemande = false;
+          chargerDonnees();
+        }
       }
     }
 
@@ -505,17 +510,53 @@
       if (typeof ouvrir === "function") {
         controle.readOnly = true;
         controle.type = "text";
-        controle.placeholder = "Choisir un département";
+        const multiple = (options.multipleFilterColumns || []).includes(column.key);
+        controle.placeholder = multiple ? "Ajouter un département" : "Choisir un département";
+        const selection = document.createElement("div");
+        const codes = () => [...new Set(String(controle.value || "").split(",").map(x => x.trim()).filter(Boolean))];
+        const rendreSelection = () => {
+          selection.replaceChildren();
+          if (!multiple) return;
+          codes().forEach(code => {
+            const retirer = document.createElement("button");
+            retirer.type = "button";
+            retirer.className = "lcdp-table-lecture-admin__pagination-button";
+            retirer.textContent = code + " ×";
+            retirer.setAttribute("aria-label", "Retirer le département " + code);
+            retirer.addEventListener("click", () => {
+              controle.value = codes().filter(x => x !== code).join(",");
+              rendreSelection();
+              controle.dispatchEvent(new Event("input"));
+            });
+            selection.appendChild(retirer);
+          });
+        };
         const choisir = async () => {
           try {
             const valeur = await ouvrir(controle.value);
             if (valeur === null || valeur === undefined) return;
-            controle.value = String(valeur);
+            const nouvelleValeur = multiple
+              ? [...new Set([...codes(), String(valeur)])].join(",")
+              : String(valeur);
+            if (nouvelleValeur === controle.value) return;
+            controle.value = nouvelleValeur;
+            rendreSelection();
             controle.dispatchEvent(new Event("input"));
           } catch (error) {
             window.alert(error?.message || "Impossible d’ouvrir le filtre.");
           }
         };
+        if (multiple) {
+          controle.hidden = true;
+          const ajouter = document.createElement("button");
+          ajouter.type = "button";
+          ajouter.className = "lcdp-table-lecture-admin__pagination-button";
+          ajouter.textContent = "Ajouter un département";
+          ajouter.addEventListener("click", choisir);
+          cellule.appendChild(ajouter);
+          cellule.appendChild(selection);
+          rendreSelection();
+        }
         controle.addEventListener("click", choisir);
         controle.addEventListener("keydown", event => {
           if (event.key === "Enter" || event.key === " ") {
