@@ -547,7 +547,9 @@
           }
         };
         if (multiple) {
+          controle.type = "hidden";
           controle.hidden = true;
+          controle.className = "";
           const ajouter = document.createElement("button");
           ajouter.type = "button";
           ajouter.className = "lcdp-table-lecture-admin__pagination-button";
