@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const CHEMIN='/ESPACE-ADMIN/C_MEMBRES/SuiviPaiements.html';
+  const CHEMIN='/ESPACE-ADMIN/B_ADMIN/SuiviPaiements.html';
   const config=window.SITE_CONFIG||{};
   const endpoint=String(config.workerSuiviPaiementsAdminUrl||config.WORKER_SUIVI_PAIEMENTS_ADMIN_URL||
     'https://ad-suivi-paiements-api.lacleduparc.fr').replace(/\/+$/,'');
@@ -90,7 +90,8 @@
     if(!d.controles?.length){const tr=element('tr');const td=cellule('Aucun contrôle enregistré.');td.colSpan=5;tr.appendChild(td);hist.appendChild(tr);}
     const ev=$('paiements-evenements');ev.replaceChildren();
     (d.evenements||[]).forEach(v=>{const tr=element('tr');
-      [date(v.date_reception),v.type_evenement,v.statut_traitement,v.tentatives,
+      ['Stripe : '+date(v.date_evenement)+' / reçu : '+date(v.date_reception),
+        v.type_evenement,v.statut_traitement,v.tentatives,
         v.detail_erreur||v.code_erreur||'—']
       .forEach(x=>tr.appendChild(cellule(x)));ev.appendChild(tr);});
     if(!d.evenements?.length){const tr=element('tr');const td=cellule('Aucun webhook enregistré depuis la mise en place du journal.');td.colSpan=5;tr.appendChild(td);ev.appendChild(tr);}
@@ -148,7 +149,7 @@
     const menu=window.LCDP_MENU_GAUCHE_ADMIN;
     Promise.allSettled([
       initialiserBandeau(),
-      menu?.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'membres'})
+      menu?.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'admin'})
     ]).then(resultats=>resultats.forEach(x=>{if(x.status==='rejected')console.warn('Composant admin indisponible.');}));
     $('paiements-recherche').addEventListener('input',rendreListe);
     $('paiements-filtre').addEventListener('change',rendreListe);
