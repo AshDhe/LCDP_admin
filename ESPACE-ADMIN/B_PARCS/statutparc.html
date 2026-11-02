@@ -77,6 +77,7 @@
         "/CSSBASE/cssbase.css",
         "/BOX/02-box-bandeau-nav.css",
         "/BOX/02-box-alerte.css",
+        "/BOX/07-box-diginum.css",
         "/BOX/03-box-formulaire.css",
         "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
@@ -325,7 +326,43 @@
           throw new Error("Objet table lecture admin indisponible.");
         }
 
+        await chargerScriptObjetUneFois("/BOX/07-box-diginum.js");
+        const cleFiltres = "lcdp-statupark-filtres";
+        const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
+        if (!sessionId) throw new Error("Identifiant de session admin absent. Déployez le worker de session et le garde admin.");
+        let initialFilters = {};
+        try {
+          const sauvegarde = JSON.parse(localStorage.getItem(cleFiltres) || "null");
+          if (sauvegarde?.sessionId === sessionId) initialFilters = sauvegarde.filters || {};
+          else localStorage.removeItem(cleFiltres);
+        } catch (_) { /* Le filtrage reste disponible sans stockage navigateur. */ }
         await table.initialiser({
+          initialFilters,
+          onFiltersChange: filters => {
+            try { localStorage.setItem(cleFiltres, JSON.stringify({ sessionId, filters })); } catch (_) {}
+          },
+          filterOpeners: {
+            dptmt: () => window.LCDP_diginum.ouvrir({
+              titre: "Changer de département",
+              placeholder: "exemple 08",
+              longueurMax: 3,
+              autoValider: code => (code.length === 2 && !code.startsWith("97")) ||
+                (code.length === 3 && code.startsWith("97")),
+              verifier: code => /^(?:0[1-9]|1[0-9]|2[1-9]|[3-8][0-9]|9[0-5]|97[1-6])$/.test(code)
+                ? null : "Code de département invalide. Exemple : 08."
+            })
+          },
+          filterOptions: {
+            statut: [
+              { value: "", label: "Tous" },
+              { value: "recherche", label: "Recherche" },
+              { value: "prepa", label: "Prépa" },
+              { value: "oui", label: "Oui" },
+              { value: "non", label: "Non" },
+              { value: "nonconforme", label: "Non conforme" },
+              { value: "acreuserfautinfo", label: "À creuser / information manquante" }
+            ]
+          },
           slotId: TABLE_SLOT_ID,
           endpoint: endpointAdminData(),
           resource: "parcs-statut",

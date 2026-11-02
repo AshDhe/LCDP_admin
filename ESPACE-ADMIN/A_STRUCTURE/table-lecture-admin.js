@@ -274,7 +274,8 @@
             columns,
             etat,
             chargerDonnees,
-            filterOptions
+            filterOptions,
+            options
           );
           etat.structureRendue = true;
         }
@@ -452,7 +453,8 @@
     columns,
     etat,
     chargerDonnees,
-    filterOptions
+    filterOptions,
+    options = {}
   ) {
     filtersRow.innerHTML = "";
 
@@ -487,6 +489,9 @@
         () => {
           etat.filters[column.key] = controle.value;
           etat.offset = 0;
+          if (typeof options.onFiltersChange === "function") {
+            options.onFiltersChange({ ...etat.filters });
+          }
 
           window.clearTimeout(etat.filtreTimer);
 
@@ -496,6 +501,29 @@
         }
       );
 
+      const ouvrir = options.filterOpeners?.[column.key];
+      if (typeof ouvrir === "function") {
+        controle.readOnly = true;
+        controle.type = "text";
+        controle.placeholder = "Choisir un département";
+        const choisir = async () => {
+          try {
+            const valeur = await ouvrir(controle.value);
+            if (valeur === null || valeur === undefined) return;
+            controle.value = String(valeur);
+            controle.dispatchEvent(new Event("input"));
+          } catch (error) {
+            window.alert(error?.message || "Impossible d’ouvrir le filtre.");
+          }
+        };
+        controle.addEventListener("click", choisir);
+        controle.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            choisir();
+          }
+        });
+      }
       cellule.appendChild(controle);
       filtersRow.appendChild(cellule);
     });

@@ -115,6 +115,7 @@ function initialiserConnexionAdmin() {
         return;
       }
 
+      try { localStorage.removeItem("lcdp-statupark-filtres"); } catch (_) {}
       window.location.href = urlAccueilAdmin;
 
     } catch (erreur) {

@@ -98,11 +98,15 @@
           ? "acces-refuse"
           : "session";
 
+        if (response.status === 401) {
+          try { localStorage.removeItem("lcdp-statupark-filtres"); } catch (_) {}
+        }
         redirigerConnexion(reason);
         return false;
       }
 
       window.LCDP_ADMIN_AUTORISATION = Object.freeze({
+        sessionId: data.sessionId,
         admin: data.admin,
         route: data.route,
         permission: data.permission
