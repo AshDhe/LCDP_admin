@@ -645,17 +645,24 @@
           ),
           champLectureSeule(
             "horaire",
-            "Synthèse des horaires",
-            parc.horaire,
+            "Ouverture du parc — mois en cours",
+            texteOuvertureParc(parc),
             "textarea",
             "lcdp-box-champ-formulaire--wide"
           ),
           champLectureSeule(
             "datemajhoraire",
-            "Actualisation des horaires",
-            formaterDateHeure(parc.datemajhoraire)
+            "Actualisation du taux d’ouverture",
+            formaterDateHeure(parc.ouverture_parc?.datemaj)
           )
         ];
+      }
+
+      function texteOuvertureParc(parc) {
+        const ouverture = parc?.ouverture_parc;
+        return ouverture && Number.isInteger(ouverture.taux)
+          ? "Le taux d’ouverture du parc est de " + ouverture.taux + " % entre 10 h et 17 h ce mois-ci."
+          : "Le taux d’ouverture du mois en cours n’est pas encore renseigné.";
       }
 
       function champTexte(name, label, value) {
