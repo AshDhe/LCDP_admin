@@ -250,11 +250,13 @@
 
     slot.innerHTML = "";
 
-    const fragment = await chargerFragmentAdmin(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.html"
-    );
-
-    slot.appendChild(fragment);
+    // La structure partagée est présente dans cette page : aucun fetch HTML
+    // externe n'est nécessaire pour initialiser les CGV.
+    const modele = document.getElementById("lcdp-cgv-editeur-structure");
+    if (!modele?.content?.querySelector("[data-lcdp-editeur-contenu]")) {
+      throw new Error("Structure de l'éditeur CGV indisponible.");
+    }
+    slot.appendChild(modele.content.cloneNode(true));
 
     await chargerScriptAdminUneFois(
       "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js"
