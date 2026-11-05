@@ -98,6 +98,12 @@
     })();
   </script>
 
+  <style>
+    /* L’éditeur ne doit afficher aucune action tant que le document n’est pas chargé. */
+    .lcdp-mentions-admin__actions[hidden],
+    [data-lcdp-mentions-editeur-slot][hidden] { display: none !important; }
+  </style>
+
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
 </head>

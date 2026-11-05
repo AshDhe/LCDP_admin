@@ -57,14 +57,19 @@
   }
 
   async function chargerFragment(url, libelle) {
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "omit",
-      cache: "no-cache"
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        credentials: "omit",
+        cache: "no-cache"
+      });
+    } catch (error) {
+      throw new Error(libelle + " : chargement impossible (" + url + ").", { cause: error });
+    }
 
     if (!response.ok) {
-      throw new Error(libelle + " introuvable.");
+      throw new Error(libelle + " : erreur HTTP " + response.status + " (" + url + ").");
     }
 
     const template = document.createElement("template");
@@ -73,11 +78,26 @@
     return template.content.cloneNode(true);
   }
 
-  function chargerFragmentAdmin(path) {
-    return chargerFragment(
-      urlAdmin(path),
-      "Fragment ADMIN " + path
-    );
+  async function chargerFragmentAdmin(path) {
+    const distant = urlAdmin(path);
+    const local = new URL(path, window.location.origin).href;
+    try {
+      return await chargerFragment(distant, "Fragment ADMIN " + path);
+    } catch (error) {
+      // Les fragments ADMIN sont des ressources statiques ; si le domaine configuré
+      // est momentanément inaccessible, essayer le chemin du site affiché.
+      if (new URL(distant, window.location.href).href !== local) {
+        try {
+          return await chargerFragment(local, "Fragment ADMIN " + path);
+        } catch (erreurLocale) {
+          throw new Error(
+            "Fragment ADMIN " + path + " inaccessible sur les deux origines : " +
+            error.message + " ; " + erreurLocale.message
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   function chargerFragmentObjet(path) {
@@ -687,14 +707,24 @@
 
     if (!autorise) return;
 
-    const [data] = await Promise.all([
-      chargerDocument(),
+    // L’échec d’un élément de navigation ne doit pas empêcher l’édition des CGV.
+    // En revanche, le document et l’éditeur sont indispensables.
+    const data = await chargerDocument();
+    documentCharge = data;
+    await initialiserEditeur(data);
+
+    const navigations = await Promise.allSettled([
       initialiserBandeau(),
       initialiserMenuGauche()
     ]);
-
-    documentCharge = data;
-    await initialiserEditeur(data);
+    navigations.forEach((resultat, index) => {
+      if (resultat.status === "rejected") {
+        console.error(
+          index === 0 ? "Bandeau ADMIN indisponible :" : "Menu ADMIN indisponible :",
+          resultat.reason
+        );
+      }
+    });
 
     const loading = document.querySelector(
       "[data-lcdp-mentions-loading]"
@@ -733,7 +763,9 @@
   });
 
   initialiserPage().catch(async (error) => {
-    console.error(error);
+    console.error("CGV : chargement interrompu :", error);
+    const actions = document.querySelector("[data-lcdp-mentions-actions]");
+    if (actions) actions.hidden = true;
 
     const loading = document.querySelector(
       "[data-lcdp-mentions-loading]"
