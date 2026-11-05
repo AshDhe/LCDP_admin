@@ -224,7 +224,7 @@
 
     slot.innerHTML = "";
     slot.appendChild(
-      await chargerFragmentObjet("/BOX/05-wraper-onglets.html")
+      await chargerFragmentObjet("/HTMLBASE/05-wraper-onglets.html")
     );
 
     const racine = slot.querySelector("[data-lcdp-wraper-onglets]");
@@ -686,7 +686,7 @@
   }
 
   async function rendreFormulaire(contexte, item, options) {
-    await chargerScriptObjetUneFois("/BOX/03-box-formulaire.js");
+    await chargerScriptObjetUneFois("/JSBASE/03-formulaire.js");
 
     if (typeof window.LCDP_creerFormulaire !== "function") {
       throw new Error("Objet formulaire indisponible.");
@@ -1198,7 +1198,7 @@
 
     slot.innerHTML = "";
     slot.appendChild(
-      await chargerFragmentObjet("/BOX/02-box-alerte.html")
+      await chargerFragmentObjet("/HTMLBASE/02-alerte.html")
     );
 
     const alerte = slot.querySelector("[data-lcdp-box-alerte]");
@@ -1241,7 +1241,7 @@
 
     slot.innerHTML = "";
     slot.appendChild(
-      await chargerFragmentObjet("/BOX/02-box-dialogue-bouton.html")
+      await chargerFragmentObjet("/HTMLBASE/02-dialogue-bouton.html")
     );
 
     const dialogue = slot.querySelector(

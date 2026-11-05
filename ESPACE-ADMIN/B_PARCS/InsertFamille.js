@@ -297,7 +297,7 @@
 
     slot.innerHTML = "";
     const fragment = await chargerFragment(
-      urlObjet("/BOX/02-box-dialogue-bouton.html"),
+      urlObjet("/HTMLBASE/02-dialogue-bouton.html"),
       "Boîte de dialogue"
     );
     slot.appendChild(fragment);

@@ -19,7 +19,7 @@
     const d=await r.json().catch(()=>null);if(!r.ok||!d?.success)throw Error(d?.message||'Impossible de joindre le service des suspensions.');return d;
   }
   async function confirmer(m,suspendre){
-    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(objet('/BOX/02-box-dialogue-bouton.html')));
+    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(objet('/HTMLBASE/02-dialogue-bouton.html')));
     const box=slot.querySelector('[data-lcdp-box-dialogue-bouton]'),titre=slot.querySelector('[data-lcdp-dialogue-title]'),texte=slot.querySelector('[data-lcdp-dialogue-text]'),actions=slot.querySelector('[data-lcdp-dialogue-actions]');
     if(!box||!titre||!texte||!actions){slot.replaceChildren();throw Error('Confirmation indisponible. Aucune modification effectuée.');}
     titre.textContent=suspendre?'Suspendre ce membre ?':'Lever la suspension ?';
@@ -75,7 +75,7 @@
       fragment(admin('/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html')).then(f=>{const slot=document.getElementById('lcdp-bandeau-slot');slot.replaceChildren(f);slot.querySelectorAll('[data-site-href]').forEach(e=>e.href=e.dataset.space==='admin'?admin(e.dataset.siteHref):window.LCDP_urlPublic(e.dataset.siteHref));}),
       window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'membres'})
     ]);
-    const slot=document.getElementById('lcdp-suspension-onglets-slot');slot.replaceChildren(await fragment(objet('/BOX/05-wraper-onglets.html')));
+    const slot=document.getElementById('lcdp-suspension-onglets-slot');slot.replaceChildren(await fragment(objet('/HTMLBASE/05-wraper-onglets.html')));
     racine=slot.querySelector('[data-lcdp-wraper-onglets]');if(!racine)throw Error('Composant onglets indisponible.');
     const bs=[...racine.querySelectorAll('[data-lcdp-onglet]')],ps=[...racine.querySelectorAll('[data-lcdp-panneau-onglet]')];if(bs.length<2||ps.length<2)throw Error('Structure des onglets incomplète.');
     for(let i=2;i<bs.length;i++)bs[i].remove();for(let i=2;i<ps.length;i++)ps[i].remove();

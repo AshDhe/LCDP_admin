@@ -267,7 +267,7 @@
   }
 
   async function rendreFormulaire(abonnement) {
-    await chargerScriptObjetUneFois("/BOX/03-box-formulaire.js");
+    await chargerScriptObjetUneFois("/JSBASE/03-formulaire.js");
 
     if (typeof window.LCDP_creerFormulaire !== "function") {
       throw new Error("Objet formulaire indisponible.");
@@ -510,7 +510,7 @@
 
     slot.innerHTML = "";
     slot.appendChild(await chargerFragment(
-      urlObjet("/BOX/02-box-alerte.html"),
+      urlObjet("/HTMLBASE/02-alerte.html"),
       "AlertBox"
     ));
 

@@ -151,7 +151,7 @@
     slot.replaceChildren(fragment);
     const cible = slot.querySelector("[data-lcdp-menu-gauche-admin-slot]");
     if (!cible) throw new Error("Structure du menu admin incomplète.");
-    cible.appendChild(await chargerFragmentObjet("/BOX/02-box-menu-bouton.html"));
+    cible.appendChild(await chargerFragmentObjet("/HTMLBASE/02-menu-bouton.html"));
     const liste = cible.querySelector("[data-lcdp-menu-bouton-list]");
     if (!liste) throw new Error("Liste des catégories admin introuvable.");
     for (const [categorie, libelle] of [["admin", "Admin"], ["parcs", "Parcs"], ["membres", "Membres"]]) {
@@ -579,7 +579,7 @@
 
     slot.innerHTML = "";
     const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-alerte.html"
+      "/HTMLBASE/02-alerte.html"
     );
 
     slot.appendChild(fragment);
@@ -625,7 +625,7 @@
 
     slot.innerHTML = "";
     const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-dialogue-bouton.html"
+      "/HTMLBASE/02-dialogue-bouton.html"
     );
 
     slot.appendChild(fragment);

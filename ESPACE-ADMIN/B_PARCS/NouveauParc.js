@@ -156,7 +156,7 @@
         slot.innerHTML = "";
 
         const fragment = await chargerFragmentObjet(
-          "/BOX/02-box-menu-bouton.html"
+          "/HTMLBASE/02-menu-bouton.html"
         );
 
         slot.appendChild(fragment);
@@ -232,7 +232,7 @@
         }
 
         await chargerScriptObjetUneFois(
-          "/BOX/03-box-formulaire.js"
+          "/JSBASE/03-formulaire.js"
         );
 
         if (
@@ -389,7 +389,7 @@
         label
       }) {
         const fragment = await window.LCDP_chargerFragmentObjet(
-          "/BOX/03-box-champ-formulaire.html"
+          "/HTMLBASE/03-champ-formulaire.html"
         );
 
         const racine = fragment.querySelector(

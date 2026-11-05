@@ -75,7 +75,7 @@
         "Menu gauche admin"
       ),
       chargerFragment(
-        objetUrl("/BOX/02-box-menu-bouton.html"),
+        objetUrl("/HTMLBASE/02-menu-bouton.html"),
         "Menu bouton générique"
       )
     ]);

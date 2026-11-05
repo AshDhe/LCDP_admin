@@ -75,9 +75,6 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-alerte.css",
-        "/BOX/04-box-dialogue-champ.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -94,7 +91,7 @@
         );
       });
 
-      ["/OBJET/BOX/04-box-dialogue-upload-img.css"].forEach((path) => {
+      ["/CSSBASE/lcdp-central-mobile-first.css?v=20261105-css-objets-complets-v1"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlPublic(path) +
@@ -149,7 +146,7 @@
       const SLOT_AJUST_DUO = 30;
       const SLOT_PRIVATISATION = 31;
       const CHEMIN_BOX_UPLOAD_IMG =
-        "/OBJET/BOX/04-box-dialogue-upload-img.html";
+        "/OBJET/HTMLBASE/04-dialogue-upload-img.html";
 
       const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
 
@@ -804,7 +801,7 @@
 
         slot.innerHTML = "";
 
-        const fragment = await chargerFragmentObjet("/BOX/02-box-alerte.html");
+        const fragment = await chargerFragmentObjet("/HTMLBASE/02-alerte.html");
         slot.appendChild(fragment);
 
         const alerte = slot.querySelector("[data-lcdp-box-alerte]");
@@ -1048,7 +1045,7 @@
 
         try {
           fragment = await chargerFragmentObjet(
-            "/BOX/04-box-dialogue-champ.html"
+            "/HTMLBASE/04-dialogue-champ.html"
           );
         } catch (error) {
           console.error(error);
@@ -1229,7 +1226,7 @@
 
         try {
           fragment = await chargerFragmentObjet(
-            "/BOX/04-box-dialogue-champ.html"
+            "/HTMLBASE/04-dialogue-champ.html"
           );
         } catch (error) {
           console.error(error);
@@ -1426,7 +1423,7 @@
 
         try {
           fragment = await chargerFragmentObjet(
-            "/BOX/04-box-dialogue-champ.html"
+            "/HTMLBASE/04-dialogue-champ.html"
           );
         } catch (error) {
           console.error(error);
@@ -1811,7 +1808,7 @@
         slot.innerHTML = "";
 
         const fragment = await chargerFragmentObjet(
-          "/BOX/04-box-dialogue-champ.html"
+          "/HTMLBASE/04-dialogue-champ.html"
         );
 
         slot.appendChild(fragment);
@@ -2547,7 +2544,7 @@
 
         try {
           fragment = await chargerFragmentObjet(
-            "/BOX/04-box-dialogue-champ.html"
+            "/HTMLBASE/04-dialogue-champ.html"
           );
         } catch (error) {
           console.error(error);
@@ -3081,7 +3078,7 @@
         }
 
         const [genericButtonMenu, miniGallery] = await Promise.all([
-          chargerFragmentObjet("/BOX/02-box-menu-bouton.html"),
+          chargerFragmentObjet("/HTMLBASE/02-menu-bouton.html"),
           chargerFragmentAdmin(
             "/ESPACE-ADMIN/A_STRUCTURE/mini-galerie-menu-centre-admin.html"
           )

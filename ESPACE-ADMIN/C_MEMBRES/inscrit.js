@@ -147,7 +147,7 @@
 
     slot.innerHTML = "";
     slot.appendChild(
-      await chargerFragmentObjet("/BOX/05-wraper-onglets.html")
+      await chargerFragmentObjet("/HTMLBASE/05-wraper-onglets.html")
     );
 
     const racine = slot.querySelector("[data-lcdp-wraper-onglets]");

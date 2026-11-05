@@ -75,13 +75,7 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-alerte.css",
-        "/BOX/02-box-dialogue-bouton.css",
-        "/BOX/03-box-formulaire.css",
-        "/BOX/03-box-champ-formulaire.css",
-        "/BOX/04-box-dialogue-champ.css",
-        "/BOX/04-box-workflow-abonnement.css"
+        "/CSSBASE/lcdp-central-mobile-first.css?v=20261105-css-objets-complets-v1",
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -390,7 +384,7 @@
 
       async function afficherDaLectureSeule(da) {
         await chargerScriptObjetUneFois(
-          "/BOX/03-box-formulaire.js"
+          "/JSBASE/03-formulaire.js"
         );
 
         if (typeof window.LCDP_creerFormulaire !== "function") {
@@ -401,7 +395,7 @@
         slot.innerHTML = "";
         slot.appendChild(
           await chargerFragmentObjet(
-            "/BOX/04-box-workflow-abonnement.html"
+            "/HTMLBASE/04-workflow-abonnement.html"
           )
         );
 
@@ -544,7 +538,7 @@
         try {
           conteneur.appendChild(
             await chargerFragmentObjet(
-              "/BOX/04-box-dialogue-champ.html"
+              "/HTMLBASE/04-dialogue-champ.html"
             )
           );
 
@@ -592,7 +586,7 @@
           boutonAnnuler.hidden = true;
 
           const champFragment = await chargerFragmentObjet(
-            "/BOX/03-box-champ-formulaire.html"
+            "/HTMLBASE/03-champ-formulaire.html"
           );
           const zoneLabel = champFragment.querySelector(
             "[data-lcdp-champ-label-zone]"
@@ -732,7 +726,7 @@
 
         try {
           conteneur.appendChild(
-            await chargerFragmentObjet("/BOX/02-box-alerte.html")
+            await chargerFragmentObjet("/HTMLBASE/02-alerte.html")
           );
         } catch (error) {
           conteneur.remove();

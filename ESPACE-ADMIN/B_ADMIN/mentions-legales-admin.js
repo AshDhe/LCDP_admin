@@ -505,7 +505,7 @@
 
     slot.innerHTML = "";
     const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-alerte.html"
+      "/HTMLBASE/02-alerte.html"
     );
 
     slot.appendChild(fragment);
@@ -551,7 +551,7 @@
 
     slot.innerHTML = "";
     const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-dialogue-bouton.html"
+      "/HTMLBASE/02-dialogue-bouton.html"
     );
 
     slot.appendChild(fragment);

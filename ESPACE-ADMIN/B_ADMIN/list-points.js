@@ -403,7 +403,7 @@
     etat = ""
   ) {
     await chargerScriptObjetUneFois(
-      "/BOX/03-box-formulaire.js"
+      "/JSBASE/03-formulaire.js"
     );
 
     if (
@@ -892,7 +892,7 @@
     slot.innerHTML = "";
     slot.appendChild(
       await chargerFragmentObjet(
-        "/BOX/02-box-dialogue-bouton.html"
+        "/HTMLBASE/02-dialogue-bouton.html"
       )
     );
 
@@ -1003,7 +1003,7 @@
     slot.innerHTML = "";
     slot.appendChild(
       await chargerFragmentObjet(
-        "/BOX/02-box-alerte.html"
+        "/HTMLBASE/02-alerte.html"
       )
     );
 

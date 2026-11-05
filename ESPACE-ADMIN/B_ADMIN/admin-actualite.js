@@ -288,7 +288,7 @@
 
     let fragment;
     try {
-      fragment = await chargerFragmentObjet("/BOX/02-box-alerte.html");
+      fragment = await chargerFragmentObjet("/HTMLBASE/02-alerte.html");
     } catch (_) {
       window.alert(message || "");
       return;
@@ -338,7 +338,7 @@
     slot.innerHTML = "";
 
     const fragment = await chargerFragmentObjet(
-      "/BOX/02-box-dialogue-bouton.html"
+      "/HTMLBASE/02-dialogue-bouton.html"
     );
 
     slot.appendChild(fragment);

@@ -14,7 +14,7 @@
     const d=await r.json().catch(()=>null);if(!r.ok||!d?.success)throw Error(d?.message||'Impossible de charger les titres À propos.');return d;
   }
   async function confirmerSuppression(titre){
-    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(window.LCDP_urlObjet('/BOX/02-box-dialogue-bouton.html')));
+    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(window.LCDP_urlObjet('/HTMLBASE/02-dialogue-bouton.html')));
     const box=slot.querySelector('[data-lcdp-box-dialogue-bouton]'),heading=slot.querySelector('[data-lcdp-dialogue-title]'),text=slot.querySelector('[data-lcdp-dialogue-text]'),actions=slot.querySelector('[data-lcdp-dialogue-actions]');
     if(!box||!heading||!text||!actions){slot.replaceChildren();throw Error('Confirmation indisponible. Aucun titre supprimé.');}
     heading.textContent='Supprimer ce titre ?';text.textContent='Supprimer « '+(titre||'Titre sans texte')+' » ? La suppression sera diffusée après enregistrement.';actions.replaceChildren();
