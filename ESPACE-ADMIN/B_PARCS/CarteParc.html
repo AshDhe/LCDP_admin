@@ -57,7 +57,11 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/CSSBASE/lcdp-central-mobile-first.css?v=20261105-css-objets-complets-v1",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/04-carte-dynamique.css",
+        "/BOX/04-box-card-parc.css",
+        "/BOX/04-box-fiche-parc.css"
       ].forEach((path) => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">');
       });
@@ -71,24 +75,27 @@
   </script>
 
   <style>
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="recherche"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="acreuserfautinfo"] {
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="1-basebrute"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="2-aqualifier"] {
       fill: #9a9a93;
       stroke: #595954;
     }
 
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="prepa"] {
-      fill: #76a966;
-      stroke: #3f6f33;
-    }
-
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="oui"] {
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="2-ademarcher"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-encours"] {
       fill: #6ea9c9;
       stroke: #356d8d;
     }
 
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="non"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="nonconforme"] {
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="prepa"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="enligne"] {
+      fill: #76a966;
+      stroke: #3f6f33;
+    }
+
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-nonqualifié"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-refus"],
+    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="horsligne"] {
       fill: #d98d8d;
       stroke: #974d4d;
     }
@@ -115,19 +122,22 @@
       "use strict";
 
       const config = window.SITE_CONFIG || {};
-      const CHEMIN_OBJET_CARTE = "/HTMLBASE/04-carte-dynamique.html";
-      const CHEMIN_GEOJSON_CARTE = "/DATA/04-carte-dynamique.geojson";
-      const CHEMIN_OBJET_CARD_PARC = "/HTMLBASE/04-card-parc.html";
-      const CHEMIN_OBJET_FICHE_PARC = "/HTMLBASE/04-fiche-parc.html";
+      const CHEMIN_OBJET_CARTE = "/BOX/04-carte-dynamique.html";
+      const CHEMIN_GEOJSON_CARTE = "/BOX/04-carte-dynamique.geojson";
+      const CHEMIN_OBJET_CARD_PARC = "/BOX/04-box-card-parc.html";
+      const CHEMIN_OBJET_FICHE_PARC = "/BOX/04-box-fiche-parc.html";
       const DOSSIER_IMAGES_PARC = "/IMAG/PARC";
       const NOM_IMAGE_CARD_PARC = "card1.webp";
       const STATUTS_AUTORISES = new Set([
-        "recherche",
+        "1-basebrute",
+        "2-aqualifier",
+        "2-ademarcher",
+        "3-nonqualifié",
+        "3-encours",
+        "3-refus",
         "prepa",
-        "non",
-        "oui",
-        "nonconforme",
-        "acreuserfautinfo"
+        "enligne",
+        "horsligne"
       ]);
 
       function urlAdmin(path) {
@@ -242,12 +252,7 @@
       }
 
       function normaliserEtat(value) {
-        return String(value || "")
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[\s_-]+/g, "");
+        return String(value || "").trim().toLowerCase();
       }
 
       function projeterCoordonnee(longitude, latitude) {
@@ -482,6 +487,20 @@
           !templateFicheParc
         ) {
           throw new Error("Structure de l’objet carte dynamique incomplète.");
+        }
+
+        // La liste du fragment carte est synchronisée avec les statuts SQL.
+        if (inputEtat.tagName === "SELECT") {
+          const optionTous = inputEtat.querySelector('option[value=""]');
+          const libelleTous = optionTous?.textContent || "Tous";
+          const selectionInitiale = normaliserEtat(inputEtat.value);
+          inputEtat.replaceChildren(
+            new Option(libelleTous, ""),
+            ...Array.from(STATUTS_AUTORISES, (statut) => new Option(statut, statut))
+          );
+          inputEtat.value = STATUTS_AUTORISES.has(selectionInitiale)
+            ? selectionInitiale
+            : "";
         }
 
         const featuresParCode = new Map();
@@ -733,7 +752,7 @@
           lightboxSlot.innerHTML = "";
 
           const fragmentAlerte = await chargerFragment(
-            urlObjet("/HTMLBASE/02-alerte.html"),
+            urlObjet("/BOX/02-box-alerte.html"),
             "Objet alerte"
           );
 

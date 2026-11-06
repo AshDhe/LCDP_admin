@@ -75,7 +75,11 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/CSSBASE/lcdp-central-mobile-first.css?v=20261105-css-objets-complets-v1",
+        "/BOX/02-box-bandeau-nav.css",
+        "/BOX/02-box-alerte.css",
+        "/BOX/07-box-diginum.css",
+        "/BOX/03-box-formulaire.css",
+        "/BOX/03-box-champ-formulaire.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -338,7 +342,7 @@
           throw new Error("Objet table lecture admin indisponible.");
         }
 
-        await chargerScriptObjetUneFois("/JSBASE/07-diginum.js");
+        await chargerScriptObjetUneFois("/BOX/07-box-diginum.js");
         const cleFiltres = "lcdp-statupark-filtres";
         const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
         if (!sessionId) throw new Error("Identifiant de session admin absent. Déployez le worker de session et le garde admin.");
@@ -370,6 +374,7 @@
               { value: "", label: "Tous" },
               { value: "1-basebrute", label: "1-basebrute" },
               { value: "2-aqualifier", label: "2-aqualifier" },
+              { value: "2-ademarcher", label: "2-ademarcher" },
               { value: "3-nonqualifié", label: "3-nonqualifié" },
               { value: "3-encours", label: "3-encours" },
               { value: "3-refus", label: "3-refus" },
@@ -452,7 +457,7 @@
 
       async function rendreFormulaireEdition(parc, message = "", etat = "") {
         await chargerScriptObjetUneFois(
-          "/JSBASE/03-formulaire.js"
+          "/BOX/03-box-formulaire.js"
         );
 
         if (typeof window.LCDP_creerFormulaire !== "function") {
@@ -583,6 +588,7 @@
               choixVide,
               { value: "1-basebrute", label: "1-basebrute" },
               { value: "2-aqualifier", label: "2-aqualifier" },
+              { value: "2-ademarcher", label: "2-ademarcher" },
               { value: "3-nonqualifié", label: "3-nonqualifié" },
               { value: "3-encours", label: "3-encours" },
               { value: "3-refus", label: "3-refus" },
@@ -915,7 +921,7 @@
 
         try {
           fragment = await chargerFragment(
-            urlObjet("/HTMLBASE/02-alerte.html"),
+            urlObjet("/BOX/02-box-alerte.html"),
             "AlertBox"
           );
         } catch (error) {
