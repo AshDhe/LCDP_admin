@@ -57,11 +57,11 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-alerte.css",
-        "/BOX/04-carte-dynamique.css",
-        "/BOX/04-box-card-parc.css",
-        "/BOX/04-box-fiche-parc.css"
+        "/CSSBASE/02-box-bandeau-nav.css",
+        "/CSSBASE/02-box-alerte.css",
+        "/CSSBASE/04-carte-dynamique.css",
+        "/CSSBASE/04-box-card-parc.css",
+        "/CSSBASE/04-box-fiche-parc.css"
       ].forEach((path) => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">');
       });
@@ -122,10 +122,10 @@
       "use strict";
 
       const config = window.SITE_CONFIG || {};
-      const CHEMIN_OBJET_CARTE = "/BOX/04-carte-dynamique.html";
-      const CHEMIN_GEOJSON_CARTE = "/BOX/04-carte-dynamique.geojson";
-      const CHEMIN_OBJET_CARD_PARC = "/BOX/04-box-card-parc.html";
-      const CHEMIN_OBJET_FICHE_PARC = "/BOX/04-box-fiche-parc.html";
+      const CHEMIN_OBJET_CARTE = "/HTMLBASE/04-carte-dynamique.html";
+      const CHEMIN_GEOJSON_CARTE = "/DATA/04-carte-dynamique.geojson";
+      const CHEMIN_OBJET_CARD_PARC = "/HTMLBASE/04-card-parc.html";
+      const CHEMIN_OBJET_FICHE_PARC = "/HTMLBASE/04-fiche-parc.html";
       const DOSSIER_IMAGES_PARC = "/IMAG/PARC";
       const NOM_IMAGE_CARD_PARC = "card1.webp";
       const STATUTS_AUTORISES = new Set([
@@ -752,7 +752,7 @@
           lightboxSlot.innerHTML = "";
 
           const fragmentAlerte = await chargerFragment(
-            urlObjet("/BOX/02-box-alerte.html"),
+            urlObjet("/HTMLBASE/02-alerte.html"),
             "Objet alerte"
           );
 

@@ -75,11 +75,11 @@
 
       [
         "/CSSBASE/cssbase.css",
-        "/BOX/02-box-bandeau-nav.css",
-        "/BOX/02-box-alerte.css",
-        "/BOX/07-box-diginum.css",
-        "/BOX/03-box-formulaire.css",
-        "/BOX/03-box-champ-formulaire.css"
+        "/CSSBASE/02-box-bandeau-nav.css",
+        "/CSSBASE/02-box-alerte.css",
+        "/CSSBASE/07-box-diginum.css",
+        "/CSSBASE/03-box-formulaire.css",
+        "/CSSBASE/03-box-champ-formulaire.css"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -342,7 +342,7 @@
           throw new Error("Objet table lecture admin indisponible.");
         }
 
-        await chargerScriptObjetUneFois("/BOX/07-box-diginum.js");
+        await chargerScriptObjetUneFois("/JSBASE/07-diginum.js");
         const cleFiltres = "lcdp-statupark-filtres";
         const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
         if (!sessionId) throw new Error("Identifiant de session admin absent. Déployez le worker de session et le garde admin.");
@@ -457,7 +457,7 @@
 
       async function rendreFormulaireEdition(parc, message = "", etat = "") {
         await chargerScriptObjetUneFois(
-          "/BOX/03-box-formulaire.js"
+          "/JSBASE/03-formulaire.js"
         );
 
         if (typeof window.LCDP_creerFormulaire !== "function") {
@@ -921,7 +921,7 @@
 
         try {
           fragment = await chargerFragment(
-            urlObjet("/BOX/02-box-alerte.html"),
+            urlObjet("/HTMLBASE/02-alerte.html"),
             "AlertBox"
           );
         } catch (error) {
