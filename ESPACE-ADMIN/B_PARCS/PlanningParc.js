@@ -115,7 +115,7 @@
   }
 
   function chargerFragmentObjet(path) {
-    if (path === "/BOX/02-box-alerte.html") {
+    if (path === "/HTMLBASE/02-alerte.html") {
       return chargerFragment(urlObjet(path), "Fragment OBJET " + path)
         .catch(() => {
           const template = document.createElement("template");
@@ -220,7 +220,7 @@
       throw new Error("Objet table lecture admin indisponible.");
     }
 
-    await chargerScriptUneFois(urlObjet("/BOX/07-box-diginum.js"), "data-lcdp-script-objet", "diginum");
+    await chargerScriptUneFois(urlObjet("/JSBASE/07-diginum.js"), "data-lcdp-script-objet", "diginum");
     const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
     const storageKey = "lcdp-planning-parc-filtres";
     let initialFilters = { statut: "enligne" };
@@ -334,10 +334,10 @@
 
     const [fragmentJour, fragmentHeure] = await Promise.all([
       chargerFragmentObjet(
-        "/BOX/04-box-card-jour-in-calendrier-mois.html"
+        "/HTMLBASE/04-card-jour-in-calendrier-mois.html"
       ),
       chargerFragmentObjet(
-        "/BOX/04-box-card-heure-in-calendrier-jour.html"
+        "/HTMLBASE/04-card-heure-in-calendrier-jour.html"
       )
     ]);
 
@@ -371,7 +371,7 @@
     }
 
     const fragment = await chargerFragmentObjet(
-      "/BOX/04-box-shift-detail-parc.html"
+      "/HTMLBASE/04-shift-detail-parc.html"
     );
     const shift = fragment.querySelector(
       "[data-lcdp-box-shift-detail-parc]"
