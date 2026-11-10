@@ -1,63 +1,6 @@
 /* CSS ADMIN CENTRALISE - LA CLE DU PARC */
 /* Charge apres cssbase.css et les CSS generiques des objets utilises. */
 
-/* BANDEAU ADMIN : le fragment est present dans les pages, mais ses styles
-   ne sont pas fournis par cssbase.css. Styles limites a l'espace admin. */
-.lcdp-box-bandeau-nav {
-  width: 100%;
-  background: var(--lcdp-color-primary);
-  color: #fff;
-}
-
-.lcdp-box-bandeau-nav__inner {
-  width: 100%;
-  max-width: 1500px;
-  min-height: 88px;
-  margin-inline: auto;
-  padding: 10px var(--lcdp-page-padding-desktop);
-  display: flex;
-  align-items: center;
-}
-
-.lcdp-box-bandeau-nav__logo-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.lcdp-box-bandeau-nav__logo {
-  display: block;
-  width: 68px;
-  height: 68px;
-  object-fit: contain;
-  flex: 0 0 68px;
-}
-
-.lcdp-box-bandeau-nav__space-label {
-  color: #fff;
-  font-size: 1.25rem;
-  line-height: 1.2;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-@media (max-width: 620px) {
-  .lcdp-box-bandeau-nav__inner {
-    min-height: 72px;
-    padding: 8px var(--lcdp-page-padding-mobile);
-  }
-
-  .lcdp-box-bandeau-nav__logo-link { gap: 10px; }
-  .lcdp-box-bandeau-nav__logo {
-    width: 54px;
-    height: 54px;
-    flex-basis: 54px;
-  }
-  .lcdp-box-bandeau-nav__space-label { font-size: 1.05rem; }
-}
-
 /* MENU GAUCHE ADMIN */
 
 .lcdp-menu-gauche-admin {
