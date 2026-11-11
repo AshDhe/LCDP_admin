@@ -83,18 +83,18 @@
         );
       });
 
-      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
+      ["/CSSBASE/lcdp-central-mobile-first.css?v=20261110-css-consolidation-v1"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlAdmin(path) +
+          window.LCDP_urlObjet(path) +
           '">'
         );
       });
 
-      ["/CSSBASE/lcdp-central-mobile-first.css?v=20261105-css-objets-complets-v1"].forEach((path) => {
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlPublic(path) +
+          window.LCDP_urlAdmin(path) +
           '">'
         );
       });
