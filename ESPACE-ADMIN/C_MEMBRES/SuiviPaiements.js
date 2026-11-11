@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const CHEMIN='/ESPACE-ADMIN/B_ADMIN/SuiviPaiements.html';
+  const CHEMIN='/ESPACE-ADMIN/C_MEMBRES/SuiviPaiements.html';
   const config=window.SITE_CONFIG||{};
   const endpoint=String(config.workerSuiviPaiementsAdminUrl||config.WORKER_SUIVI_PAIEMENTS_ADMIN_URL||
     'https://ad-suivi-paiements-api.lacleduparc.fr').replace(/\/+$/,'');
