@@ -49,7 +49,8 @@
 
     autocompleteParc: "https://autocomplete-parc-api.lacleduparc.fr",
     editingAdmin: "https://editing-admin-api.lacleduparc.fr",
-    aboAdmin: "https://abo-admin-api.lacleduparc.fr"
+    aboAdmin: "https://abo-admin-api.lacleduparc.fr",
+    suiviPaiementsAdmin: "https://ad-suivi-paiements-api.lacleduparc.fr"
 
   };
 
@@ -90,6 +91,7 @@
     workerAutocompleteParcUrl: WORKERS.autocompleteParc,
     workerEditingAdminUrl: WORKERS.editingAdmin,
     workerAboAdminUrl: WORKERS.aboAdmin,
+    workerSuiviPaiementsAdminUrl: WORKERS.suiviPaiementsAdmin,
 
     PUBLIC_BASE: active.publicBase,
     MEMBRE_BASE: active.membreBase,
@@ -116,6 +118,7 @@
     WORKER_AUTOCOMPLETE_PARC_URL: WORKERS.autocompleteParc,
     WORKER_EDITING_ADMIN_URL: WORKERS.editingAdmin,
     WORKER_ABO_ADMIN_URL: WORKERS.aboAdmin,
+    WORKER_SUIVI_PAIEMENTS_ADMIN_URL: WORKERS.suiviPaiementsAdmin,
 
     publicUrl(path) {
       return buildUrl(active.publicBase, path);
@@ -166,7 +169,8 @@
 
     API_AUTOCOMPLETE_PARC: WORKERS.autocompleteParc,
     API_EDITING_ADMIN: WORKERS.editingAdmin,
-    API_ABO_ADMIN: WORKERS.aboAdmin
+    API_ABO_ADMIN: WORKERS.aboAdmin,
+    API_SUIVI_PAIEMENTS_ADMIN: WORKERS.suiviPaiementsAdmin
 
   };
 })();
