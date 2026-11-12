@@ -329,3 +329,29 @@ tr > td:nth-child(2) > button:focus-visible {
   border-radius: 2px !important;
 }
 
+
+/* Filtre multisélection opt-in (PrixAbo) */
+.lcdp-table-lecture-admin__multi { min-width: 132px; position: relative; font-weight: 400; }
+.lcdp-table-lecture-admin__multi-resume {
+  display: block; min-height: 34px; padding: 8px 10px; cursor: pointer;
+  border: 1px solid var(--lcdp-color-border); border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface); white-space: nowrap; font-size: .82rem;
+}
+.lcdp-table-lecture-admin__multi-panel {
+  padding: 8px; border: 1px solid var(--lcdp-color-border);
+  background: var(--lcdp-color-surface); border-radius: var(--lcdp-radius-small);
+  min-width: 175px; max-width: 250px; margin-top: 4px;
+}
+.lcdp-table-lecture-admin__multi-panel .lcdp-table-lecture-admin__filter-input { min-width: 0; }
+.lcdp-table-lecture-admin__multi-options { max-height: 160px; overflow-y: auto; margin: 6px 0; }
+.lcdp-table-lecture-admin__multi-choice {
+  display: flex; gap: 6px; align-items: center; padding: 4px 0;
+  cursor: pointer; white-space: nowrap; font-size: .84rem; font-weight: 400;
+}
+.lcdp-table-lecture-admin__multi-choice input { flex: 0 0 auto; }
+.lcdp-table-lecture-admin__multi-clear {
+  font: inherit; font-size: .82rem; border: 1px solid var(--lcdp-color-border);
+  background: var(--lcdp-color-surface); color: var(--lcdp-color-text);
+  border-radius: var(--lcdp-radius-small); padding: 6px 8px; cursor: pointer;
+}
+.lcdp-table-lecture-admin__multi-clear:disabled { opacity: .5; cursor: default; }
