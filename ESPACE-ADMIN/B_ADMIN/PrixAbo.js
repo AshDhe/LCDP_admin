@@ -351,10 +351,10 @@
       champType,
       {
         name: "datedebut",
-        label: "Date de début de commercialisation",
+        label: "Date de début de commercialisation (facultative)",
         type: "date",
         value: String(abonnement.datedebut || "").slice(0, 10),
-        required: true,
+        required: false,
         validationNative: true
       },
       {
