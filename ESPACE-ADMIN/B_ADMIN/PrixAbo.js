@@ -392,6 +392,8 @@
         label: "Nombre d'échéances",
         type: "select",
         value: abonnement.ech ?? "",
+        required: true,
+        validationNative: true,
         options: [
           { value: "", label: "Non renseigné" },
           { value: "1", label: "1" },
@@ -399,11 +401,11 @@
           { value: "3", label: "3" }
         ]
       },
-      champMontant("mois1", "Mois 1", abonnement.mois1, false, 0.01),
-      champMontant("mois2", "Mois 2", abonnement.mois2, false, 0.01),
-      champMontant("mois3", "Mois 3", abonnement.mois3, false, 0.01),
-      champMontant("valvrmt", "Valeur de versement", abonnement.valvrmt, false, 0),
-      champMontant("1xval", "Valeur 1×", abonnement["1xval"], false, 0)
+      champMontant("mois1", "Mois 1", abonnement.mois1, true, 0),
+      champMontant("mois2", "Mois 2", abonnement.mois2, true, 0),
+      champMontant("mois3", "Mois 3", abonnement.mois3, true, 0),
+      champMontant("valvrmt", "Valeur de versement", abonnement.valvrmt, true, 0),
+      champMontant("1xval", "Valeur 1×", abonnement["1xval"], true, 0)
     ];
 
     if (modeEdition === "update") {
