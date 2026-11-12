@@ -355,3 +355,19 @@ tr > td:nth-child(2) > button:focus-visible {
   border-radius: var(--lcdp-radius-small); padding: 6px 8px; cursor: pointer;
 }
 .lcdp-table-lecture-admin__multi-clear:disabled { opacity: .5; cursor: default; }
+
+/* Choix de la position des colonnes, activé uniquement par la page concernée. */
+.lcdp-table-lecture-admin__column-position {
+  display: inline-block;
+  width: 46px;
+  min-height: 28px;
+  margin-left: 8px;
+  padding: 2px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  color: var(--lcdp-color-text);
+  background: var(--lcdp-color-surface);
+  font: inherit;
+  font-size: .79rem;
+  cursor: pointer;
+}
