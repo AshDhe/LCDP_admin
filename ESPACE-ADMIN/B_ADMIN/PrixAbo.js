@@ -163,7 +163,7 @@
       reorderableColumns: true,
       resource: "prixabo",
       pageSize: 200,
-      multiSelectFilterColumns: ["typeabo", "nomabo", "datedebut", "datefin", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise", "datecreation"],
+      multiSelectFilterColumns: ["typeabo", "nomabo", "variables", "datedebut", "datefin", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise", "datecreation"],
       initialSortKey: "typeabo",
       initialSortDirection: "asc",
       interactiveColumns: ["typeabo", "nomabo", "ria", "typmb"],
@@ -257,6 +257,7 @@
     abonnementCourant = {
       typeabo: "",
       nomabo: "",
+      variables: "",
       datedebut: "",
       datefin: "",
       prixabottc: "",
@@ -417,6 +418,13 @@
         validationNative: true
       },
       {
+        name: "variables",
+        label: "Variables",
+        type: "text",
+        value: abonnement.variables ?? "",
+        required: false
+      },
+      {
         name: "datedebut",
         label: "Date de début de commercialisation (facultative)",
         type: "date",
@@ -512,6 +520,16 @@
     if (!form.reportValidity()) return;
 
     const abonnement = construirePayload(form);
+    const total = abonnement.mois1 + abonnement.mois2 + abonnement.mois3;
+    if (Math.round(total * 100) !== Math.round(abonnement.prixabottc * 100)) {
+      await afficherAlerte("Le total des mois 1, 2 et 3 doit être exactement égal au prix TTC de l’abonnement.");
+      return;
+    }
+    if ((abonnement.ech === 1 && (abonnement.mois2 !== 0 || abonnement.mois3 !== 0)) ||
+        (abonnement.ech === 2 && abonnement.mois3 !== 0)) {
+      await afficherAlerte("Échéances incohérentes : avec 1 échéance, mois 2 et mois 3 doivent être à 0 ; avec 2 échéances, mois 3 doit être à 0.");
+      return;
+    }
     boutonEnregistrer.disabled = true;
     boutonRetour.disabled = true;
     afficherNote(note, "Enregistrement en cours…", "");
@@ -573,6 +591,7 @@
     return {
       typeabo: String(form.elements.namedItem("typeabo")?.value || "").trim(),
       nomabo: String(form.elements.namedItem("nomabo")?.value || "").trim(),
+      variables: String(form.elements.namedItem("variables")?.value || ""),
       datedebut: String(form.elements.namedItem("datedebut")?.value || "").trim(),
       datefin: String(form.elements.namedItem("datefin")?.value || "").trim() || null,
       maxduo: lireNombre("maxduo", false),
