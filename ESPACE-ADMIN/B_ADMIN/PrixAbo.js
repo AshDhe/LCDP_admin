@@ -158,6 +158,7 @@
     await table.initialiser({
       slotId: TABLE_SLOT_ID,
       endpoint,
+      reorderableColumns: true,
       resource: "prixabo",
       pageSize: 200,
       multiSelectFilterColumns: ["typeabo", "nomabo", "datedebut", "datefin", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise", "datecreation"],
@@ -305,7 +306,7 @@
         ? ""
         : String(abonnement.typeabo || ""),
       validationNative: true,
-      champs: construireChamps(abonnement),
+      champs: ordonnerChampsSelonTable(construireChamps(abonnement)),
       boutons: [
         {
           id: "lcdp-prixabo-enregistrer",
@@ -368,6 +369,21 @@
     } finally {
       if (bouton?.isConnected) bouton.disabled = false;
     }
+  }
+
+  function ordonnerChampsSelonTable(champs) {
+    let ordre = [];
+    try {
+      const valeur = JSON.parse(window.localStorage.getItem("lcdp-admin-columns:prixabo") || "[]");
+      if (Array.isArray(valeur)) ordre = valeur.filter(cle => typeof cle === "string");
+    } catch (_) { /* L'ordre standard reste disponible. */ }
+    if (!ordre.length) return champs;
+    const position = new Map(ordre.map((cle, index) => [cle, index]));
+    return [...champs].sort((a, b) => {
+      const ia = position.has(a.name) ? position.get(a.name) : Infinity;
+      const ib = position.has(b.name) ? position.get(b.name) : Infinity;
+      return ia - ib;
+    });
   }
 
   function construireChamps(abonnement) {
