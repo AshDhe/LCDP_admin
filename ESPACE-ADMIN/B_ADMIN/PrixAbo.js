@@ -251,8 +251,17 @@
     modeEdition = "create";
     abonnementCourant = {
       typeabo: "",
+      datedebut: "",
+      datefin: "",
       prixabottc: "",
       txtvafr: 20,
+      maxduo: "",
+      duoplus: "",
+      freqduoplus: "",
+      famille: "",
+      coach: "",
+      maxcoach: "",
+      remise: "",
       typmb: "",
       ech: "",
       mois1: "",
@@ -340,7 +349,29 @@
 
     const champs = [
       champType,
+      {
+        name: "datedebut",
+        label: "Date de début de commercialisation",
+        type: "date",
+        value: String(abonnement.datedebut || "").slice(0, 10),
+        required: true,
+        validationNative: true
+      },
+      {
+        name: "datefin",
+        label: "Date de fin de commercialisation (facultative)",
+        type: "date",
+        value: String(abonnement.datefin || "").slice(0, 10),
+        required: false
+      },
       champMontant("prixabottc", "Prix total TTC", abonnement.prixabottc, true, 0.01),
+      champMontant("maxduo", "MaxDuo", abonnement.maxduo, true, 0),
+      champMontant("duoplus", "Duo+", abonnement.duoplus, true, 0),
+      champMontant("freqduoplus", "Fréquence Duo+", abonnement.freqduoplus, true, 0),
+      champMontant("famille", "Famille", abonnement.famille, true, 0),
+      champMontant("coach", "Coach", abonnement.coach, true, 0),
+      champMontant("maxcoach", "MaxCoach", abonnement.maxcoach, true, 0),
+      champMontant("remise", "Remise", abonnement.remise, true, 0),
       {
         name: "typmb",
         label: "TypMb",
@@ -471,6 +502,15 @@
 
     return {
       typeabo: String(form.elements.namedItem("typeabo")?.value || "").trim(),
+      datedebut: String(form.elements.namedItem("datedebut")?.value || "").trim(),
+      datefin: String(form.elements.namedItem("datefin")?.value || "").trim() || null,
+      maxduo: lireNombre("maxduo", false),
+      duoplus: lireNombre("duoplus", false),
+      freqduoplus: lireNombre("freqduoplus", false),
+      famille: lireNombre("famille", false),
+      coach: lireNombre("coach", false),
+      maxcoach: lireNombre("maxcoach", false),
+      remise: lireNombre("remise", false),
       prixabottc: lireNombre("prixabottc", false),
       typmb: String(form.elements.namedItem("typmb")?.value || "").trim(),
       txtvafr: lireNombre("txtvafr", false),
