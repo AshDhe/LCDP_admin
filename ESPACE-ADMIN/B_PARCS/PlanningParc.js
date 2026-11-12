@@ -211,7 +211,7 @@
     );
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261102-taux"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
@@ -321,7 +321,7 @@
 
   async function initialiserObjetsPlanning() {
     await chargerScriptPublicUneFois(
-      "/ESPACE-PUBLIC/fiche-parc.js?v=20261102-admin-restaure-v3"
+      "/ESPACE-PUBLIC/fiche-parc.js"
     );
 
     if (
