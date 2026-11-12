@@ -146,7 +146,7 @@
     ));
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20260802-1359"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
