@@ -184,43 +184,50 @@
     const scroll = slot.querySelector("[data-lcdp-table-lecture-admin-scroll]");
     const tableau = scroll?.querySelector("table");
     if (!scroll || !tableau || slot.querySelector("[data-lcdp-prixabo-scroll-haut]")) return;
+
     const barre = document.createElement("div");
     barre.dataset.lcdpPrixaboScrollHaut = "";
     barre.setAttribute("role", "region");
     barre.setAttribute("aria-label", "Défilement horizontal du tableau des abonnements");
     barre.tabIndex = 0;
-    barre.style.cssText = "overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;height:18px;margin-bottom:8px;";
-    const contenu = document.createElement("div");
-    contenu.style.height = "1px";
-    barre.appendChild(contenu);
-    scroll.before(barre);
-    let synchronisation = false;
+    barre.style.cssText = "display:block;overflow-x:scroll;overflow-y:hidden;width:100%;max-width:100%;height:22px;margin-bottom:8px;";
+    const piste = document.createElement("div");
+    piste.style.cssText = "height:1px;pointer-events:none;";
+    barre.appendChild(piste);
+    scroll.parentElement.insertBefore(barre, scroll);
+
+    let verrou = false;
     barre.addEventListener("scroll", () => {
-      if (synchronisation) return;
-      synchronisation = true;
+      if (verrou) return;
+      verrou = true;
       scroll.scrollLeft = barre.scrollLeft;
-      synchronisation = false;
+      verrou = false;
     });
     scroll.addEventListener("scroll", () => {
-      if (synchronisation) return;
-      synchronisation = true;
+      if (verrou) return;
+      verrou = true;
       barre.scrollLeft = scroll.scrollLeft;
-      synchronisation = false;
+      verrou = false;
     });
-    const redimensionner = () => {
-      const largeur = Math.max(scroll.scrollWidth, tableau.scrollWidth, scroll.clientWidth + 2);
-      contenu.style.width = largeur + "px";
-      barre.hidden = scroll.hidden;
+
+    const ajuster = () => {
+      if (scroll.hidden) {
+        barre.style.display = "none";
+        return;
+      }
+      barre.style.display = "block";
+      piste.style.width = Math.max(tableau.scrollWidth, scroll.scrollWidth, scroll.clientWidth + 1) + "px";
       barre.scrollLeft = scroll.scrollLeft;
     };
+    const observer = new MutationObserver(ajuster);
+    observer.observe(scroll, { attributes: true, attributeFilter: ["hidden", "style"] });
     if (typeof ResizeObserver === "function") {
-      const observateur = new ResizeObserver(redimensionner);
-      observateur.observe(scroll);
-      observateur.observe(tableau);
+      const tailles = new ResizeObserver(ajuster);
+      tailles.observe(scroll);
+      tailles.observe(tableau);
     }
-    new MutationObserver(redimensionner).observe(scroll, {attributes:true,attributeFilter:["hidden"]});
-    window.addEventListener("resize", redimensionner);
-    redimensionner();
+    window.addEventListener("resize", ajuster);
+    ajuster();
   }
 
   async function basculerDroitRechercheIa(row) {
