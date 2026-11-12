@@ -47,6 +47,15 @@
     const multiSelectFilters = new Set(Array.isArray(options.multiSelectFilterColumns)
       ? options.multiSelectFilterColumns.map(String) : []);
     const choixMulti = new Map();
+    const ordreStockage = options.reorderableColumns === true
+      ? "lcdp-admin-columns:" + resource : null;
+    let ordreColonnes = [];
+    if (ordreStockage) {
+      try {
+        const memorise = JSON.parse(window.localStorage.getItem(ordreStockage) || "[]");
+        if (Array.isArray(memorise)) ordreColonnes = memorise.filter(x => typeof x === "string");
+      } catch (_) { /* Le tableau reste utilisable sans stockage local. */ }
+    }
     const initialSortKey = String(
       options.initialSortKey || ""
     ).trim();
@@ -234,9 +243,16 @@
           );
         }
 
-        const columns = Array.isArray(data.columns)
+        const columnsSource = Array.isArray(data.columns)
           ? data.columns
           : [];
+        const columns = ordreStockage
+          ? [...columnsSource].sort((a, b) => {
+              const ia = ordreColonnes.indexOf(a.key);
+              const ib = ordreColonnes.indexOf(b.key);
+              return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
+            })
+          : columnsSource;
 
         const rows = Array.isArray(data.rows)
           ? data.rows
@@ -274,7 +290,18 @@
         }
 
         if (!etat.structureRendue) {
-          rendreEntete(head, columns);
+          rendreEntete(head, columns, ordreStockage ? (cle, position) => {
+            const cles = columns.map(col => col.key);
+            const avant = cles.indexOf(cle);
+            if (avant < 0) return;
+            cles.splice(avant, 1);
+            cles.splice(position, 0, cle);
+            ordreColonnes = cles;
+            try { window.localStorage.setItem(ordreStockage, JSON.stringify(cles)); }
+            catch (_) { /* L'ordre reste actif pour cette session. */ }
+            etat.structureRendue = false;
+            chargerDonnees();
+          } : null);
           rendreTris(
             sortsRow,
             columns,
@@ -377,15 +404,32 @@
     return chargerDonnees();
   }
 
-  function rendreEntete(head, columns) {
+  function rendreEntete(head, columns, deplacerColonne = null) {
     head.innerHTML = "";
 
     columns.forEach((column) => {
       const cellule = document.createElement("th");
       cellule.scope = "col";
-      cellule.textContent = String(
-        column.label || column.key || ""
-      );
+      const label = String(column.label || column.key || "");
+      if (deplacerColonne) {
+        const titre = document.createElement("span");
+        titre.textContent = label;
+        const select = document.createElement("select");
+        select.className = "lcdp-table-lecture-admin__column-position";
+        select.setAttribute("aria-label", "Position de la colonne " + label);
+        select.title = "Déplacer la colonne " + label;
+        columns.forEach((_, position) => {
+          const option = document.createElement("option");
+          option.value = String(position);
+          option.textContent = String(position + 1);
+          select.appendChild(option);
+        });
+        select.value = String(columns.indexOf(column));
+        select.addEventListener("change", () => deplacerColonne(column.key, Number(select.value)));
+        cellule.append(titre, select);
+      } else {
+        cellule.textContent = label;
+      }
       head.appendChild(cellule);
     });
   }
