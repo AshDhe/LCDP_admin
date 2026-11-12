@@ -138,5 +138,68 @@
   </div>
 
   <script src="./PrixAbo.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const slot = document.getElementById("lcdp-prixabo-table-slot");
+      if (!slot) return;
+
+      function installer() {
+        const scroll = slot.querySelector("[data-lcdp-table-lecture-admin-scroll]");
+        const table = scroll?.querySelector("table");
+        if (!scroll || !table) return false;
+
+        // Supprimer tout élément créé par un ancien script encore en cache.
+        slot.querySelectorAll("[data-lcdp-prixabo-scroll-haut]").forEach(el => el.remove());
+
+        const haut = document.createElement("div");
+        haut.setAttribute("data-lcdp-prixabo-scroll-haut", "");
+        haut.setAttribute("aria-label", "Défilement horizontal en haut du tableau");
+        haut.setAttribute("role", "region");
+        haut.tabIndex = 0;
+        haut.style.cssText =
+          "box-sizing:border-box;display:block;width:100%;max-width:100%;" +
+          "height:23px;overflow-x:scroll;overflow-y:hidden;margin:0 0 8px;";
+        const piste = document.createElement("div");
+        piste.style.height = "1px";
+        haut.appendChild(piste);
+        scroll.before(haut);
+
+        let synchronise = false;
+        haut.addEventListener("scroll", () => {
+          if (synchronise) return;
+          synchronise = true;
+          scroll.scrollLeft = haut.scrollLeft;
+          synchronise = false;
+        });
+        scroll.addEventListener("scroll", () => {
+          if (synchronise) return;
+          synchronise = true;
+          haut.scrollLeft = scroll.scrollLeft;
+          synchronise = false;
+        });
+        const ajuster = () => {
+          haut.style.display = scroll.hidden ? "none" : "block";
+          piste.style.width = Math.max(scroll.scrollWidth, table.scrollWidth, scroll.clientWidth + 2) + "px";
+          haut.scrollLeft = scroll.scrollLeft;
+        };
+        const observer = new MutationObserver(ajuster);
+        observer.observe(scroll, { attributes: true, attributeFilter: ["hidden", "style"] });
+        if (typeof ResizeObserver === "function") {
+          const resize = new ResizeObserver(ajuster);
+          resize.observe(scroll);
+          resize.observe(table);
+        }
+        window.addEventListener("resize", ajuster);
+        ajuster();
+        return true;
+      }
+      if (installer()) return;
+      const attente = new MutationObserver(() => {
+        if (installer()) attente.disconnect();
+      });
+      attente.observe(slot, { childList: true, subtree: true });
+    })();
+  </script>
 </body>
 </html>
