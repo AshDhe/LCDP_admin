@@ -315,7 +315,13 @@
           type: "button",
           style: "lcdp-button-secondary",
           label: "Retour à la liste"
-        }
+        },
+        ...(modeEdition === "update" ? [{
+          id: "lcdp-prixabo-supprimer",
+          type: "button",
+          style: "lcdp-button-secondary",
+          label: "Supprimer"
+        }] : [])
       ],
       noteHtml: ""
     });
@@ -325,8 +331,39 @@
     form.addEventListener("submit", enregistrerAbonnement);
     form.querySelector("#lcdp-prixabo-retour")
       ?.addEventListener("click", fermerEdition);
+    form.querySelector("#lcdp-prixabo-supprimer")
+      ?.addEventListener("click", () => supprimerAbonnement(form));
 
     editionSlot.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function supprimerAbonnement(form) {
+    if (modeEdition !== "update" || !abonnementCourant?.typeabo) return;
+    const typeabo = String(abonnementCourant.typeabo).trim();
+    if (!window.confirm('Supprimer définitivement l’abonnement « ' + typeabo + ' » ?')) return;
+
+    const bouton = form.querySelector("#lcdp-prixabo-supprimer");
+    if (bouton) bouton.disabled = true;
+    try {
+      const response = await fetch(endpointAboAdmin() + "/abonnement", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", typeabo })
+      });
+      const data = await response.json().catch(() => null);
+      gererStatutAcces(response, data);
+      if (!response.ok || !data || data.success !== true) {
+        throw new Error(data?.message || data?.detail || "Suppression non prise en charge par le Worker Admin.");
+      }
+      fermerEdition();
+      await window.LCDP_TABLE_LECTURE_ADMIN?.recharger(TABLE_SLOT_ID);
+    } catch (error) {
+      await afficherAlerte(String(error?.message || error || "Suppression impossible."));
+    } finally {
+      if (bouton?.isConnected) bouton.disabled = false;
+    }
   }
 
   function construireChamps(abonnement) {
