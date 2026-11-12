@@ -44,6 +44,9 @@
     const filterOptions = normaliserOptionsFiltres(
       options.filterOptions
     );
+    const multiSelectFilters = new Set(Array.isArray(options.multiSelectFilterColumns)
+      ? options.multiSelectFilterColumns.map(String) : []);
+    const choixMulti = new Map();
     const initialSortKey = String(
       options.initialSortKey || ""
     ).trim();
@@ -240,6 +243,14 @@
           : [];
 
         etat.columns = columns;
+        for (const column of columns) {
+          if (!multiSelectFilters.has(column.key)) continue;
+          if (!choixMulti.has(column.key)) choixMulti.set(column.key, new Set());
+          for (const row of rows) {
+            const valeur = row?.[column.key];
+            choixMulti.get(column.key).add(valeur === null || valeur === undefined || valeur === "" ? "null" : String(valeur));
+          }
+        }
         etat.total = normaliserEntierPositif(data.total, rows.length);
         etat.limit = normaliserEntierPositif(
           data.limit,
@@ -276,7 +287,9 @@
             etat,
             chargerDonnees,
             filterOptions,
-            options
+            options,
+            multiSelectFilters,
+            choixMulti
           );
           etat.structureRendue = true;
         }
@@ -459,7 +472,9 @@
     etat,
     chargerDonnees,
     filterOptions,
-    options = {}
+    options = {},
+    multiSelectFilters = new Set(),
+    choixMulti = new Map()
   ) {
     filtersRow.innerHTML = "";
 
@@ -476,6 +491,11 @@
       }
 
       const label = String(column.label || column.key || "");
+      if (multiSelectFilters.has(column.key)) {
+        cellule.appendChild(creerFiltreMultiselection(column, etat, chargerDonnees, choixMulti.get(column.key) || new Set()));
+        filtersRow.appendChild(cellule);
+        return;
+      }
       const choix = filterOptions.get(
         String(column.key || "")
       );
@@ -570,6 +590,70 @@
       cellule.appendChild(controle);
       filtersRow.appendChild(cellule);
     });
+  }
+
+  function creerFiltreMultiselection(column, etat, chargerDonnees, valeurs) {
+    const conteneur = document.createElement("details");
+    conteneur.className = "lcdp-table-lecture-admin__multi";
+    const resume = document.createElement("summary");
+    resume.className = "lcdp-table-lecture-admin__multi-resume";
+    const panneau = document.createElement("div");
+    panneau.className = "lcdp-table-lecture-admin__multi-panel";
+    const chercher = document.createElement("input");
+    chercher.type = "search";
+    chercher.placeholder = "Rechercher une valeur";
+    chercher.className = "lcdp-table-lecture-admin__filter-input";
+    chercher.setAttribute("aria-label", "Chercher dans " + (column.label || column.key));
+    const liste = document.createElement("div");
+    liste.className = "lcdp-table-lecture-admin__multi-options";
+    const tout = document.createElement("button");
+    tout.type = "button";
+    tout.textContent = "Tout effacer";
+    tout.className = "lcdp-table-lecture-admin__multi-clear";
+    const valeursChoisies = new Set(String(etat.filters[column.key] || "").split("|").filter(Boolean));
+    const trier = (a, b) => a.localeCompare(b, "fr", { numeric: true, sensitivity: "base" });
+    const afficher = () => {
+      const n = valeursChoisies.size;
+      resume.textContent = n ? n + " valeur" + (n > 1 ? "s" : "") + " sélectionnée" + (n > 1 ? "s" : "") : "Sélectionner";
+      resume.title = n ? [...valeursChoisies].join(", ") : "Choisir plusieurs valeurs";
+      liste.replaceChildren();
+      const recherche = chercher.value.trim().toLocaleLowerCase("fr");
+      const options = [...new Set([...valeurs, ...valeursChoisies])].sort(trier);
+      for (const valeur of options) {
+        const libelle = valeur === "null" ? "— (vide)" : valeur;
+        if (recherche && !libelle.toLocaleLowerCase("fr").includes(recherche)) continue;
+        const ligne = document.createElement("label");
+        ligne.className = "lcdp-table-lecture-admin__multi-choice";
+        const caseCocher = document.createElement("input");
+        caseCocher.type = "checkbox";
+        caseCocher.checked = valeursChoisies.has(valeur);
+        caseCocher.addEventListener("change", () => {
+          if (caseCocher.checked) valeursChoisies.add(valeur);
+          else valeursChoisies.delete(valeur);
+          etat.filters[column.key] = [...valeursChoisies].join("|");
+          etat.offset = 0;
+          afficher();
+          chargerDonnees();
+        });
+        ligne.append(caseCocher, document.createTextNode(" " + libelle));
+        liste.appendChild(ligne);
+      }
+      tout.disabled = n === 0;
+    };
+    chercher.addEventListener("input", afficher);
+    tout.addEventListener("click", () => {
+      valeursChoisies.clear();
+      etat.filters[column.key] = "";
+      etat.offset = 0;
+      afficher();
+      chargerDonnees();
+    });
+    // Le panneau reste dans le flux de la cellule : ni débordement ni recouvrement
+    // des lignes du tableau à l'intérieur du conteneur horizontal défilant.
+    panneau.append(chercher, liste, tout);
+    conteneur.append(resume, panneau);
+    afficher();
+    return conteneur;
   }
 
   function creerFiltreStandard(column, label) {
