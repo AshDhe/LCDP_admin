@@ -177,6 +177,50 @@
         return ouvrirModification(row);
       }
     });
+    installerDefilementHorizontalHaut(slot);
+  }
+
+  function installerDefilementHorizontalHaut(slot) {
+    const scroll = slot.querySelector("[data-lcdp-table-lecture-admin-scroll]");
+    const tableau = scroll?.querySelector("table");
+    if (!scroll || !tableau || slot.querySelector("[data-lcdp-prixabo-scroll-haut]")) return;
+    const barre = document.createElement("div");
+    barre.dataset.lcdpPrixaboScrollHaut = "";
+    barre.setAttribute("role", "region");
+    barre.setAttribute("aria-label", "Défilement horizontal du tableau des abonnements");
+    barre.tabIndex = 0;
+    barre.style.cssText = "overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;height:18px;margin-bottom:8px;";
+    const contenu = document.createElement("div");
+    contenu.style.height = "1px";
+    barre.appendChild(contenu);
+    scroll.before(barre);
+    let synchronisation = false;
+    barre.addEventListener("scroll", () => {
+      if (synchronisation) return;
+      synchronisation = true;
+      scroll.scrollLeft = barre.scrollLeft;
+      synchronisation = false;
+    });
+    scroll.addEventListener("scroll", () => {
+      if (synchronisation) return;
+      synchronisation = true;
+      barre.scrollLeft = scroll.scrollLeft;
+      synchronisation = false;
+    });
+    const redimensionner = () => {
+      const largeur = Math.max(tableau.scrollWidth, tableau.offsetWidth);
+      contenu.style.width = largeur + "px";
+      barre.hidden = scroll.hidden || largeur <= scroll.clientWidth + 1;
+      barre.scrollLeft = scroll.scrollLeft;
+    };
+    if (typeof ResizeObserver === "function") {
+      const observateur = new ResizeObserver(redimensionner);
+      observateur.observe(scroll);
+      observateur.observe(tableau);
+    }
+    new MutationObserver(redimensionner).observe(scroll, {attributes:true,attributeFilter:["hidden"]});
+    window.addEventListener("resize", redimensionner);
+    redimensionner();
   }
 
   async function basculerDroitRechercheIa(row) {
