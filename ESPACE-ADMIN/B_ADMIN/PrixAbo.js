@@ -208,9 +208,9 @@
       synchronisation = false;
     });
     const redimensionner = () => {
-      const largeur = Math.max(tableau.scrollWidth, tableau.offsetWidth);
+      const largeur = Math.max(scroll.scrollWidth, tableau.scrollWidth, scroll.clientWidth + 2);
       contenu.style.width = largeur + "px";
-      barre.hidden = scroll.hidden || largeur <= scroll.clientWidth + 1;
+      barre.hidden = scroll.hidden;
       barre.scrollLeft = scroll.scrollLeft;
     };
     if (typeof ResizeObserver === "function") {
