@@ -162,10 +162,11 @@
       pageSize: 50,
       initialSortKey: "typeabo",
       initialSortDirection: "asc",
-      interactiveColumns: ["typeabo", "ria", "typmb"],
+      interactiveColumns: ["typeabo", "nomabo", "ria", "typmb"],
       interactiveLabel: "Modifier l'abonnement",
       interactiveLabels: {
         typeabo: "Modifier l'abonnement",
+        nomabo: "Modifier l'abonnement",
         ria: "Modifier le droit Recherche IA",
         typmb: "Modifier la catégorie membre"
       },
@@ -180,10 +181,10 @@
   }
 
   async function basculerDroitRechercheIa(row) {
-    const typeabo = String(row?.typeabo || "").trim();
+    const idprixabo = String(row?.idprixabo || "").trim();
 
-    if (!typeabo) {
-      throw new Error("Type d'abonnement absent.");
+    if (!idprixabo) {
+      throw new Error("Identifiant PrixAbo absent.");
     }
 
     const nouvelEtat = row?.rechercheia !== true;
@@ -196,7 +197,7 @@
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        typeabo,
+        idprixabo,
         actif: nouvelEtat
       })
     });
@@ -219,12 +220,12 @@
   }
 
   async function ouvrirModification(row) {
-    const typeabo = String(row?.typeabo || "").trim();
-    if (!typeabo) throw new Error("Type d'abonnement absent.");
+    const idprixabo = String(row?.idprixabo || "").trim();
+    if (!idprixabo) throw new Error("Identifiant PrixAbo absent.");
 
     const endpoint = endpointAboAdmin();
     const requestUrl = new URL(endpoint + "/abonnement");
-    requestUrl.searchParams.set("typeabo", typeabo);
+    requestUrl.searchParams.set("idprixabo", idprixabo);
 
     const response = await fetch(requestUrl.toString(), {
       method: "GET",
@@ -251,6 +252,7 @@
     modeEdition = "create";
     abonnementCourant = {
       typeabo: "",
+      nomabo: "",
       datedebut: "",
       datefin: "",
       prixabottc: "",
@@ -338,9 +340,10 @@
   }
 
   async function supprimerAbonnement(form) {
-    if (modeEdition !== "update" || !abonnementCourant?.typeabo) return;
-    const typeabo = String(abonnementCourant.typeabo).trim();
-    if (!window.confirm('Supprimer définitivement l’abonnement « ' + typeabo + ' » ?')) return;
+    if (modeEdition !== "update" || !abonnementCourant?.idprixabo) return;
+    const idprixabo = String(abonnementCourant.idprixabo).trim();
+    const nom = String(abonnementCourant.nomabo || abonnementCourant.typeabo || "").trim();
+    if (!window.confirm('Supprimer définitivement cette version de l’abonnement « ' + nom + ' » ?')) return;
 
     const bouton = form.querySelector("#lcdp-prixabo-supprimer");
     if (bouton) bouton.disabled = true;
@@ -350,7 +353,7 @@
         credentials: "include",
         cache: "no-store",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", typeabo })
+        body: JSON.stringify({ action: "delete", idprixabo })
       });
       const data = await response.json().catch(() => null);
       gererStatutAcces(response, data);
@@ -386,6 +389,14 @@
 
     const champs = [
       champType,
+      {
+        name: "nomabo",
+        label: "Nom commercial",
+        type: "text",
+        value: abonnement.nomabo || "",
+        required: true,
+        validationNative: true
+      },
       {
         name: "datedebut",
         label: "Date de début de commercialisation (facultative)",
@@ -497,6 +508,7 @@
         },
         body: JSON.stringify({
           action: modeEdition,
+          idprixabo: modeEdition === "update" ? abonnementCourant?.idprixabo : undefined,
           abonnement
         })
       });
@@ -541,6 +553,7 @@
 
     return {
       typeabo: String(form.elements.namedItem("typeabo")?.value || "").trim(),
+      nomabo: String(form.elements.namedItem("nomabo")?.value || "").trim(),
       datedebut: String(form.elements.namedItem("datedebut")?.value || "").trim(),
       datefin: String(form.elements.namedItem("datefin")?.value || "").trim() || null,
       maxduo: lireNombre("maxduo", false),
