@@ -514,6 +514,13 @@
         titreApercu.textContent = "Aperçu de la fiche Parc";
         apercu.appendChild(titreApercu);
 
+        const retourListeHaut = document.createElement("button");
+        retourListeHaut.type = "button";
+        retourListeHaut.className = "lcdp-button lcdp-button-secondary";
+        retourListeHaut.textContent = "Retour à la liste des parcs";
+        retourListeHaut.addEventListener("click", fermerEditionParc);
+        apercu.appendChild(retourListeHaut);
+
         if (["prepa", "enligne"].includes(String(parc.statut || ""))) {
           const url = urlPublic("/ESPACE-PUBLIC/fiche-parc.html?idparc=" +
             encodeURIComponent(String(parc.idparc || "")));
