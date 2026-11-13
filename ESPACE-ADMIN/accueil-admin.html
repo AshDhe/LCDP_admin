@@ -720,7 +720,8 @@
         ) {
           // Deux entrées pour la programmation ; les autres rubriques Parcs restent présentes.
           if (categorie.id === "parcs" && [SLOT_HORIZON_PLANNING, SLOT_AJUST_FAMILLE,
-              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION, SLOT_QUALIFICATION_PARC].includes(position)) continue;
+              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION, SLOT_QUALIFICATION_PARC,
+              SLOT_CARD1_PARC, SLOT_UPLOAD_IMG_PARC].includes(position)) continue;
           const lien = template.content.firstElementChild.cloneNode(true);
           lien.dataset.lcdpPosition = String(position);
 
