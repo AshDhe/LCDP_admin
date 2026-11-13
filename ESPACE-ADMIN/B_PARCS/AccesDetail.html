@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-lcdp-css="c001 c033 c040 c041 c066">
+<html lang="fr" data-lcdp-css="c001 c009 c033 c040 c041 c066">
 <head>
   <meta charset="utf-8">
 
@@ -79,6 +79,7 @@
       [
         "/CSSBASE/cssbase.css",
         "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-central-module-01.css",
         "/CSSBASE/lcdp-lightbox-convergence.css",
         "/CSSBASE/lcdp-central-module-05.css",
         "/CSSBASE/lcdp-central-module-06.css",
@@ -92,22 +93,25 @@
         );
       });
 
-      document.write(
-        '<link rel="stylesheet" href="' +
-        window.LCDP_urlAdmin(
-          "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"
-        ) +
-        '">'
-      );
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
     })();
   </script>
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <script src="./AccesDetail.js?v=20261113-confirmation-information-v1" defer></script>
+  <script src="./AccesDetail.js?v=20261113-portefeuille-parcs-v1" defer></script>
 </head>
 
-<body class="lcdp-page-admin-interieure lcdp-page-accesdetail">
+<body class="lcdp-page-admin-interieure lcdp-page-statutparc lcdp-page-accesdetail">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
@@ -123,11 +127,10 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
-              <h1 class="lcdp-box-formulaire__title">Accès détail</h1>
-              <p>Choisissez un département et un parc pour rédiger les consignes d’accès.</p>
-              <div id="lcdp-accesdetail-selection"></div>
-              <div id="lcdp-accesdetail-edition" hidden></div>
+              <p>Sélectionnez un parc en cliquant sur son nom pour gérer exclusivement ses accès détaillés.</p>
               <p id="lcdp-accesdetail-statut" role="status" aria-live="polite" hidden></p>
+              <div id="lcdp-table-lecture-admin-slot"></div>
+              <div id="lcdp-accesdetail-edition" hidden></div>
             </div>
           </div>
         </div>
