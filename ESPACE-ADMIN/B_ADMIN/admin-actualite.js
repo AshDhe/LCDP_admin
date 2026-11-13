@@ -330,8 +330,69 @@
     const slot = document.getElementById(
       "lcdp-lightbox-slot"
     );
-    // Une suppression reste sur l'ancien objet jusqu'au profil SUPPRESSION.
-    if (options.confirmer !== "Supprimer" && slot) {
+    if (options.confirmer === "Supprimer") {
+      if (!slot) return false;
+      const focusInitial = document.activeElement;
+      try {
+        const href = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+        if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === new URL(href, document.baseURI).href)) {
+          await new Promise((resolve, reject) => {
+            const feuille = document.createElement("link");
+            feuille.rel = "stylesheet";
+            feuille.href = href;
+            feuille.onload = resolve;
+            feuille.onerror = () => { feuille.remove(); reject(new Error("CSS SUPPRESSION indisponible.")); };
+            document.head.appendChild(feuille);
+          });
+        }
+        slot.replaceChildren();
+        slot.appendChild(await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-suppression.html"));
+        const dialogue = slot.querySelector('[data-lcdp-dialogue-reference="suppression"]');
+        const titre = slot.querySelector("[data-lcdp-dialogue-titre]");
+        const texte = slot.querySelector("[data-lcdp-dialogue-message]");
+        const conserver = slot.querySelector('[data-lcdp-dialogue-action="conserver"]');
+        const supprimer = slot.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+        if (!dialogue || !titre || !texte || !conserver || !supprimer) throw new Error("Dialogue SUPPRESSION incomplet.");
+        titre.textContent = options.titre || "Supprimer l’actualité";
+        texte.textContent = options.texte || "";
+        conserver.textContent = "Annuler";
+        supprimer.textContent = "Supprimer";
+        conserver.focus();
+        return await new Promise(resolve => {
+          let resolu = false;
+          const terminer = valeur => {
+            if (resolu) return;
+            resolu = true;
+            document.removeEventListener("keydown", gererClavier);
+            slot.replaceChildren();
+            if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+            resolve(valeur);
+          };
+          const gererClavier = event => {
+            if (event.key === "Escape") { event.preventDefault(); terminer(false); }
+            if (event.key === "Tab") {
+              const cible = event.shiftKey ? conserver : supprimer;
+              if (document.activeElement === cible) {
+                event.preventDefault();
+                (event.shiftKey ? supprimer : conserver).focus();
+              }
+            }
+          };
+          document.addEventListener("keydown", gererClavier);
+          conserver.addEventListener("click", () => terminer(false), { once: true });
+          supprimer.addEventListener("click", () => terminer(true), { once: true });
+          dialogue.addEventListener("click", event => {
+            if (event.target === dialogue) terminer(false);
+          });
+        });
+      } catch (erreur) {
+        slot.replaceChildren();
+        if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+        console.error("Confirmation SUPPRESSION indisponible :", erreur);
+        return false;
+      }
+    }
+    if (slot) {
       const href = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
       if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === href)) {
         await new Promise((resolve, reject) => {
@@ -388,98 +449,7 @@
       }
     }
 
-    if (!slot) {
-      return window.confirm(options.texte || "");
-    }
-
-    slot.innerHTML = "";
-
-    const fragment = await chargerFragmentObjet(
-      "/HTMLBASE/02-dialogue-bouton.html"
-    );
-
-    slot.appendChild(fragment);
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector(
-      "[data-lcdp-dialogue-title]"
-    );
-    const texte = slot.querySelector(
-      "[data-lcdp-dialogue-text]"
-    );
-    const actions = slot.querySelector(
-      "[data-lcdp-dialogue-actions]"
-    );
-    const fermer = slot.querySelector(
-      "[data-lcdp-dialogue-close]"
-    );
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
-      return false;
-    }
-
-    titre.textContent = options.titre || "Confirmation";
-    texte.textContent = options.texte || "";
-
-    const annuler = document.createElement("button");
-    annuler.type = "button";
-    annuler.className =
-      "lcdp-button lcdp-button-secondary";
-    annuler.textContent = "Annuler";
-
-    const confirmer = document.createElement("button");
-    confirmer.type = "button";
-    confirmer.className =
-      "lcdp-button lcdp-button-orange";
-    confirmer.textContent = options.confirmer || "Confirmer";
-
-    actions.appendChild(annuler);
-    actions.appendChild(confirmer);
-
-    return new Promise((resolve) => {
-      let resolu = false;
-
-      function terminer(valeur) {
-        if (resolu) return;
-        resolu = true;
-        document.removeEventListener(
-          "keydown",
-          gererClavier
-        );
-        slot.innerHTML = "";
-        resolve(valeur);
-      }
-
-      function gererClavier(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
-        }
-      }
-
-      document.addEventListener("keydown", gererClavier);
-
-      fermer?.addEventListener("click", () => {
-        terminer(false);
-      });
-
-      annuler.addEventListener("click", () => {
-        terminer(false);
-      });
-
-      confirmer.addEventListener("click", () => {
-        terminer(true);
-      });
-
-      dialogue.addEventListener("click", (event) => {
-        if (event.target === dialogue) {
-          terminer(false);
-        }
-      });
-    });
+    return false;
   }
 
   function formaterDateHeure(value) {
