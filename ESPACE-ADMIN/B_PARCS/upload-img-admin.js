@@ -95,7 +95,7 @@
       return;
     }
 
-    const bouton = grille.children[SLOT_UPLOAD_IMG_PARC - 1];
+    const bouton = grille.querySelector('[data-lcdp-position="21"]');
 
     if (!bouton || bouton.dataset.lcdpUploadImgConfigured === "true") {
       return;
@@ -745,9 +745,11 @@
     }
   }
 
+  window.LCDP_UPLOAD_IMG_ADMIN = Object.freeze({ ouvrirWorkflow: ouvrirWorkflowUploadIMG });
+
   function initialiserUploadIMG() {
     chargerCssUploadIMG();
-    observerMenuAdmin();
+    if (window.location.pathname.endsWith("/accueil-admin.html")) observerMenuAdmin();
   }
 
   if (document.readyState === "loading") {
