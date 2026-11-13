@@ -166,6 +166,8 @@
         "latloc",
         "lngloc",
         "prez",
+        "exterieur",
+        "espacereserve",
         "statut",
         "adresse1",
         "adresse2",
@@ -545,6 +547,8 @@
         actionsApercu.className = "lcdp-box-formulaire__actions";
         for (const [libelle, nomChamp] of [
           ["Modifier la présentation", "prez"],
+          ["Modifier les extérieurs", "exterieur"],
+          ["Modifier les espaces réservés", "espacereserve"],
           ["Modifier l’accès", "entreeparc"]
         ]) {
           const bouton = document.createElement("button");
@@ -577,12 +581,14 @@
         });
         actionsApercu.appendChild(boutonPhotos);
         apercu.appendChild(actionsApercu);
-        const limiteEdition = document.createElement("p");
-        limiteEdition.textContent =
-          "Extérieur, Espace réservé et légendes des photographies : " +
-          "la lecture existe, mais leur modification n’est pas autorisée par le worker actuel.";
-        apercu.appendChild(limiteEdition);
         slotEdition.prepend(apercu);
+        const editeurPhotosSlot = document.createElement("div");
+        editeurPhotosSlot.id = "lcdp-parc-editeur-photos-slot";
+        slotEdition.insertBefore(
+          editeurPhotosSlot,
+          slotEdition.querySelector(".lcdp-box-formulaire-page")
+        );
+        await initialiserEditeurPhotos(editeurPhotosSlot, parc, apercu);
 
         const note = form.querySelector("[data-lcdp-formulaire-note]");
 
@@ -666,6 +672,20 @@
             className: "lcdp-box-champ-formulaire--wide"
           },
           {
+            name: "exterieur",
+            label: "Extérieur",
+            type: "textarea",
+            value: parc.exterieur,
+            className: "lcdp-box-champ-formulaire--wide"
+          },
+          {
+            name: "espacereserve",
+            label: "Espaces réservés",
+            type: "textarea",
+            value: parc.espacereserve,
+            className: "lcdp-box-champ-formulaire--wide"
+          },
+          {
             name: "statut",
             label: "Statut",
             type: "select",
@@ -691,7 +711,13 @@
           champTexte("adresse1", "Adresse 1", parc.adresse1),
           champTexte("adresse2", "Adresse 2", parc.adresse2),
           champTexte("adresse3", "Adresse 3", parc.adresse3),
-          champTexte("entreeparc", "Entrée du parc", parc.entreeparc),
+          {
+            name: "entreeparc",
+            label: "Entrée et accès au parc",
+            type: "textarea",
+            value: parc.entreeparc,
+            className: "lcdp-box-champ-formulaire--wide"
+          },
           {
             name: "gpeprio",
             label: "Groupe de priorité",
@@ -780,6 +806,162 @@
             formaterDateHeure(parc.ouverture_parc?.datemaj)
           )
         ];
+      }
+
+      async function initialiserEditeurPhotos(slot, parc, zoneApercu) {
+        const fichiers = [
+          { value: "card1.webp", label: "Photographie principale (card1.webp)" },
+          { value: "01.jpg", label: "Photographie 2 (01.jpg)" },
+          { value: "02.jpg", label: "Photographie 3 (02.jpg)" },
+          { value: "03.jpg", label: "Photographie 4 (03.jpg)" },
+          { value: "04.jpg", label: "Photographie 5 (04.jpg)" },
+          { value: "05.jpg", label: "Photographie 6 (05.jpg)" }
+        ];
+        const brouillon = JSON.parse(JSON.stringify(parc.photoseditorial || {}));
+        const form = await window.LCDP_creerFormulaire(slot.id, {
+          id: "lcdp-parc-editeur-photos-form",
+          ariaLabel: "Textes des photographies",
+          titre: "Textes associés aux photographies",
+          sousTitre: "Titres, légendes, descriptions et textes alternatifs",
+          validationNative: true,
+          champs: [
+            {
+              name: "photo_fichier", label: "Photographie",
+              type: "select", value: "card1.webp", options: fichiers, required: true
+            },
+            { name: "photo_titre", label: "Titre de la photographie", type: "text" },
+            {
+              name: "photo_legende", label: "Légende de la photographie",
+              type: "textarea", className: "lcdp-box-champ-formulaire--wide"
+            },
+            {
+              name: "photo_texte", label: "Texte associé à la photographie",
+              type: "textarea", className: "lcdp-box-champ-formulaire--wide"
+            },
+            {
+              name: "photo_alt", label: "Texte alternatif de la photographie",
+              type: "text", description: "Description accessible aux lecteurs d'écran."
+            }
+          ],
+          boutons: [{
+            type: "submit",
+            label: "Enregistrer les textes des photographies",
+            style: "lcdp-button-orange"
+          }]
+        });
+        if (!form) throw new Error("Éditeur photographique non initialisé.");
+
+        const selection = form.elements.namedItem("photo_fichier");
+        const titre = form.elements.namedItem("photo_titre");
+        const legende = form.elements.namedItem("photo_legende");
+        const texte = form.elements.namedItem("photo_texte");
+        const alt = form.elements.namedItem("photo_alt");
+        const bouton = form.querySelector('button[type="submit"]');
+        const note = form.querySelector("[data-lcdp-formulaire-note]");
+        let fichierCourant = selection.value;
+
+        function afficherNotePhoto(message, type = "") {
+          if (!note) return;
+          note.hidden = !message;
+          note.textContent = message;
+          note.dataset.state = type;
+        }
+        function lireChampsPhoto() {
+          return {
+            titre: String(titre.value || "").trim(),
+            legende: String(legende.value || "").trim(),
+            texte: String(texte.value || "").trim(),
+            alt: String(alt.value || "").trim()
+          };
+        }
+        function memoriserPhoto() {
+          const entree = lireChampsPhoto();
+          if (Object.values(entree).some(Boolean)) brouillon[fichierCourant] = entree;
+          else delete brouillon[fichierCourant];
+        }
+        function afficherPhoto(fichier) {
+          const entree = brouillon[fichier] || {};
+          titre.value = entree.titre || "";
+          legende.value = entree.legende || "";
+          texte.value = entree.texte || "";
+          alt.value = entree.alt || "";
+        }
+        selection.addEventListener("change", () => {
+          memoriserPhoto();
+          fichierCourant = selection.value;
+          afficherPhoto(fichierCourant);
+          afficherNotePhoto("Textes non enregistrés tant que vous n'avez pas validé.", "");
+        });
+        afficherPhoto(fichierCourant);
+        for (const champ of [titre, legende, texte, alt]) {
+          champ.addEventListener("input", () => {
+            afficherNotePhoto("Modifications non enregistrées.", "");
+          });
+        }
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          memoriserPhoto();
+          for (const [fichier, contenu] of Object.entries(brouillon)) {
+            for (const [cle, valeur] of Object.entries(contenu)) {
+              const max = { titre: 160, legende: 500, texte: 4000, alt: 320 }[cle];
+              if (max && valeur.length > max) {
+                afficherNotePhoto(
+                  "Texte trop long : " + fichier + " / " + cle + " (maximum " + max + ").",
+                  "error"
+                );
+                return;
+              }
+            }
+          }
+          const contenuInitial = parcEditionCourant?.photoseditorial || {};
+          if (JSON.stringify(contenuInitial) === JSON.stringify(brouillon)) {
+            afficherNotePhoto("Aucune modification à enregistrer.", "success");
+            return;
+          }
+          bouton.disabled = true;
+          afficherNotePhoto("Enregistrement des textes en cours…");
+          try {
+            const endpoint = endpointParcAdmin();
+            if (!endpoint) throw new Error("Worker parc admin non configuré.");
+            const reponse = await fetch(endpoint + "/edition-parc", {
+              method: "POST",
+              credentials: "include",
+              cache: "no-store",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                idparc: parcEditionCourant.idparc,
+                changes: { photoseditorial: brouillon },
+                original: { photoseditorial: contenuInitial }
+              })
+            });
+            const data = await reponse.json().catch(() => null);
+            if (reponse.status === 401 || reponse.status === 403) {
+              redirigerConnexion();
+              return;
+            }
+            if (!reponse.ok || !data || data.success !== true || !data.parc) {
+              throw new Error(data?.message || data?.detail || "Enregistrement des photos impossible.");
+            }
+            parcEditionCourant = data.parc;
+            Object.keys(brouillon).forEach(cle => delete brouillon[cle]);
+            Object.assign(brouillon, JSON.parse(JSON.stringify(data.parc.photoseditorial || {})));
+            afficherPhoto(fichierCourant);
+            afficherNotePhoto("Textes des photographies enregistrés.", "success");
+            const apercuIframe = zoneApercu.querySelector("iframe");
+            if (apercuIframe) {
+              const url = new URL(apercuIframe.src);
+              url.searchParams.set("actualisation", String(Date.now()));
+              apercuIframe.src = url.toString();
+            }
+          } catch (error) {
+            afficherNotePhoto(String(error?.message || error), "error");
+          } finally {
+            bouton.disabled = false;
+          }
+        });
       }
 
       function texteOuvertureParc(parc) {
