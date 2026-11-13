@@ -483,100 +483,53 @@
   }
 
   async function demanderConfirmation(datepoints) {
-    const slot = document.getElementById(
-      "lcdp-lightbox-slot"
-    );
-
+    const slot = document.getElementById("lcdp-lightbox-slot");
     if (!slot) return false;
-
-    slot.innerHTML = "";
-    slot.appendChild(
-      await chargerFragmentObjet(
-        "/HTMLBASE/02-dialogue-bouton.html"
-      )
-    );
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector(
-      "[data-lcdp-dialogue-title]"
-    );
-    const texte = slot.querySelector(
-      "[data-lcdp-dialogue-text]"
-    );
-    const actions = slot.querySelector(
-      "[data-lcdp-dialogue-actions]"
-    );
-    const fermer = slot.querySelector(
-      "[data-lcdp-dialogue-close]"
-    );
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
+    const hrefCss = window.LCDP_urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+    if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === hrefCss)) {
+      await new Promise((resolve, reject) => {
+        const feuille = document.createElement("link");
+        feuille.rel = "stylesheet";
+        feuille.href = hrefCss;
+        feuille.onload = resolve;
+        feuille.onerror = () => { feuille.remove(); reject(new Error("CSS CHOIX indisponible.")); };
+        document.head.appendChild(feuille);
+      });
+    }
+    slot.replaceChildren(await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-choix.html"));
+    const dialogue = slot.querySelector('[data-lcdp-dialogue-reference="choix"]');
+    const titre = slot.querySelector("[data-lcdp-dialogue-titre]");
+    const texte = slot.querySelector("[data-lcdp-dialogue-message]");
+    const annuler = slot.querySelector('[data-lcdp-dialogue-action="annuler"]');
+    const confirmer = slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+    if (!dialogue || !titre || !texte || !annuler || !confirmer) {
+      slot.replaceChildren();
       return false;
     }
-
     titre.textContent = "Calculer les points";
-    texte.textContent =
-      "Le calcul au " +
-      formaterDateIso(datepoints) +
+    texte.textContent = "Le calcul au " + formaterDateIso(datepoints) +
       " remplacera les valeurs déjà enregistrées à cette date.";
-
-    const annuler = document.createElement("button");
-    annuler.type = "button";
-    annuler.className =
-      "lcdp-button lcdp-button-secondary";
     annuler.textContent = "Annuler";
-
-    const confirmer = document.createElement("button");
-    confirmer.type = "button";
-    confirmer.className =
-      "lcdp-button lcdp-button-orange";
     confirmer.textContent = "Calculer";
-
-    actions.appendChild(annuler);
-    actions.appendChild(confirmer);
-
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let resolu = false;
-
-      function terminer(valeur) {
+      const terminer = valeur => {
         if (resolu) return;
         resolu = true;
-        document.removeEventListener(
-          "keydown",
-          gererClavier
-        );
-        slot.innerHTML = "";
+        document.removeEventListener("keydown", gererClavier);
+        slot.replaceChildren();
         resolve(valeur);
-      }
-
-      function gererClavier(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
-        }
-      }
-
+      };
+      const gererClavier = event => {
+        if (event.key === "Escape") { event.preventDefault(); terminer(false); }
+      };
       document.addEventListener("keydown", gererClavier);
-      fermer?.addEventListener(
-        "click",
-        () => terminer(false)
-      );
-      annuler.addEventListener(
-        "click",
-        () => terminer(false)
-      );
-      confirmer.addEventListener(
-        "click",
-        () => terminer(true)
-      );
-      dialogue.addEventListener("click", (event) => {
-        if (event.target === dialogue) {
-          terminer(false);
-        }
+      annuler.addEventListener("click", () => terminer(false), {once: true});
+      confirmer.addEventListener("click", () => terminer(true), {once: true});
+      dialogue.addEventListener("click", event => {
+        if (event.target === dialogue) terminer(false);
       });
+      annuler.focus();
     });
   }
 
