@@ -46,71 +46,49 @@
     modifie = true;
     statut("Modifications non enregistrées.");
   }
-  async function demanderAbandon() {
-    if (importsEnCours > 0) {
-      statut("Un import de photographie est en cours. Terminez-le avant de quitter.", true);
-      return false;
-    }
-    if (!modifie) return true;
+  async function afficherConfirmationEnregistrement(message) {
     const conteneur = document.createElement("div");
-    const focusInitial = document.activeElement;
-    try {
-      const reponse = await fetch(urlObjet("/HTMLBASE/02-dialogue-reference-choix.html"), {
-        credentials: "same-origin", cache: "no-cache"
-      });
-      if (!reponse.ok) throw new Error("Confirmation d'abandon indisponible.");
-      const template = document.createElement("template");
-      template.innerHTML = (await reponse.text()).trim();
-      conteneur.appendChild(template.content.cloneNode(true));
-      const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="choix"]');
-      const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
-      const texte = conteneur.querySelector("[data-lcdp-dialogue-message]");
-      const annuler = conteneur.querySelector('[data-lcdp-dialogue-action="annuler"]');
-      const confirmer = conteneur.querySelector('[data-lcdp-dialogue-action="confirmer"]');
-      if (!dialogue || !titre || !texte || !annuler || !confirmer) {
-        throw new Error("Structure CHOIX d'abandon incomplète.");
-      }
-      titre.textContent = "Abandonner les modifications ?";
-      texte.textContent = "Des textes n'ont pas été enregistrés. Abandonner ces modifications ?";
-      annuler.textContent = "Conserver";
-      confirmer.textContent = "Abandonner";
-      document.body.appendChild(conteneur);
-      return await new Promise(resolve => {
-        let resolu = false;
-        const fermer = valeur => {
-          if (resolu) return;
-          resolu = true;
-          document.removeEventListener("keydown", clavier);
-          conteneur.remove();
-          if (focusInitial?.isConnected && typeof focusInitial.focus === "function") {
-            focusInitial.focus({preventScroll:true});
-          }
-          resolve(valeur);
-        };
-        const clavier = event => {
-          if (event.key === "Escape") { event.preventDefault(); fermer(false); }
-          if (event.key === "Tab") {
-            if (event.shiftKey && document.activeElement === annuler) {
-              event.preventDefault(); confirmer.focus();
-            } else if (!event.shiftKey && document.activeElement === confirmer) {
-              event.preventDefault(); annuler.focus();
-            }
-          }
-        };
-        annuler.addEventListener("click", () => fermer(false), {once:true});
-        confirmer.addEventListener("click", () => fermer(true), {once:true});
-        dialogue.addEventListener("click", event => {
-          if (event.target === dialogue) fermer(false);
-        });
-        document.addEventListener("keydown", clavier);
-        annuler.focus();
-      });
-    } catch (erreur) {
-      conteneur.remove();
-      console.error("Confirmation d'abandon Accès détail :", erreur);
-      return false;
+    const reponse = await fetch(urlObjet("/HTMLBASE/02-dialogue-reference-information.html"), {
+      credentials: "same-origin",
+      cache: "no-cache"
+    });
+    if (!reponse.ok) throw new Error("Dialogue INFORMATION indisponible.");
+    const template = document.createElement("template");
+    template.innerHTML = (await reponse.text()).trim();
+    conteneur.appendChild(template.content.cloneNode(true));
+
+    const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="information"]');
+    const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
+    const texte = conteneur.querySelector("[data-lcdp-dialogue-message]");
+    const boutonOk = conteneur.querySelector('[data-lcdp-dialogue-action="compris"]');
+    if (!dialogue || !titre || !texte || !boutonOk) {
+      throw new Error("Structure du dialogue INFORMATION incomplète.");
     }
+    titre.textContent = "Enregistrement confirmé";
+    texte.textContent = message;
+    boutonOk.textContent = "OK";
+    document.body.appendChild(conteneur);
+
+    await new Promise(resolve => {
+      const fermer = () => {
+        document.removeEventListener("keydown", intercepterClavier);
+        conteneur.remove();
+        resolve();
+      };
+      const intercepterClavier = event => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          boutonOk.focus();
+        }
+      };
+      document.addEventListener("keydown", intercepterClavier);
+      boutonOk.addEventListener("click", fermer, { once: true });
+      boutonOk.focus();
+    });
   }
+
   async function chargerFragmentAdmin(path) {
     const response = await fetch(urlAdmin(path), { credentials: "same-origin", cache: "no-cache" });
     if (!response.ok) throw new Error("Fragment ADMIN introuvable : " + path);
@@ -212,11 +190,6 @@
     const optionPhotos = document.createElement("p");
     optionPhotos.textContent = "Photographies facultatives : choisissez uniquement les images que vous souhaitez ajouter. Chaque image sélectionnée est enregistrée séparément dans GitHub.";
     slot.appendChild(optionPhotos);
-    slot.appendChild(creerBouton("Retour à la sélection des parcs", async () => {
-      if (!await demanderAbandon()) return;
-      fermerEdition();
-    }));
-
     const emplacements = new Map();
     for (const rubrique of RUBRIQUES) {
       const bloc = document.createElement("section");
@@ -452,28 +425,39 @@
         const texte = f.textarea.value.trim();
         if (texte) contenu[cle] = { texte };
       }
-      if (JSON.stringify(contenu) === JSON.stringify(contenuOriginal)) {
-        statut("Aucune modification à enregistrer.");
-        modifie = false;
-        return;
-      }
-      operation = true; enregistrer.disabled = true;
-      statut("Enregistrement des rubriques en cours…");
+      operation = true;
+      enregistrer.disabled = true;
+      const changement = JSON.stringify(contenu) !== JSON.stringify(contenuOriginal);
+      statut(changement ? "Enregistrement des rubriques en cours…" : "Vérification de l'enregistrement…");
       try {
-        const data = await api("/accesdetail",{method:"POST",
-          body:{idparc:parcCourant.idparc,original:contenuOriginal,accesdetail:contenu}});
-        parcCourant = data.parc;
-        contenuOriginal = JSON.parse(JSON.stringify(data.parc.accesdetail || {}));
+        if (changement) {
+          const data = await api("/accesdetail", { method: "POST",
+            body: { idparc: parcCourant.idparc, original: contenuOriginal, accesdetail: contenu } });
+          if (!data.parc || !data.parc.accesdetail) {
+            throw new Error("Réponse d'enregistrement incomplète : la fiche enregistrée est absente.");
+          }
+          parcCourant = data.parc;
+          contenuOriginal = JSON.parse(JSON.stringify(data.parc.accesdetail));
+        }
         modifie = false;
-        statut(data.modifie ? "Rubriques enregistrées dans la fiche du parc." :
-          "Aucune modification à enregistrer.");
-      } catch (e) { statut(e.message || String(e),true); }
-      finally { operation=false; enregistrer.disabled=false; }
+        await afficherConfirmationEnregistrement(
+          changement
+            ? "Les rubriques Accès détail de ce parc ont bien été enregistrées."
+            : "Aucune modification des rubriques n'était nécessaire."
+        );
+        fermerEdition();
+        const liste = document.getElementById("lcdp-accesdetail-selection");
+        liste?.scrollIntoView({ behavior: "auto", block: "start" });
+        liste?.querySelector('[name="parc"]')?.focus({ preventScroll: true });
+      } catch (e) {
+        statut(e.message || String(e), true);
+      } finally {
+        operation = false;
+        enregistrer.disabled = false;
+      }
     }, false);
+    enregistrer.textContent = "Enregistrer";
     actions.appendChild(enregistrer);
-    actions.appendChild(creerBouton("Retour à la sélection", async () => {
-      if (await demanderAbandon()) fermerEdition();
-    }));
     slot.appendChild(actions);
     statut("Rubriques chargées pour " + parc.nom + ".");
   }
