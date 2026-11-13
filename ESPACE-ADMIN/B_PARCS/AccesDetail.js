@@ -5,8 +5,8 @@
   const RUBRIQUES = [
     { cle: "entree", titre: "Entrée", images: ["entree1.webp", "entree2.webp"] },
     { cle: "checkin", titre: "Check-in", images: ["checkin1.webp", "checkin2.webp"] },
-    { cle: "chemin1", titre: "Chemin", images: ["chemin1.webp"] },
-    { cle: "chemin2", titre: "Chemin supplémentaire", images: ["chemin2.webp"], optionnelle: true },
+    { cle: "chemin1", titre: "Chemin d’accès à la zone réservée 1", images: ["chemin1.webp"] },
+    { cle: "chemin2", titre: "Chemin d’accès à la zone réservée 2", images: ["chemin2.webp"], optionnelle: true },
     { cle: "zonereservee1", titre: "Zone réservée 1", images: ["zonereservee11.webp", "zonereservee12.webp"] },
     { cle: "zonereservee2", titre: "Zone réservée 2", images: ["zonereservee21.webp", "zonereservee22.webp"], optionnelle: true },
     { cle: "presence", titre: "Présence 1", images: ["presence11.webp", "presence12.webp"] },
@@ -252,21 +252,32 @@
         form.appendChild(liens);
       }
     }
-    for (const [cle, label] of [
-      ["chemin2","Ajouter un chemin"],
-      ["zonereservee2","Ajouter une zone réservée"],
-      ["presence2","Ajouter une présence"]
-    ]) {
-      const zone = emplacements.get(cle);
-      const bouton = creerBouton(label, () => {
-        zone.hidden = false;
-        bouton.hidden = true;
-        zone.scrollIntoView({behavior:"smooth",block:"start"});
-        zone.querySelector("textarea")?.focus();
-      });
-      if (!zone.hidden) bouton.hidden = true;
-      zone.before(bouton);
+    // La seconde zone réservée et son chemin forment une seule option.
+    const chemin2 = emplacements.get("chemin2");
+    const zone2 = emplacements.get("zonereservee2");
+    if (!chemin2.hidden || !zone2.hidden) {
+      chemin2.hidden = false;
+      zone2.hidden = false;
     }
+    const ajouterZone2 = creerBouton("Ajouter une zone réservée 2 et son chemin d’accès", () => {
+      chemin2.hidden = false;
+      zone2.hidden = false;
+      ajouterZone2.hidden = true;
+      chemin2.scrollIntoView({behavior:"smooth",block:"start"});
+      chemin2.querySelector("textarea")?.focus();
+    });
+    ajouterZone2.hidden = !zone2.hidden;
+    chemin2.before(ajouterZone2);
+
+    const presence2 = emplacements.get("presence2");
+    const ajouterPresence2 = creerBouton("Ajouter une présence 2", () => {
+      presence2.hidden = false;
+      ajouterPresence2.hidden = true;
+      presence2.scrollIntoView({behavior:"smooth",block:"start"});
+      presence2.querySelector("textarea")?.focus();
+    });
+    ajouterPresence2.hidden = !presence2.hidden;
+    presence2.before(ajouterPresence2);
 
     const actions = document.createElement("div");
     actions.className = "lcdp-box-formulaire__actions";
