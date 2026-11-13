@@ -667,102 +667,67 @@
       }
     }
 
-    const slot = document.getElementById(
-      "lcdp-lightbox-slot"
-    );
-
-    if (!slot) {
-      return false;
-    }
-
-    slot.innerHTML = "";
-    const fragment = await chargerFragmentObjet(
-      "/HTMLBASE/02-dialogue-bouton.html"
-    );
-
-    slot.appendChild(fragment);
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector(
-      "[data-lcdp-dialogue-title]"
-    );
-    const texte = slot.querySelector(
-      "[data-lcdp-dialogue-text]"
-    );
-    const actions = slot.querySelector(
-      "[data-lcdp-dialogue-actions]"
-    );
-    const fermer = slot.querySelector(
-      "[data-lcdp-dialogue-close]"
-    );
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
-      return false;
-    }
-
-    titre.textContent = options.titre || "Publier les FAQ";
-    texte.textContent =
-      options.texte || "La version affichée sur le site sera remplacée par le contenu actuel.";
-
-    const annuler = document.createElement("button");
-    annuler.type = "button";
-    annuler.className =
-      "lcdp-button lcdp-button-secondary";
-    annuler.textContent = options.annuler || "Annuler";
-
-    const confirmer = document.createElement("button");
-    confirmer.type = "button";
-    confirmer.className =
-      "lcdp-button lcdp-button-orange";
-    confirmer.textContent = options.confirmer || "Publier";
-
-    actions.appendChild(annuler);
-    actions.appendChild(confirmer);
-
-    return new Promise((resolve) => {
-      let resolu = false;
-
-      function terminer(valeur) {
-        if (resolu) return;
-        resolu = true;
-        document.removeEventListener(
-          "keydown",
-          gererClavier
-        );
-        slot.innerHTML = "";
-        resolve(valeur);
+    const slot = document.getElementById("lcdp-lightbox-slot");
+    if (!slot) return false;
+    const focusInitial = document.activeElement;
+    try {
+      const hrefCss = typeof window.LCDP_urlObjet === "function"
+        ? window.LCDP_urlObjet("/CSSBASE/lcdp-lightbox-convergence.css")
+        : null;
+      if (!hrefCss) return false;
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === new URL(hrefCss, document.baseURI).href)) {
+        await new Promise((resolve, reject) => {
+          const lien = document.createElement("link");
+          lien.rel = "stylesheet";
+          lien.href = hrefCss;
+          lien.onload = resolve;
+          lien.onerror = () => { lien.remove(); reject(new Error("CSS SUPPRESSION indisponible.")); };
+          document.head.appendChild(lien);
+        });
       }
-
-      function gererClavier(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
+      slot.replaceChildren();
+      slot.appendChild(await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-suppression.html"));
+      const dialogue = slot.querySelector('[data-lcdp-dialogue-reference="suppression"]');
+      const titre = slot.querySelector("[data-lcdp-dialogue-titre]");
+      const texte = slot.querySelector("[data-lcdp-dialogue-message]");
+      const non = slot.querySelector('[data-lcdp-dialogue-action="conserver"]');
+      const oui = slot.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+      if (!dialogue || !titre || !texte || !non || !oui) throw new Error("Structure SUPPRESSION incomplète.");
+      titre.textContent = options.titre || "Supprimer cette FAQ ?";
+      texte.textContent = options.texte || "Supprimer ce bloc FAQ du brouillon ?";
+      non.textContent = options.annuler || "Non";
+      oui.textContent = options.confirmer || "Oui";
+      non.focus();
+      return await new Promise(resolve => {
+        let termine = false;
+        function fermer(valeur) {
+          if (termine) return;
+          termine = true;
+          document.removeEventListener("keydown", onClavier);
+          slot.replaceChildren();
+          if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+          resolve(valeur);
         }
-      }
-
-      document.addEventListener("keydown", gererClavier);
-
-      fermer?.addEventListener("click", () => {
-        terminer(false);
-      });
-
-      annuler.addEventListener("click", () => {
-        terminer(false);
-      });
-
-      confirmer.addEventListener("click", () => {
-        terminer(true);
-      });
-
-      dialogue.addEventListener("click", (event) => {
-        if (event.target === dialogue) {
-          terminer(false);
+        function onClavier(event) {
+          if (event.key === "Escape") { event.preventDefault(); fermer(false); }
+          if (event.key === "Tab") {
+            const cible = event.shiftKey ? non : oui;
+            if (document.activeElement === cible) {
+              event.preventDefault();
+              (event.shiftKey ? oui : non).focus();
+            }
+          }
         }
+        document.addEventListener("keydown", onClavier);
+        non.addEventListener("click", () => fermer(false), { once: true });
+        oui.addEventListener("click", () => fermer(true), { once: true });
+        dialogue.addEventListener("click", event => { if (event.target === dialogue) fermer(false); });
       });
-    });
+    } catch (error) {
+      slot.replaceChildren();
+      if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+      throw error;
+    }
   }
 
   function formaterDateHeure(value) {
