@@ -4,12 +4,13 @@
   const configuration = window.SITE_CONFIG || {};
   const RUBRIQUES = [
     { cle: "entree", titre: "Entrée", images: ["entree1.webp", "entree2.webp"] },
-    { cle: "checkin", titre: "Check-in", images: ["checkin1.webp"] },
+    { cle: "checkin", titre: "Check-in", images: ["checkin1.webp", "checkin2.webp"] },
     { cle: "chemin1", titre: "Chemin", images: ["chemin1.webp"] },
     { cle: "chemin2", titre: "Chemin supplémentaire", images: ["chemin2.webp"], optionnelle: true },
-    { cle: "zonereservee1", titre: "Zone réservée", images: ["zonereservee1.webp"] },
-    { cle: "zonereservee2", titre: "Zone réservée supplémentaire", images: ["zonereservee2.webp"], optionnelle: true },
-    { cle: "presence", titre: "Présence", images: ["presence1.webp"] },
+    { cle: "zonereservee1", titre: "Zone réservée 1", images: ["zonereservee11.webp", "zonereservee12.webp"] },
+    { cle: "zonereservee2", titre: "Zone réservée 2", images: ["zonereservee21.webp", "zonereservee22.webp"], optionnelle: true },
+    { cle: "presence", titre: "Présence 1", images: ["presence11.webp", "presence12.webp"] },
+    { cle: "presence2", titre: "Présence 2", images: ["presence21.webp", "presence22.webp"], optionnelle: true },
     { cle: "reglement", titre: "Règlement", images: [], liens: true },
     { cle: "reglementparc", titre: "Règlement parc", images: [] }
   ];
@@ -253,7 +254,8 @@
     }
     for (const [cle, label] of [
       ["chemin2","Ajouter un chemin"],
-      ["zonereservee2","Ajouter une zone réservée"]
+      ["zonereservee2","Ajouter une zone réservée"],
+      ["presence2","Ajouter une présence"]
     ]) {
       const zone = emplacements.get(cle);
       const bouton = creerBouton(label, () => {
