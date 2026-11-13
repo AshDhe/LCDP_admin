@@ -215,6 +215,53 @@ function afficher(){
   const zone=$('tableau').closest('.planning-scroll');const x=zone?.scrollLeft||0,y=zone?.scrollTop||0;
   $('tableau').innerHTML=html+'</tbody>';if(zone){zone.scrollLeft=x;zone.scrollTop=y;}boutons();
 }
+async function demanderChoixPlanningAdmin(titre, message, libelleConfirmer = 'Confirmer') {
+  const conteneur = document.createElement('div');
+  document.body.appendChild(conteneur);
+  try {
+    const reponse = await fetch(window.LCDP_urlObjet('/HTMLBASE/02-dialogue-reference-choix.html'), {
+      credentials: 'omit', cache: 'no-cache'
+    });
+    if (!reponse.ok) throw new Error('Dialogue CHOIX indisponible.');
+    const template = document.createElement('template');
+    template.innerHTML = (await reponse.text()).trim();
+    conteneur.replaceChildren(template.content.cloneNode(true));
+    const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="choix"]');
+    const titreEl = conteneur.querySelector('[data-lcdp-dialogue-titre]');
+    const texteEl = conteneur.querySelector('[data-lcdp-dialogue-message]');
+    const annuler = conteneur.querySelector('[data-lcdp-dialogue-action="annuler"]');
+    const confirmer = conteneur.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+    if (!dialogue || !titreEl || !texteEl || !annuler || !confirmer) throw new Error('Structure CHOIX incomplète.');
+    titreEl.textContent = titre;
+    texteEl.textContent = message;
+    annuler.textContent = 'Annuler';
+    confirmer.textContent = libelleConfirmer;
+    return await new Promise(resolve => {
+      let termine = false;
+      const clavier = event => {
+        if (event.key === 'Escape') { event.preventDefault(); fermer(false); }
+      };
+      const fermer = valeur => {
+        if (termine) return;
+        termine = true;
+        document.removeEventListener('keydown', clavier);
+        conteneur.remove();
+        resolve(valeur);
+      };
+      document.addEventListener('keydown', clavier);
+      annuler.addEventListener('click', () => fermer(false), {once: true});
+      confirmer.addEventListener('click', () => fermer(true), {once: true});
+      dialogue.addEventListener('click', event => {
+        if (event.target === dialogue) fermer(false);
+      });
+      annuler.focus();
+    });
+  } catch (erreur) {
+    console.error('Confirmation planning admin :', erreur);
+    conteneur.remove();
+    return false;
+  }
+}
 async function confirmerAncienneJournee(date) {
   const dialogueHistorique = $('planning-confirmation-ancien');
   if (!dialogueHistorique || typeof dialogueHistorique.showModal !== 'function') return false;
@@ -350,7 +397,7 @@ async function enregistrerBase(){
   if(!/^\d{4}-\d{2}-01$/.test(applicable)||applicable<=today.slice(0,7)+'-01')throw Error('Choisissez un mois à venir.');
   baseBrouillon.applicable=applicable;
   const remplace=bases.some(b=>b.applicable===applicable);
-  if(!confirm('Enregistrer cette nouvelle base pour '+parc.nom+' — Département '+parc.dptmt+', à compter du '+dateLisible(applicable)+' ? Les mois déjà ouverts restent inchangés.'+(remplace?' Une référence est déjà programmée à cette date ; elle reste en historique et cette nouvelle version la remplace.':'')))return;
+  if(!await demanderChoixPlanningAdmin('Enregistrer la nouvelle base', 'Enregistrer cette nouvelle base pour '+parc.nom+' — Département '+parc.dptmt+', à compter du '+dateLisible(applicable)+' ? Les mois déjà ouverts restent inchangés.'+(remplace?' Une référence est déjà programmée à cette date ; elle reste en historique et cette nouvelle version la remplace.':''), 'Enregistrer'))return;
   busy=true;bloquer(true);$('nouvelle-base').disabled=true;$('base-date').disabled=true;$('base-tableau').querySelectorAll('input').forEach(e=>e.disabled=true);boutons();
   try{const d=await api('/base',{...contexte(),...baseBrouillon});apres(d);annulerBase();afficherBases();statut('Nouvelle base enregistrée. Elle sert uniquement à créer de nouveaux mois à partir du '+dateLisible(applicable)+'.');}
   catch(e){statut(e.message+' La nouvelle base reste à l’écran.',true);throw e;}
