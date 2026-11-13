@@ -14,18 +14,58 @@
     const d=await r.json().catch(()=>null);if(!r.ok||!d?.success)throw Error(d?.message||'Impossible de charger les titres À propos.');return d;
   }
   async function confirmerSuppression(titre){
-    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(window.LCDP_urlObjet('/HTMLBASE/02-dialogue-bouton.html')));
-    const box=slot.querySelector('[data-lcdp-box-dialogue-bouton]'),heading=slot.querySelector('[data-lcdp-dialogue-title]'),text=slot.querySelector('[data-lcdp-dialogue-text]'),actions=slot.querySelector('[data-lcdp-dialogue-actions]');
-    if(!box||!heading||!text||!actions){slot.replaceChildren();throw Error('Confirmation indisponible. Aucun titre supprimé.');}
-    heading.textContent='Supprimer ce titre ?';text.textContent='Supprimer « '+(titre||'Titre sans texte')+' » ? La suppression sera diffusée après enregistrement.';actions.replaceChildren();
+    const slot=document.getElementById('lcdp-lightbox-slot');
+    if(!slot)throw Error('Confirmation indisponible. Aucun titre supprimé.');
     const avant=document.activeElement;
-    return new Promise(resolve=>{
-      let termine=false;
-      const finir=v=>{if(termine)return;termine=true;document.removeEventListener('keydown',clavier);slot.replaceChildren();avant?.focus({preventScroll:true});resolve(v);};
-      const non=element('button','Non','lcdp-button lcdp-button-secondary'),oui=element('button','Oui','lcdp-button lcdp-button-orange');non.type=oui.type='button';non.onclick=()=>finir(false);oui.onclick=()=>finir(true);actions.append(non,oui);
-      const clavier=e=>{if(e.key==='Escape'){e.preventDefault();finir(false);}if(e.key==='Tab'){const bs=[...slot.querySelectorAll('button')].filter(b=>!b.hidden&&!b.disabled);const i=bs.indexOf(document.activeElement);if((e.shiftKey&&i<=0)||(!e.shiftKey&&i===bs.length-1)){e.preventDefault();(e.shiftKey?bs.at(-1):bs[0])?.focus();}}};
-      document.addEventListener('keydown',clavier);slot.querySelector('[data-lcdp-dialogue-close]')?.addEventListener('click',()=>finir(false));box.addEventListener('click',e=>{if(e.target===box)finir(false);});non.focus();
-    });
+    try{
+      const href=window.LCDP_urlObjet('/CSSBASE/lcdp-lightbox-convergence.css');
+      if(!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l=>l.href===new URL(href,document.baseURI).href)){
+        await new Promise((resolve,reject)=>{
+          const feuille=document.createElement('link');
+          feuille.rel='stylesheet';feuille.href=href;
+          feuille.onload=resolve;
+          feuille.onerror=()=>{feuille.remove();reject(Error('CSS SUPPRESSION indisponible.'));};
+          document.head.appendChild(feuille);
+        });
+      }
+      slot.replaceChildren(await fragment(window.LCDP_urlObjet('/HTMLBASE/02-dialogue-reference-suppression.html')));
+      const box=slot.querySelector('[data-lcdp-dialogue-reference="suppression"]');
+      const heading=slot.querySelector('[data-lcdp-dialogue-titre]');
+      const texte=slot.querySelector('[data-lcdp-dialogue-message]');
+      const non=slot.querySelector('[data-lcdp-dialogue-action="conserver"]');
+      const oui=slot.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+      if(!box||!heading||!texte||!non||!oui)throw Error('Confirmation indisponible. Aucun titre supprimé.');
+      heading.textContent='Supprimer ce titre ?';
+      texte.textContent='Supprimer « '+(titre||'Titre sans texte')+' » ? La suppression sera diffusée après enregistrement.';
+      non.textContent='Non';oui.textContent='Oui';
+      return await new Promise(resolve=>{
+        let termine=false;
+        const finir=v=>{
+          if(termine)return;
+          termine=true;
+          document.removeEventListener('keydown',clavier);
+          slot.replaceChildren();
+          if(avant?.isConnected&&typeof avant.focus==='function')avant.focus({preventScroll:true});
+          resolve(v);
+        };
+        const clavier=e=>{
+          if(e.key==='Escape'){e.preventDefault();finir(false);}
+          if(e.key==='Tab'){
+            if(e.shiftKey&&document.activeElement===non){e.preventDefault();oui.focus();}
+            else if(!e.shiftKey&&document.activeElement===oui){e.preventDefault();non.focus();}
+          }
+        };
+        document.addEventListener('keydown',clavier);
+        non.addEventListener('click',()=>finir(false),{once:true});
+        oui.addEventListener('click',()=>finir(true),{once:true});
+        box.addEventListener('click',e=>{if(e.target===box)finir(false);});
+        non.focus();
+      });
+    }catch(error){
+      slot.replaceChildren();
+      if(avant?.isConnected&&typeof avant.focus==='function')avant.focus({preventScroll:true});
+      throw error;
+    }
   }
   function bouton(label,action){const b=element('button',label,'lcdp-button lcdp-button-secondary lcdp-editeur-contenu__petit-bouton');b.type='button';b.onclick=action;return b;}
   function rendre(){
