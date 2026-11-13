@@ -44,10 +44,66 @@
     modifie = true;
     statut("Modifications non enregistrées.");
   }
-  function demanderAbandon() {
-    return !modifie || window.confirm(
-      "Des textes n'ont pas été enregistrés. Abandonner ces modifications ?"
-    );
+  async function demanderAbandon() {
+    if (!modifie) return true;
+    const conteneur = document.createElement("div");
+    const focusInitial = document.activeElement;
+    try {
+      const reponse = await fetch(urlObjet("/HTMLBASE/02-dialogue-reference-choix.html"), {
+        credentials: "same-origin", cache: "no-cache"
+      });
+      if (!reponse.ok) throw new Error("Confirmation d'abandon indisponible.");
+      const template = document.createElement("template");
+      template.innerHTML = (await reponse.text()).trim();
+      conteneur.appendChild(template.content.cloneNode(true));
+      const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="choix"]');
+      const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
+      const texte = conteneur.querySelector("[data-lcdp-dialogue-message]");
+      const annuler = conteneur.querySelector('[data-lcdp-dialogue-action="annuler"]');
+      const confirmer = conteneur.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+      if (!dialogue || !titre || !texte || !annuler || !confirmer) {
+        throw new Error("Structure CHOIX d'abandon incomplète.");
+      }
+      titre.textContent = "Abandonner les modifications ?";
+      texte.textContent = "Des textes n'ont pas été enregistrés. Abandonner ces modifications ?";
+      annuler.textContent = "Conserver";
+      confirmer.textContent = "Abandonner";
+      document.body.appendChild(conteneur);
+      return await new Promise(resolve => {
+        let resolu = false;
+        const fermer = valeur => {
+          if (resolu) return;
+          resolu = true;
+          document.removeEventListener("keydown", clavier);
+          conteneur.remove();
+          if (focusInitial?.isConnected && typeof focusInitial.focus === "function") {
+            focusInitial.focus({preventScroll:true});
+          }
+          resolve(valeur);
+        };
+        const clavier = event => {
+          if (event.key === "Escape") { event.preventDefault(); fermer(false); }
+          if (event.key === "Tab") {
+            if (event.shiftKey && document.activeElement === annuler) {
+              event.preventDefault(); confirmer.focus();
+            } else if (!event.shiftKey && document.activeElement === confirmer) {
+              event.preventDefault(); annuler.focus();
+            }
+          }
+        };
+        annuler.addEventListener("click", () => fermer(false), {once:true});
+        confirmer.addEventListener("click", () => fermer(true), {once:true});
+        dialogue.addEventListener("click", event => {
+          if (event.target === dialogue) fermer(false);
+        });
+        document.addEventListener("keydown", clavier);
+        annuler.focus();
+      });
+    } catch (erreur) {
+      conteneur.remove();
+      console.error("Confirmation d'abandon Accès détail :", erreur);
+      return false;
+    }
   }
   async function chargerFragmentAdmin(path) {
     const response = await fetch(urlAdmin(path), { credentials: "same-origin", cache: "no-cache" });
@@ -147,8 +203,8 @@
     const nom = document.createElement("h2");
     nom.textContent = parc.nom + " — " + parc.dptmt;
     slot.appendChild(nom);
-    slot.appendChild(creerBouton("Retour à la sélection des parcs", () => {
-      if (!demanderAbandon()) return;
+    slot.appendChild(creerBouton("Retour à la sélection des parcs", async () => {
+      if (!await demanderAbandon()) return;
       fermerEdition();
     }));
 
@@ -307,8 +363,8 @@
       finally { operation=false; enregistrer.disabled=false; }
     }, false);
     actions.appendChild(enregistrer);
-    actions.appendChild(creerBouton("Retour à la sélection", () => {
-      if (demanderAbandon()) fermerEdition();
+    actions.appendChild(creerBouton("Retour à la sélection", async () => {
+      if (await demanderAbandon()) fermerEdition();
     }));
     slot.appendChild(actions);
     statut("Rubriques chargées pour " + parc.nom + ".");
