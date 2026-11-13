@@ -41,6 +41,8 @@
       script.src = src;
       script.defer = true;
       script.dataset.lcdpCreationModule = marqueur;
+      if (marqueur === "formulaire") script.dataset.lcdpScriptObjet = "/JSBASE/03-formulaire.js";
+      if (marqueur === "onglets") script.dataset.lcdpScriptObjet = "/JSBASE/05-wraper-onglets.js";
       script.addEventListener("load", resolve, { once: true });
       script.addEventListener("error", () => reject(new Error("Module indisponible : " + marqueur)), { once: true });
       document.body.appendChild(script);
