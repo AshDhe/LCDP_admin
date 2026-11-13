@@ -570,7 +570,7 @@
             if (typeof window.LCDP_UPLOAD_IMG_ADMIN?.ouvrirWorkflow !== "function") {
               throw new Error("Outil UploadIMG indisponible.");
             }
-            await window.LCDP_UPLOAD_IMG_ADMIN.ouvrirWorkflow();
+            await window.LCDP_UPLOAD_IMG_ADMIN.ouvrirWorkflow({ dptmt: parc.dptmt, idparc: parc.idparc });
           } catch (error) {
             await afficherAlerteEditionParc(String(error?.message || error));
           }
