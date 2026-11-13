@@ -130,6 +130,7 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
+              <p>Sélectionnez un parc en cliquant sur son nom pour afficher sa fiche et ses champs de mise à jour.</p>
               <div id="lcdp-table-lecture-admin-slot"></div>
               <div id="lcdp-parc-edition-slot" hidden></div>
             </div>
@@ -140,6 +141,7 @@
     </main>
 
   </div>
+  <div id="lcdp-lightbox-slot"></div>
 
   <script>
     (() => {
@@ -533,6 +535,48 @@
             ". Les champs administratifs restent modifiables ci-dessous.";
           apercu.appendChild(information);
         }
+        // Outils déjà opérationnels : accès direct aux champs et UploadIMG.
+        const actionsApercu = document.createElement("div");
+        actionsApercu.className = "lcdp-box-formulaire__actions";
+        for (const [libelle, nomChamp] of [
+          ["Modifier la présentation", "prez"],
+          ["Modifier l’accès", "entreeparc"]
+        ]) {
+          const bouton = document.createElement("button");
+          bouton.type = "button";
+          bouton.className = "lcdp-button lcdp-button-secondary";
+          bouton.textContent = libelle;
+          bouton.addEventListener("click", () => {
+            const champ = form.elements.namedItem(nomChamp);
+            if (!champ) return;
+            champ.scrollIntoView({ behavior: "smooth", block: "center" });
+            champ.focus();
+          });
+          actionsApercu.appendChild(bouton);
+        }
+
+        const boutonPhotos = document.createElement("button");
+        boutonPhotos.type = "button";
+        boutonPhotos.className = "lcdp-button lcdp-button-secondary";
+        boutonPhotos.textContent = "Gérer les photographies";
+        boutonPhotos.addEventListener("click", async () => {
+          try {
+            await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_PARCS/upload-img-admin.js");
+            if (typeof window.LCDP_UPLOAD_IMG_ADMIN?.ouvrirWorkflow !== "function") {
+              throw new Error("Outil UploadIMG indisponible.");
+            }
+            await window.LCDP_UPLOAD_IMG_ADMIN.ouvrirWorkflow();
+          } catch (error) {
+            await afficherAlerteEditionParc(String(error?.message || error));
+          }
+        });
+        actionsApercu.appendChild(boutonPhotos);
+        apercu.appendChild(actionsApercu);
+        const limiteEdition = document.createElement("p");
+        limiteEdition.textContent =
+          "Extérieur, Espace réservé et légendes des photographies : " +
+          "la lecture existe, mais leur modification n’est pas autorisée par le worker actuel.";
+        apercu.appendChild(limiteEdition);
         slotEdition.prepend(apercu);
 
         const note = form.querySelector("[data-lcdp-formulaire-note]");
