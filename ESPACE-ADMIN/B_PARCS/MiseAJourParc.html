@@ -875,8 +875,10 @@
           };
         }
         function memoriserPhoto() {
-          const entree = lireChampsPhoto();
-          if (Object.values(entree).some(Boolean)) brouillon[fichierCourant] = entree;
+          const entree = Object.fromEntries(
+            Object.entries(lireChampsPhoto()).filter(([, valeur]) => Boolean(valeur))
+          );
+          if (Object.keys(entree).length) brouillon[fichierCourant] = entree;
           else delete brouillon[fichierCourant];
         }
         function afficherPhoto(fichier) {
