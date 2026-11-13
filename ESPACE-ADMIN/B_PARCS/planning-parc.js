@@ -469,7 +469,7 @@ function afficherOperations(){
 function effacerProposition(){proposition=null;$('transcription').textContent='';$('proposition').textContent='';$('rejeter').hidden=true;boutons();}
 async function appliquerIA(){
   if(!proposition||busy)return;
-  if(!confirm('Enregistrer cette opération pour '+parc.nom+' — département '+parc.dptmt+' ? Une réduction d’accès annule les réservations concernées.'))return;
+  if(!await demanderChoixPlanningAdmin('Enregistrer cette opération ?', 'Enregistrer cette opération pour '+parc.nom+' — département '+parc.dptmt+' ? Une réduction d’accès annule les réservations concernées.', 'Enregistrer'))return;
   busy=true;boutons();
   try{const d=await api('/operation',{...contexte(),operation:proposition});apres(d);effacerProposition();afficherOperations();statut('Opération enregistrée.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':'')+(d.emailsEnAttente?' Des emails d’annulation sont en attente d’envoi.':''));}
   finally{busy=false;boutons();}
