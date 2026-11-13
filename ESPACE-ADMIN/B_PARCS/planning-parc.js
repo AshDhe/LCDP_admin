@@ -262,7 +262,7 @@ async function demanderChoixPlanningAdmin(titre, message, libelleConfirmer = 'Co
     return false;
   }
 }
-async function demanderSuppressionOperation(nomParc) {
+async function demanderSuppressionOperation(nomParc, options = {}) {
   const conteneur = document.createElement('div');
   const focusInitial = document.activeElement;
   try {
@@ -281,10 +281,10 @@ async function demanderSuppressionOperation(nomParc) {
     const conserver = conteneur.querySelector('[data-lcdp-dialogue-action="conserver"]');
     const supprimer = conteneur.querySelector('[data-lcdp-dialogue-action="supprimer"]');
     if (!dialogue || !titre || !message || !conserver || !supprimer) return false;
-    titre.textContent = 'Supprimer cette opération ?';
-    message.textContent = 'Supprimer cette opération pour ' + nomParc + ' ? Les réservations annulées restent annulées.';
+    titre.textContent = options.titre || 'Supprimer cette opération ?';
+    message.textContent = options.message || ('Supprimer cette opération pour ' + nomParc + ' ? Les réservations annulées restent annulées.');
     conserver.textContent = 'Conserver';
-    supprimer.textContent = 'Supprimer';
+    supprimer.textContent = options.confirmer || 'Supprimer';
     document.body.appendChild(conteneur);
     return await new Promise(resolve => {
       let termine = false;
@@ -440,9 +440,9 @@ async function chargerBases(){
 }
 async function chargerSelection(){return !ia&&onglet==='base'?chargerBases():chargerMois();}
 function annulerBase(){baseBrouillon=null;baseDirty=false;$('base-editeur').hidden=true;$('base-courante').hidden=false;boutons();}
-function nouvelleBase(){
+async function nouvelleBase(){
   if(busy||!parc)return;
-  if(baseDirty&&!confirm('Abandonner la nouvelle base en cours ?'))return;
+  if(baseDirty&&!await demanderSuppressionOperation(null, {titre:'Abandonner la nouvelle base ?', message:'Abandonner la nouvelle base en cours ?', confirmer:'Abandonner'}))return;
   const prochain=new Date(today.slice(0,7)+'-01T12:00:00Z');prochain.setUTCMonth(prochain.getUTCMonth()+1);
   const applicable=prochain.toISOString().slice(0,10);
   // Préremplir avec la référence prévue à la date choisie, ou l'actuelle.
@@ -512,8 +512,8 @@ async function initialiser(){
     const caseCoche=cellule.querySelector('input[type=checkbox][data-date]');
     if(caseCoche&&!caseCoche.disabled)caseCoche.click();
   });
-  $('nouvelle-base').addEventListener('click',nouvelleBase);
-  $('annuler-base').addEventListener('click',()=>{if(!busy&&confirm('Abandonner la nouvelle base ?'))annulerBase();});
+  $('nouvelle-base').addEventListener('click',()=>nouvelleBase().catch(e=>statut(e.message,true)));
+  $('annuler-base').addEventListener('click',async()=>{if(!busy&&await demanderSuppressionOperation(null, {titre:'Abandonner la nouvelle base ?', message:'Abandonner la nouvelle base ?', confirmer:'Abandonner'}))annulerBase();});
   $('base-tableau').addEventListener('change',e=>{if(!baseBrouillon||busy)return;const el=e.target;if(el.dataset.baseJour===undefined)return;baseBrouillon.semaine[Number(el.dataset.baseJour)][Number(el.dataset.basePlage)]=el.checked;baseDirty=true;boutons();});
   $('base-date').addEventListener('change',()=>{if(baseBrouillon){baseBrouillon.applicable=$('base-date').value+'-01';baseDirty=true;boutons();}});
 
