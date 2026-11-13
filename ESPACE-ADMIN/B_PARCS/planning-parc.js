@@ -215,39 +215,49 @@ function afficher(){
   const zone=$('tableau').closest('.planning-scroll');const x=zone?.scrollLeft||0,y=zone?.scrollTop||0;
   $('tableau').innerHTML=html+'</tbody>';if(zone){zone.scrollLeft=x;zone.scrollTop=y;}boutons();
 }
-function confirmerAncienneJournee(date) {
-  const dialogue = $('planning-confirmation-ancien');
-  const dateCible = $('planning-confirmation-date');
-  if (!dialogue || typeof dialogue.showModal !== 'function') {
-    // Ne jamais modifier un ancien planning sans confirmation explicite.
-    return Promise.resolve(false);
+async function confirmerAncienneJournee(date) {
+  const dialogueHistorique = $('planning-confirmation-ancien');
+  if (!dialogueHistorique || typeof dialogueHistorique.showModal !== 'function') return false;
+  const conteneur = document.createElement('div');
+  document.body.appendChild(conteneur);
+  try {
+    const chemin = window.LCDP_urlObjet('/HTMLBASE/02-dialogue-reference-choix.html');
+    const reponse = await fetch(chemin,{credentials:'omit',cache:'no-cache'});
+    if (!reponse.ok) throw new Error('Dialogue CHOIX indisponible.');
+    const template = document.createElement('template');
+    template.innerHTML = (await reponse.text()).trim();
+    conteneur.replaceChildren(template.content.cloneNode(true));
+    const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="choix"]');
+    const titre = conteneur.querySelector('[data-lcdp-dialogue-titre]');
+    const texte = conteneur.querySelector('[data-lcdp-dialogue-message]');
+    const annuler = conteneur.querySelector('[data-lcdp-dialogue-action="annuler"]');
+    const confirmer = conteneur.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+    if (!dialogue || !titre || !texte || !annuler || !confirmer) throw new Error('Structure CHOIX incomplète.');
+    titre.textContent = 'Confirmer la modification';
+    texte.textContent = 'Vous allez modifier une ancienne journée du '+dateLisible(date)+'. Confirmez-vous cette modification ?';
+    annuler.textContent = 'Annuler';
+    confirmer.textContent = 'Confirmer';
+    return await new Promise(resolve => {
+      let termine=false;
+      const terminer = accepte => {
+        if(termine)return;
+        termine=true;
+        document.removeEventListener('keydown',gererClavier);
+        conteneur.remove();
+        resolve(accepte);
+      };
+      const gererClavier = e => {if(e.key==='Escape'){e.preventDefault();terminer(false);}};
+      document.addEventListener('keydown',gererClavier);
+      annuler.addEventListener('click',()=>terminer(false),{once:true});
+      confirmer.addEventListener('click',()=>terminer(true),{once:true});
+      dialogue.addEventListener('click',e=>{if(e.target===dialogue)terminer(false);});
+      annuler.focus();
+    });
+  } catch(erreur) {
+    console.error('Confirmation ancienne journée :',erreur);
+    conteneur.remove();
+    return false;
   }
-  dateCible.textContent = dateLisible(date);
-  return new Promise(resolve => {
-    const annuler = $('planning-confirmation-annuler');
-    const confirmer = $('planning-confirmation-valider');
-    let termine = false;
-    const terminer = accepte => {
-      if (termine) return;
-      termine = true;
-      dialogue.removeEventListener('cancel', surAnnulation);
-      dialogue.removeEventListener('close', surFermeture);
-      annuler.removeEventListener('click', surRefus);
-      confirmer.removeEventListener('click', surAccord);
-      if (dialogue.open) dialogue.close();
-      resolve(accepte);
-    };
-    const surAnnulation = event => { event.preventDefault(); terminer(false); };
-    const surFermeture = () => terminer(false);
-    const surRefus = () => terminer(false);
-    const surAccord = () => terminer(true);
-    dialogue.addEventListener('cancel', surAnnulation);
-    dialogue.addEventListener('close', surFermeture);
-    annuler.addEventListener('click', surRefus);
-    confirmer.addEventListener('click', surAccord);
-    dialogue.showModal();
-    annuler.focus();
-  });
 }
 
 async function changement(e){
