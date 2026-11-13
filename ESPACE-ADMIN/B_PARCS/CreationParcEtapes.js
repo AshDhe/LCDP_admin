@@ -66,7 +66,7 @@
       "Limite : " + String(data.limite ?? limit)];
     for (const [cle, libelle] of mesures) lignes.push(libelle + " : " + String(data[cle] ?? 0));
     status.textContent = lignes.join("\n");
-    status.dataset.state = "success";
+    status.dataset.state = Number(data.erreurs || 0) > 0 ? "warning" : "success";
   }
 
   async function initialiserEtapeAutomatique(key, titre) {
@@ -144,7 +144,7 @@
           window.location.replace(urlAdmin("/ESPACE-ADMIN/connexion-admin.html"));
           return;
         }
-        if (!reponse.ok || !data || data.success !== true) {
+        if (!reponse.ok || !data) {
           throw new Error(data?.message || data?.detail || "Traitement impossible.");
         }
         afficherCompteRendu(statut, data, key, dptmt, limit);
