@@ -378,7 +378,7 @@
     select.disabled = false;
   }
 
-  async function ouvrirWorkflowUploadIMG() {
+  async function ouvrirWorkflowUploadIMG(selection = {}) {
     const endpoint = endpointParcAdmin();
 
     if (!endpoint) {
@@ -497,6 +497,17 @@
 
     try {
       await chargerDepartements(champDepartement.select);
+      const departementInitial = String(selection?.dptmt || "").trim();
+      const parcInitial = String(selection?.idparc || "").trim();
+      if (departementInitial && Array.from(champDepartement.select.options).some(
+        option => option.value === departementInitial
+      )) {
+        champDepartement.select.value = departementInitial;
+        await chargerParcs(departementInitial, champParc.select);
+        if (parcInitial && Array.from(champParc.select.options).some(
+          option => option.value === parcInitial
+        )) champParc.select.value = parcInitial;
+      }
     } catch (error) {
       afficherErreurDialogue(
         erreur,
