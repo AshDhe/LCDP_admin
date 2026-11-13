@@ -20,6 +20,8 @@
   let contenuOriginal = {};
   let modifie = false;
   let operation = false;
+  let importsEnCours = 0;
+  let fileImportQueue = Promise.resolve();
 
   const urlAdmin = chemin => typeof window.LCDP_urlAdmin === "function"
     ? window.LCDP_urlAdmin(chemin) : chemin;
@@ -45,6 +47,10 @@
     statut("Modifications non enregistrées.");
   }
   async function demanderAbandon() {
+    if (importsEnCours > 0) {
+      statut("Un import de photographie est en cours. Terminez-le avant de quitter.", true);
+      return false;
+    }
     if (!modifie) return true;
     const conteneur = document.createElement("div");
     const focusInitial = document.activeElement;
@@ -244,6 +250,7 @@
           const texte = document.createElement("p");
           texte.textContent = "Photo : " + nomImage + " (WEBP, 15 Mo maximum)";
           item.appendChild(texte);
+
           const apercu = document.createElement("img");
           apercu.alt = "Aperçu de " + nomImage + " pour " + parc.nom;
           apercu.style.maxWidth = "min(100%, 420px)";
@@ -252,41 +259,100 @@
           apercu.hidden = true;
           apercu.onerror = () => { apercu.hidden = true; };
           apercu.onload = () => { apercu.hidden = false; };
-          apercu.src = cheminImage(parc,nomImage);
+          apercu.src = cheminImage(parc, nomImage);
           item.appendChild(apercu);
 
           const input = document.createElement("input");
           input.type = "file";
           input.accept = ".webp,image/webp";
-          input.setAttribute("aria-label", "Choisir une image pour " + nomImage);
+          input.setAttribute("aria-label", "Sélectionner une photo pour import automatique : " + nomImage);
           input.className = "lcdp-box-champ-formulaire__input";
           item.appendChild(input);
-          const boutonUpload = creerBouton("Importer " + nomImage, async () => {
-            const fichier = input.files?.[0];
-            if (!fichier) { statut("Choisissez une image WEBP pour " + nomImage, true); return; }
-            if (!/\.webp$/i.test(fichier.name) ||
-                (fichier.type && fichier.type !== "image/webp") ||
-                fichier.size > 15*1024*1024) {
-              statut("Image WEBP uniquement, 15 Mo maximum.", true);
-              return;
-            }
-            boutonUpload.disabled = true;
-            statut("Import de " + nomImage + " en cours…");
+          const aide = document.createElement("p");
+          aide.textContent = "Sélectionnez une image : son import est automatique. Le résultat apparaît ici.";
+          item.appendChild(aide);
+          const etatImage = document.createElement("p");
+          etatImage.setAttribute("role", "status");
+          etatImage.setAttribute("aria-live", "polite");
+          etatImage.textContent = "Statut GitHub non vérifié.";
+          item.appendChild(etatImage);
+          const retry = creerBouton("Réessayer l'import", () => {
+            if (fichierSelectionne) programmerImport(fichierSelectionne);
+            else input.click();
+          });
+          retry.hidden = true;
+          item.appendChild(retry);
+          photos.appendChild(item);
+
+          let fichierSelectionne = null;
+          let tentativeEnCours = false;
+          const afficherImageStatut = (message, erreur = false) => {
+            etatImage.textContent = message;
+            etatImage.dataset.state = erreur ? "error" : "success";
+            etatImage.style.color = erreur ? "var(--lcdp-color-danger, #a02020)" : "";
+            etatImage.style.fontWeight = erreur ? "700" : "";
+          };
+          const televerser = async fichier => {
+            if (tentativeEnCours) return;
+            tentativeEnCours = true;
+            input.disabled = true;
+            retry.hidden = true;
+            afficherImageStatut("Import en cours vers GitHub…");
             try {
+              if (!/\.webp$/i.test(fichier.name) ||
+                  (fichier.type && fichier.type !== "image/webp") ||
+                  fichier.size < 12 || fichier.size > 15 * 1024 * 1024) {
+                throw new Error("Le fichier doit être un WEBP de 15 Mo maximum.");
+              }
               const body = new FormData();
               body.append("idparc", parc.idparc);
               body.append("image", nomImage);
               body.append("fichier", fichier, fichier.name);
-              const data = await api("/accesdetail/image",{method:"POST",body});
-              apercu.src = cheminImage(parc,nomImage) + "?v=" + Date.now();
+              const data = await api("/accesdetail/image", { method: "POST", body });
+              if (data.image !== nomImage || !data.chemin) {
+                throw new Error("Confirmation d'enregistrement incomplète.");
+              }
+              const cheminAttendu = "OBJET/IMAG/ACCESPARC/" +
+                parc.dptmt + "/" + nomDossier(parc.nom) + "/" + nomImage;
+              if (data.chemin !== cheminAttendu) {
+                throw new Error("Le worker a enregistré l'image à un emplacement inattendu.");
+              }
+              if (data.confirme === false) {
+                throw new Error("Le worker n'a pas confirmé le stockage de l'image.");
+              }
+              afficherImageStatut(
+                data.confirme === true
+                  ? "Image enregistrée et vérifiée dans GitHub."
+                  : "Envoi accepté par le worker. Vérification GitHub à actualiser."
+              );
+              apercu.src = cheminImage(parc, nomImage) + "?v=" + Date.now();
+              fichierSelectionne = null;
               input.value = "";
-              statut("Image importée : " + data.chemin +
-                (data.version_precedente ? " (ancienne version archivée)" : ""));
-            } catch (e) { statut(e.message || String(e),true); }
-            finally { boutonUpload.disabled = false; }
+            } catch (erreur) {
+              afficherImageStatut("Échec de l'import : " + String(erreur?.message || erreur), true);
+              retry.hidden = false;
+            } finally {
+              input.disabled = false;
+              tentativeEnCours = false;
+            }
+          };
+          const programmerImport = fichier => {
+            importsEnCours += 1;
+            afficherImageStatut("En attente d'envoi vers GitHub…");
+            const tache = fileImportQueue.then(() => televerser(fichier));
+            fileImportQueue = tache.catch(() => {});
+            tache.finally(() => { importsEnCours -= 1; });
+          };
+          input.addEventListener("change", () => {
+            const fichier = input.files?.[0];
+            if (!fichier) return;
+            fichierSelectionne = fichier;
+            programmerImport(fichier);
           });
-          item.appendChild(boutonUpload);
-          photos.appendChild(item);
+          // Les preuves de présence viennent du listing GitHub lu par le worker.
+          // Une image absente n'est pas présentée comme enregistrée.
+          item.dataset.lcdpAccesImage = nomImage;
+          item._lcdpStatutPhoto = afficherImageStatut;
         }
         form.appendChild(photos);
       }
@@ -334,6 +400,22 @@
     });
     ajouterPresence2.hidden = !presence2.hidden;
     presence2.before(ajouterPresence2);
+
+    // Lecture de l'état de toutes les photos directement sur la branche GitHub.
+    try {
+      const etat = await api("/accesdetail/images?idparc=" + encodeURIComponent(parc.idparc));
+      const imagesConfirmees = new Set((etat.images || []).map(x => x.nom));
+      for (const item of slot.querySelectorAll("[data-lcdp-acces-image]")) {
+        const existe = imagesConfirmees.has(item.dataset.lcdpAccesImage);
+        item._lcdpStatutPhoto?.(
+          existe ? "Image présente et vérifiée dans GitHub." : "Aucune image enregistrée dans GitHub."
+        );
+      }
+    } catch (erreur) {
+      for (const item of slot.querySelectorAll("[data-lcdp-acces-image]")) {
+        item._lcdpStatutPhoto?.("Vérification GitHub indisponible. La sélection et l'import restent possibles.");
+      }
+    }
 
     const actions = document.createElement("div");
     actions.className = "lcdp-box-formulaire__actions";
