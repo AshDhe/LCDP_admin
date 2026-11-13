@@ -290,74 +290,53 @@
 
   async function demanderConfirmation(message) {
     const slot = document.getElementById("lcdp-lightbox-slot");
-
-    if (!slot) {
-      throw new Error("Slot de dialogue absent.");
+    if (!slot) throw new Error("Slot de dialogue absent.");
+    const hrefCss = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+    if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === hrefCss)) {
+      await new Promise((resolve, reject) => {
+        const feuille = document.createElement("link");
+        feuille.rel = "stylesheet";
+        feuille.href = hrefCss;
+        feuille.onload = resolve;
+        feuille.onerror = () => { feuille.remove(); reject(new Error("CSS CHOIX indisponible.")); };
+        document.head.appendChild(feuille);
+      });
     }
-
-    slot.innerHTML = "";
-    const fragment = await chargerFragment(
-      urlObjet("/HTMLBASE/02-dialogue-bouton.html"),
-      "Boîte de dialogue"
-    );
-    slot.appendChild(fragment);
-
-    const dialogue = slot.querySelector(
-      "[data-lcdp-box-dialogue-bouton]"
-    );
-    const titre = slot.querySelector("[data-lcdp-dialogue-title]");
-    const texte = slot.querySelector("[data-lcdp-dialogue-text]");
-    const actions = slot.querySelector("[data-lcdp-dialogue-actions]");
-    const boutonFermer = slot.querySelector("[data-lcdp-dialogue-close]");
-
-    if (!dialogue || !titre || !texte || !actions) {
-      slot.innerHTML = "";
+    slot.replaceChildren(await chargerFragment(
+      urlObjet("/HTMLBASE/02-dialogue-reference-choix.html"), "Boîte de dialogue"
+    ));
+    const dialogue = slot.querySelector('[data-lcdp-dialogue-reference="choix"]');
+    const titre = slot.querySelector("[data-lcdp-dialogue-titre]");
+    const texte = slot.querySelector("[data-lcdp-dialogue-message]");
+    const annuler = slot.querySelector('[data-lcdp-dialogue-action="annuler"]');
+    const valider = slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+    if (!dialogue || !titre || !texte || !annuler || !valider) {
+      slot.replaceChildren();
       throw new Error("Structure de la boîte de dialogue incomplète.");
     }
-
-    if (boutonFermer) boutonFermer.remove();
-
     titre.textContent = PAGE.confirmTitle;
     texte.textContent = String(message || "").trim();
-
-    const boutonAnnuler = document.createElement("button");
-    boutonAnnuler.type = "button";
-    boutonAnnuler.className = "lcdp-button lcdp-button-secondary";
-    boutonAnnuler.textContent = "Annuler";
-
-    const boutonOk = document.createElement("button");
-    boutonOk.type = "button";
-    boutonOk.className = "lcdp-button lcdp-button-orange";
-    boutonOk.textContent = "Valider";
-
-    actions.append(boutonAnnuler, boutonOk);
-
-    return new Promise((resolve) => {
+    annuler.textContent = "Annuler";
+    valider.textContent = "Valider";
+    return new Promise(resolve => {
       let resolu = false;
-
-      function terminer(valeur) {
+      const terminer = valeur => {
         if (resolu) return;
         resolu = true;
         document.removeEventListener("keydown", gererTouche);
-        slot.innerHTML = "";
+        slot.replaceChildren();
         resolve(valeur);
-      }
-
-      function gererTouche(event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          terminer(false);
-        }
-      }
-
-      boutonAnnuler.addEventListener("click", () => terminer(false));
-      boutonOk.addEventListener("click", () => terminer(true));
-      dialogue.addEventListener("click", (event) => {
+      };
+      const gererTouche = event => {
+        if (event.key === "Escape") { event.preventDefault(); terminer(false); }
+      };
+      annuler.addEventListener("click", () => terminer(false), { once: true });
+      valider.addEventListener("click", () => terminer(true), { once: true });
+      dialogue.addEventListener("click", event => {
         if (event.target === dialogue) terminer(false);
       });
       document.addEventListener("keydown", gererTouche);
-
-      window.setTimeout(() => boutonOk.focus(), 0);
+      valider.focus();
     });
   }
 
