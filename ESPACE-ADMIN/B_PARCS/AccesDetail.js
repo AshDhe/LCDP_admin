@@ -209,6 +209,9 @@
     const nom = document.createElement("h2");
     nom.textContent = parc.nom + " — " + parc.dptmt;
     slot.appendChild(nom);
+    const optionPhotos = document.createElement("p");
+    optionPhotos.textContent = "Photographies facultatives : choisissez uniquement les images que vous souhaitez ajouter. Chaque image sélectionnée est enregistrée séparément dans GitHub.";
+    slot.appendChild(optionPhotos);
     slot.appendChild(creerBouton("Retour à la sélection des parcs", async () => {
       if (!await demanderAbandon()) return;
       fermerEdition();
@@ -265,6 +268,7 @@
           const input = document.createElement("input");
           input.type = "file";
           input.accept = ".webp,image/webp";
+          input.required = false;
           input.setAttribute("aria-label", "Sélectionner une photo pour import automatique : " + nomImage);
           input.className = "lcdp-box-champ-formulaire__input";
           item.appendChild(input);
@@ -317,14 +321,13 @@
               if (data.chemin !== cheminAttendu) {
                 throw new Error("Le worker a enregistré l'image à un emplacement inattendu.");
               }
-              if (data.confirme === false) {
-                throw new Error("Le worker n'a pas confirmé le stockage de l'image.");
+              if (data.confirme !== true ||
+                  !/^[0-9a-f]{40}$/i.test(String(data.sha || "")) ||
+                  Number(data.taille) !== fichier.size ||
+                  !/^[0-9a-f]{40}$/i.test(String(data.commit || ""))) {
+                throw new Error("Enregistrement non confirmé par GitHub. Ne pas considérer l'image comme enregistrée.");
               }
-              afficherImageStatut(
-                data.confirme === true
-                  ? "Image enregistrée et vérifiée dans GitHub."
-                  : "Envoi accepté par le worker. Vérification GitHub à actualiser."
-              );
+              afficherImageStatut("Image enregistrée dans GitHub (commit confirmé).");
               apercu.src = cheminImage(parc, nomImage) + "?v=" + Date.now();
               fichierSelectionne = null;
               input.value = "";
@@ -337,11 +340,17 @@
             }
           };
           const programmerImport = fichier => {
+            if (input.disabled || tentativeEnCours) return;
             importsEnCours += 1;
+            input.disabled = true;
+            retry.hidden = true;
             afficherImageStatut("En attente d'envoi vers GitHub…");
             const tache = fileImportQueue.then(() => televerser(fichier));
             fileImportQueue = tache.catch(() => {});
-            tache.finally(() => { importsEnCours -= 1; });
+            tache.then(
+              () => { importsEnCours -= 1; input.disabled = false; },
+              () => { importsEnCours -= 1; input.disabled = false; }
+            );
           };
           input.addEventListener("change", () => {
             const fichier = input.files?.[0];
@@ -405,6 +414,19 @@
     try {
       const etat = await api("/accesdetail/images?idparc=" + encodeURIComponent(parc.idparc));
       const imagesConfirmees = new Set((etat.images || []).map(x => x.nom));
+      if (["chemin2.webp", "zonereservee21.webp", "zonereservee22.webp"].some(
+        nom => imagesConfirmees.has(nom)
+      )) {
+        chemin2.hidden = false;
+        zone2.hidden = false;
+        ajouterZone2.hidden = true;
+      }
+      if (["presence21.webp", "presence22.webp"].some(
+        nom => imagesConfirmees.has(nom)
+      )) {
+        presence2.hidden = false;
+        ajouterPresence2.hidden = true;
+      }
       for (const item of slot.querySelectorAll("[data-lcdp-acces-image]")) {
         const existe = imagesConfirmees.has(item.dataset.lcdpAccesImage);
         item._lcdpStatutPhoto?.(
@@ -421,6 +443,10 @@
     actions.className = "lcdp-box-formulaire__actions";
     const enregistrer = creerBouton("Enregistrer les rubriques", async () => {
       if (!parcCourant || operation) return;
+      if (importsEnCours > 0) {
+        statut("Import de photographie en cours : attendez la confirmation sous chaque image avant d'enregistrer les textes.", true);
+        return;
+      }
       const contenu = {};
       for (const [cle, f] of formulaires) {
         const texte = f.textarea.value.trim();
