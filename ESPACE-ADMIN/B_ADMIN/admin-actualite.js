@@ -330,6 +330,63 @@
     const slot = document.getElementById(
       "lcdp-lightbox-slot"
     );
+    // Une suppression reste sur l'ancien objet jusqu'au profil SUPPRESSION.
+    if (options.confirmer !== "Supprimer" && slot) {
+      const href = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === href)) {
+        await new Promise((resolve, reject) => {
+          const feuille = document.createElement("link");
+          feuille.rel = "stylesheet";
+          feuille.href = href;
+          feuille.onload = resolve;
+          feuille.onerror = () => {
+            feuille.remove();
+            reject(new Error("CSS CHOIX indisponible."));
+          };
+          document.head.appendChild(feuille);
+        });
+      }
+      slot.replaceChildren();
+      try {
+        slot.appendChild(await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-choix.html"));
+        const dialogueChoix = slot.querySelector('[data-lcdp-dialogue-reference="choix"]');
+        const titreChoix = slot.querySelector("[data-lcdp-dialogue-titre]");
+        const texteChoix = slot.querySelector("[data-lcdp-dialogue-message]");
+        const annulerChoix = slot.querySelector('[data-lcdp-dialogue-action="annuler"]');
+        const confirmerChoix = slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+        if (!dialogueChoix || !titreChoix || !texteChoix || !annulerChoix || !confirmerChoix) throw new Error("Structure CHOIX incomplète.");
+        titreChoix.textContent = options.titre || "Confirmation";
+        texteChoix.textContent = options.texte || "";
+        annulerChoix.textContent = "Annuler";
+        confirmerChoix.textContent = options.confirmer || "Confirmer";
+        return await new Promise(resolve => {
+          let resolu = false;
+          const terminer = valeur => {
+            if (resolu) return;
+            resolu = true;
+            document.removeEventListener("keydown", gererClavier);
+            slot.replaceChildren();
+            resolve(valeur);
+          };
+          const gererClavier = event => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              terminer(false);
+            }
+          };
+          document.addEventListener("keydown", gererClavier);
+          annulerChoix.addEventListener("click", () => terminer(false), { once: true });
+          confirmerChoix.addEventListener("click", () => terminer(true), { once: true });
+          dialogueChoix.addEventListener("click", event => {
+            if (event.target === dialogueChoix) terminer(false);
+          });
+          confirmerChoix.focus();
+        });
+      } catch (erreur) {
+        slot.replaceChildren();
+        throw erreur;
+      }
+    }
 
     if (!slot) {
       return window.confirm(options.texte || "");
