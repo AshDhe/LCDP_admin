@@ -1114,10 +1114,17 @@
 
       async function afficherConfirmationEditionParc(message) {
         const conteneur = document.createElement("div");
-        const fragment = await chargerFragment(
-          urlObjet("/HTMLBASE/02-dialogue-reference-information.html"),
-          "Dialogue INFORMATION"
-        );
+        let fragment;
+        try {
+          fragment = await chargerFragment(
+            urlObjet("/HTMLBASE/02-dialogue-reference-information.html"),
+            "Dialogue INFORMATION"
+          );
+        } catch (error) {
+          console.error("Dialogue INFORMATION indisponible :", error);
+          window.alert(message);
+          return;
+        }
         conteneur.appendChild(fragment);
         const dialogue = conteneur.querySelector(
           '[data-lcdp-dialogue-reference="information"]'
@@ -1128,7 +1135,8 @@
           '[data-lcdp-dialogue-action="compris"]'
         );
         if (!dialogue || !titre || !texte || !boutonOk) {
-          throw new Error("Dialogue INFORMATION indisponible.");
+          window.alert(message);
+          return;
         }
         titre.textContent = "Enregistrement confirmé";
         texte.textContent = message;
