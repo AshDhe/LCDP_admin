@@ -19,20 +19,47 @@
     const d=await r.json().catch(()=>null);if(!r.ok||!d?.success)throw Error(d?.message||'Impossible de joindre le service des suspensions.');return d;
   }
   async function confirmer(m,suspendre){
-    const slot=document.getElementById('lcdp-lightbox-slot');slot.replaceChildren(await fragment(objet('/HTMLBASE/02-dialogue-bouton.html')));
-    const box=slot.querySelector('[data-lcdp-box-dialogue-bouton]'),titre=slot.querySelector('[data-lcdp-dialogue-title]'),texte=slot.querySelector('[data-lcdp-dialogue-text]'),actions=slot.querySelector('[data-lcdp-dialogue-actions]');
-    if(!box||!titre||!texte||!actions){slot.replaceChildren();throw Error('Confirmation indisponible. Aucune modification effectuée.');}
+    const slot=document.getElementById('lcdp-lightbox-slot');
+    if(!slot)throw Error('Conteneur de confirmation indisponible. Aucune modification effectuée.');
+    const hrefCss=objet('/CSSBASE/lcdp-lightbox-convergence.css');
+    if(!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l=>l.href===hrefCss)){
+      await new Promise((resolve,reject)=>{
+        const lien=document.createElement('link');lien.rel='stylesheet';lien.href=hrefCss;
+        lien.onload=resolve;lien.onerror=()=>{lien.remove();reject(Error('CSS de confirmation indisponible.'));};
+        document.head.appendChild(lien);
+      });
+    }
+    slot.replaceChildren(await fragment(objet('/HTMLBASE/02-dialogue-reference-choix.html')));
+    const box=slot.querySelector('[data-lcdp-dialogue-reference="choix"]'),
+      titre=slot.querySelector('[data-lcdp-dialogue-titre]'),
+      texte=slot.querySelector('[data-lcdp-dialogue-message]'),
+      non=slot.querySelector('[data-lcdp-dialogue-action="annuler"]'),
+      oui=slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+    if(!box||!titre||!texte||!non||!oui){slot.replaceChildren();throw Error('Confirmation indisponible. Aucune modification effectuée.');}
     titre.textContent=suspendre?'Suspendre ce membre ?':'Lever la suspension ?';
-    texte.textContent=(suspendre?'Confirmer la suspension disciplinaire de ':'Confirmer la levée de suspension de ')+nom(m)+' (ID : '+m.idmembre+') ?';actions.replaceChildren();
+    texte.textContent=(suspendre?'Confirmer la suspension disciplinaire de ':'Confirmer la levée de suspension de ')+nom(m)+' (ID : '+m.idmembre+') ?';
+    non.textContent='Non';oui.textContent='Oui';
     const avant=document.activeElement;
     return new Promise(resolve=>{
       let fini=false;
-      const terminer=v=>{if(fini)return;fini=true;document.removeEventListener('keydown',clavier);slot.replaceChildren();avant?.focus({preventScroll:true});resolve(v);};
-      const non=bouton('Non',()=>terminer(false)),oui=bouton('Oui',()=>terminer(true));oui.className='lcdp-button lcdp-button-orange';actions.append(non,oui);
-      const clavier=e=>{if(e.key==='Escape'){e.preventDefault();terminer(false);}if(e.key==='Tab'){const c=[...slot.querySelectorAll('button:not([disabled])')].filter(b=>!b.hidden);if(!c.length)return;const i=c.indexOf(document.activeElement);if((!e.shiftKey&&i===c.length-1)||(e.shiftKey&&i<=0)){e.preventDefault();(e.shiftKey?c.at(-1):c[0]).focus();}}};
-      document.addEventListener('keydown',clavier);slot.querySelector('[data-lcdp-dialogue-close]')?.addEventListener('click',()=>terminer(false));box.addEventListener('click',e=>{if(e.target===box)terminer(false);});non.focus();
+      const terminer=v=>{
+        if(fini)return;fini=true;document.removeEventListener('keydown',clavier);
+        slot.replaceChildren();avant?.focus({preventScroll:true});resolve(v);
+      };
+      const clavier=e=>{
+        if(e.key==='Escape'){e.preventDefault();terminer(false);}
+        if(e.key==='Tab'){const c=[non,oui].filter(b=>!b.disabled);const i=c.indexOf(document.activeElement);
+          if(c.length&&((!e.shiftKey&&i===c.length-1)||(e.shiftKey&&i<=0))){e.preventDefault();(e.shiftKey?c.at(-1):c[0]).focus();}
+        }
+      };
+      document.addEventListener('keydown',clavier);
+      non.addEventListener('click',()=>terminer(false),{once:true});
+      oui.addEventListener('click',()=>terminer(true),{once:true});
+      box.addEventListener('click',e=>{if(e.target===box)terminer(false);});
+      non.focus();
     });
   }
+
   function fiche(m,zone,maintenant){
     zone.replaceChildren();const card=el('section',undefined,'lcdp-suspension-admin__fiche');card.append(el('h2',nom(m),'lcdp-suspension-admin__fiche-titre'));
     const dl=el('dl',undefined,'lcdp-suspension-admin__fiche-donnees');
