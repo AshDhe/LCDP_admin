@@ -344,11 +344,71 @@
     editionSlot.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  async function confirmerSuppressionAbonnement(nom) {
+    const focusInitial = document.activeElement;
+    let conteneur = null;
+    try {
+      const hrefCss = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(lien => lien.href === new URL(hrefCss, document.baseURI).href)) {
+        await new Promise((resolve, reject) => {
+          const feuille = document.createElement("link");
+          feuille.rel = "stylesheet";
+          feuille.href = hrefCss;
+          feuille.onload = resolve;
+          feuille.onerror = () => { feuille.remove(); reject(new Error("CSS SUPPRESSION indisponible.")); };
+          document.head.appendChild(feuille);
+        });
+      }
+      const fragment = await chargerFragment(urlObjet("/HTMLBASE/02-dialogue-reference-suppression.html"), "Dialogue SUPPRESSION");
+      conteneur = document.createElement("div");
+      conteneur.appendChild(fragment);
+      const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="suppression"]');
+      const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
+      const message = conteneur.querySelector("[data-lcdp-dialogue-message]");
+      const conserver = conteneur.querySelector('[data-lcdp-dialogue-action="conserver"]');
+      const supprimer = conteneur.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+      if (!dialogue || !titre || !message || !conserver || !supprimer) throw new Error("Dialogue SUPPRESSION incomplet.");
+      titre.textContent = "Supprimer cette version d’abonnement ?";
+      message.textContent = 'Supprimer définitivement cette version de l’abonnement « ' + nom + ' » ?';
+      conserver.textContent = "Conserver";
+      supprimer.textContent = "Supprimer";
+      document.body.appendChild(conteneur);
+      conserver.focus();
+      return await new Promise(resolve => {
+        let termine = false;
+        const terminer = valeur => {
+          if (termine) return;
+          termine = true;
+          document.removeEventListener("keydown", gererClavier);
+          conteneur.remove();
+          if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+          resolve(valeur);
+        };
+        const gererClavier = event => {
+          if (event.key === "Escape") { event.preventDefault(); terminer(false); }
+          if (event.key === "Tab") {
+            const cible = event.shiftKey ? supprimer : conserver;
+            if (document.activeElement === cible) { event.preventDefault(); (event.shiftKey ? conserver : supprimer).focus(); }
+          }
+        };
+        document.addEventListener("keydown", gererClavier);
+        conserver.addEventListener("click", () => terminer(false), { once: true });
+        supprimer.addEventListener("click", () => terminer(true), { once: true });
+        dialogue.addEventListener("click", event => { if (event.target === dialogue) terminer(false); });
+      });
+    } catch (erreur) {
+      conteneur?.remove();
+      if (focusInitial?.isConnected && typeof focusInitial.focus === "function") focusInitial.focus();
+      console.error("Confirmation de suppression indisponible :", erreur);
+      return false;
+    }
+  }
+
   async function supprimerAbonnement(form) {
     if (modeEdition !== "update" || !abonnementCourant?.idprixabo) return;
     const idprixabo = String(abonnementCourant.idprixabo).trim();
     const nom = String(abonnementCourant.nomabo || abonnementCourant.typeabo || "").trim();
-    if (!window.confirm('Supprimer définitivement cette version de l’abonnement « ' + nom + ' » ?')) return;
+    if (!await confirmerSuppressionAbonnement(nom)) return;
 
     const bouton = form.querySelector("#lcdp-prixabo-supprimer");
     if (bouton) bouton.disabled = true;
