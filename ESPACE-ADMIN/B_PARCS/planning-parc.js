@@ -262,6 +262,65 @@ async function demanderChoixPlanningAdmin(titre, message, libelleConfirmer = 'Co
     return false;
   }
 }
+async function demanderSuppressionOperation(nomParc) {
+  const conteneur = document.createElement('div');
+  const focusInitial = document.activeElement;
+  try {
+    const objet = typeof window.LCDP_urlObjet === 'function'
+      ? window.LCDP_urlObjet('/HTMLBASE/02-dialogue-reference-suppression.html')
+      : null;
+    if (!objet) return false;
+    const reponse = await fetch(objet, { credentials: 'omit', cache: 'no-cache' });
+    if (!reponse.ok) return false;
+    const template = document.createElement('template');
+    template.innerHTML = (await reponse.text()).trim();
+    conteneur.replaceChildren(template.content.cloneNode(true));
+    const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="suppression"]');
+    const titre = conteneur.querySelector('[data-lcdp-dialogue-titre]');
+    const message = conteneur.querySelector('[data-lcdp-dialogue-message]');
+    const conserver = conteneur.querySelector('[data-lcdp-dialogue-action="conserver"]');
+    const supprimer = conteneur.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+    if (!dialogue || !titre || !message || !conserver || !supprimer) return false;
+    titre.textContent = 'Supprimer cette opération ?';
+    message.textContent = 'Supprimer cette opération pour ' + nomParc + ' ? Les réservations annulées restent annulées.';
+    conserver.textContent = 'Conserver';
+    supprimer.textContent = 'Supprimer';
+    document.body.appendChild(conteneur);
+    return await new Promise(resolve => {
+      let termine = false;
+      const clavier = event => {
+        if (event.key === 'Escape') { event.preventDefault(); fermer(false); }
+        if (event.key === 'Tab') {
+          if (event.shiftKey && document.activeElement === conserver) {
+            event.preventDefault(); supprimer.focus();
+          } else if (!event.shiftKey && document.activeElement === supprimer) {
+            event.preventDefault(); conserver.focus();
+          }
+        }
+      };
+      const fermer = valeur => {
+        if (termine) return;
+        termine = true;
+        document.removeEventListener('keydown', clavier);
+        conteneur.remove();
+        if (focusInitial?.isConnected && typeof focusInitial.focus === 'function') focusInitial.focus();
+        resolve(valeur);
+      };
+      document.addEventListener('keydown', clavier);
+      conserver.addEventListener('click', () => fermer(false), { once: true });
+      supprimer.addEventListener('click', () => fermer(true), { once: true });
+      dialogue.addEventListener('click', event => {
+        if (event.target === dialogue) fermer(false);
+      });
+      conserver.focus();
+    });
+  } catch (erreur) {
+    console.error('Confirmation suppression opération planning indisponible :', erreur);
+    return false;
+  } finally {
+    conteneur.remove();
+  }
+}
 async function confirmerAncienneJournee(date) {
   const dialogueHistorique = $('planning-confirmation-ancien');
   if (!dialogueHistorique || typeof dialogueHistorique.showModal !== 'function') return false;
@@ -464,7 +523,7 @@ async function initialiser(){
   $('departement').addEventListener('change',()=>{const next=$('departement').value;$('departement').value=selected.dptmt;navigation(async()=>{selected.dptmt=next;selected.idparc='';parc=null;jours=[];$('departement').value=next;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc — Département '+next;options($('parc'),[],'Choisir un parc');$('parc').disabled=true;if(next)await chargerParcs(next);boutons();}).catch(e=>statut(e.message,true));});
   $('parc').addEventListener('change',()=>{const next=$('parc').value;$('parc').value=selected.idparc;navigation(async()=>{selected.idparc=next;$('parc').value=next;selected.mois=today.slice(0,7);$('mois').value=selected.mois;parc=null;jours=[];bases=[];moisOuverts=[];$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent=next?'Chargement du parc…':'Choisir un parc';boutons();if(next)await chargerSelection();else{parc=null;$('edition').hidden=true;$('ia').hidden=true;$('identite').textContent='Choisir un parc';boutons();}}).catch(e=>statut(e.message,true));});
   $('micro').addEventListener('click',()=>micro().catch(e=>statut(e.message,true)));$('rejeter').addEventListener('click',effacerProposition);
-  $('operations').addEventListener('click',async e=>{const id=e.target.dataset.delete;if(!id||busy)return;if(!confirm('Supprimer cette opération pour '+parc.nom+' ? Les réservations annulées restent annulées.'))return;busy=true;boutons();try{const d=await api('/supprimer-operation',{...contexte(),id});apres(d);afficherOperations();statut('Opération supprimée.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':''));}catch(e){statut(e.message,true);}finally{busy=false;boutons();}});
+  $('operations').addEventListener('click',async e=>{const id=e.target.dataset.delete;if(!id||busy)return;if(!await demanderSuppressionOperation(parc.nom))return;busy=true;boutons();try{const d=await api('/supprimer-operation',{...contexte(),id});apres(d);afficherOperations();statut('Opération supprimée.'+(d.annulations?' '+d.annulations+' réservation(s) annulée(s).':''));}catch(e){statut(e.message,true);}finally{busy=false;boutons();}});
   document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||e.defaultPrevented||a.target==='_blank'||(!dirty.size&&!existeBrouillon()&&!saving&&!proposition&&!baseDirty&&!busy))return;
     e.preventDefault();e.stopImmediatePropagation();navigation(async()=>{if(existeBrouillon()){statut('Des modifications non enregistrées restent dans un autre mois. Enregistrez-les avant de quitter cette page.',true);return;}location.href=a.href;}).catch(e=>statut(e.message,true));},true);
   window.addEventListener('beforeunload',e=>{if(dirty.size||existeBrouillon()||saving||proposition||baseDirty||busy){e.preventDefault();e.returnValue='';}});
