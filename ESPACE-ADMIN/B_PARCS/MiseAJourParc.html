@@ -81,6 +81,7 @@
         "/CSSBASE/lcdp-central-module-06.css",
         "/CSSBASE/lcdp-central-module-08.css",
         "/CSSBASE/lcdp-central-module-12-gabarit-composants.css",
+        "/CSSBASE/lcdp-lightbox-convergence.css",
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -171,12 +172,10 @@
         "lngloc",
         "prez",
         "exterieur",
-        "espacereserve",
         "statut",
         "adresse1",
         "adresse2",
         "adresse3",
-        "entreeparc",
         "gpeprio",
         "qualifmotif",
         "parcprive",
@@ -482,8 +481,14 @@
             titre: "Mettre à jour le parc",
             sousTitre: String(parc.nom || ""),
             introHtml:
-              "<p>Les champs techniques sont affichés en lecture seule. " +
-              "La date du statut est actualisée automatiquement lorsque le statut change.</p>",
+              "<p><strong>Champs modifiables</strong> : présentation, immersion " +
+              "(ancien champ Extérieur) et informations administratives.</p>" +
+              "<p><strong>Contenus automatiques</strong> : Espace réservé et Entrée " +
+              "(rubriques Accès détail, slot 23), Ouverture en cours " +
+              "(synthèse du planning), textes fixes d’Accès Ma Clé.</p>" +
+              "<p>La galerie utilise ses quatre premières photographies ; " +
+              "l’image entree1.webp se gère dans Accès détail. " +
+              "La date du statut est actualisée lors d'un changement de statut.</p>",
             validationNative: true,
             champs: construireChampsEdition(parc),
             boutons: [
@@ -645,16 +650,9 @@
           },
           {
             name: "exterieur",
-            label: "Extérieur",
+            label: "Immersion",
             type: "textarea",
             value: parc.exterieur,
-            className: "lcdp-box-champ-formulaire--wide"
-          },
-          {
-            name: "espacereserve",
-            label: "Espaces réservés",
-            type: "textarea",
-            value: parc.espacereserve,
             className: "lcdp-box-champ-formulaire--wide"
           },
           {
@@ -683,13 +681,6 @@
           champTexte("adresse1", "Adresse 1", parc.adresse1),
           champTexte("adresse2", "Adresse 2", parc.adresse2),
           champTexte("adresse3", "Adresse 3", parc.adresse3),
-          {
-            name: "entreeparc",
-            label: "Entrée et accès au parc",
-            type: "textarea",
-            value: parc.entreeparc,
-            className: "lcdp-box-champ-formulaire--wide"
-          },
           {
             name: "gpeprio",
             label: "Groupe de priorité",
@@ -785,16 +776,14 @@
           { value: "card1.webp", label: "Photographie principale (card1.webp)" },
           { value: "01.jpg", label: "Photographie 2 (01.jpg)" },
           { value: "02.jpg", label: "Photographie 3 (02.jpg)" },
-          { value: "03.jpg", label: "Photographie 4 (03.jpg)" },
-          { value: "04.jpg", label: "Photographie 5 (04.jpg)" },
-          { value: "05.jpg", label: "Photographie 6 (05.jpg)" }
+          { value: "03.jpg", label: "Photographie 4 (03.jpg)" }
         ];
         const brouillon = JSON.parse(JSON.stringify(parc.photoseditorial || {}));
         const form = await window.LCDP_creerFormulaire(slot.id, {
           id: "lcdp-parc-editeur-photos-form",
           ariaLabel: "Textes des photographies",
           titre: "Textes associés aux photographies",
-          sousTitre: "Titres, légendes, descriptions et textes alternatifs",
+          sousTitre: "Quatre photos de la galerie. La photo d’entrée se gère dans Accès détail.",
           validationNative: true,
           champs: [
             {
@@ -978,7 +967,7 @@
         }
 
         if (Object.keys(changes).length < 1) {
-          afficherNote(note, "Aucune modification à enregistrer.", "success");
+          await afficherConfirmationEditionParc("Aucune modification à enregistrer.");
           return;
         }
 
@@ -1028,14 +1017,14 @@
 
           if (data.modifie === false) {
             boutonEnregistrer.disabled = false;
-            await afficherAlerteEditionParc(
+            await afficherConfirmationEditionParc(
               "Aucune modification à enregistrer."
             );
             return;
           }
 
-          await afficherAlerteEditionParc(
-            "Modification enregistrée."
+          await afficherConfirmationEditionParc(
+            "Les modifications du parc ont bien été enregistrées."
           );
 
           window.location.reload();
@@ -1121,6 +1110,48 @@
         }
 
         return String(a) === String(b);
+      }
+
+      async function afficherConfirmationEditionParc(message) {
+        const conteneur = document.createElement("div");
+        const fragment = await chargerFragment(
+          urlObjet("/HTMLBASE/02-dialogue-reference-information.html"),
+          "Dialogue INFORMATION"
+        );
+        conteneur.appendChild(fragment);
+        const dialogue = conteneur.querySelector(
+          '[data-lcdp-dialogue-reference="information"]'
+        );
+        const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
+        const texte = conteneur.querySelector("[data-lcdp-dialogue-message]");
+        const boutonOk = conteneur.querySelector(
+          '[data-lcdp-dialogue-action="compris"]'
+        );
+        if (!dialogue || !titre || !texte || !boutonOk) {
+          throw new Error("Dialogue INFORMATION indisponible.");
+        }
+        titre.textContent = "Enregistrement confirmé";
+        texte.textContent = message;
+        boutonOk.textContent = "OK";
+        document.body.appendChild(conteneur);
+        await new Promise(resolve => {
+          const fermer = () => {
+            document.removeEventListener("keydown", intercepterClavier);
+            conteneur.remove();
+            resolve();
+          };
+          const intercepterClavier = event => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+            } else if (event.key === "Tab") {
+              event.preventDefault();
+              boutonOk.focus();
+            }
+          };
+          document.addEventListener("keydown", intercepterClavier);
+          boutonOk.addEventListener("click", fermer, { once: true });
+          boutonOk.focus();
+        });
       }
 
       async function afficherAlerteEditionParc(message) {
