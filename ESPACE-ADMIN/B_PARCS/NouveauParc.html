@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-lcdp-css="c081">
 <head>
   <meta charset="utf-8">
 
-  <title>NouveauParc - La Clé du Parc</title>
+  <title>Création Parc - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta
     name="description"
-    content="Insertion de nouveaux parcs dans l’espace admin La Clé du Parc."
+    content="Création progressive des parcs dans l’espace admin La Clé du Parc."
   >
 
   <script src="../../config.js"></script>
@@ -79,6 +79,7 @@
       [
         "/CSSBASE/cssbase.css",
         "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-central-module-05.css",
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -99,6 +100,7 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <script src="./CreationParcEtapes.js" defer></script>
   <script src="./NouveauParc.js" defer></script>
 </head>
 
@@ -110,7 +112,7 @@
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
       <section
         class="lcdp-page-section"
-        aria-label="Insertion de nouveaux parcs"
+        aria-label="Création Parc"
       >
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
@@ -118,6 +120,7 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
+              <div id="lcdp-creation-onglets-slot"></div>
               <div id="lcdp-nouveauparc-menu-slot"></div>
 
               <div
@@ -140,5 +143,6 @@
     </main>
 
   </div>
+  <div id="lcdp-lightbox-slot"></div>
 </body>
 </html>
