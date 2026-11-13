@@ -534,50 +534,55 @@
   }
 
   async function afficherAlerte(message) {
-    const slot = document.getElementById(
-      "lcdp-lightbox-slot"
-    );
-
-    if (!slot) return false;
-
-    slot.innerHTML = "";
-    slot.appendChild(
-      await chargerFragmentObjet(
-        "/HTMLBASE/02-alerte.html"
-      )
-    );
-
-    const texte = slot.querySelector(
-      "[data-lcdp-alerte-message]"
-    );
-    const fermer = slot.querySelector(
-      "[data-lcdp-alerte-close]"
-    );
-    const ok = slot.querySelector(
-      "[data-lcdp-alerte-ok]"
-    );
-
-    if (!texte || !ok) {
-      slot.innerHTML = "";
-      return false;
+    const slot = document.getElementById("lcdp-lightbox-slot");
+    if (!slot) {
+      window.alert(message || "");
+      return true;
     }
 
-    texte.textContent = message || "";
+    try {
+      const hrefCss = window.LCDP_urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === hrefCss)) {
+        await new Promise((resolve, reject) => {
+          const feuille = document.createElement("link");
+          feuille.rel = "stylesheet";
+          feuille.href = hrefCss;
+          feuille.onload = resolve;
+          feuille.onerror = () => {
+            feuille.remove();
+            reject(new Error("CSS ERREUR indisponible."));
+          };
+          document.head.appendChild(feuille);
+        });
+      }
 
-    if (fermer) {
-      fermer.hidden = true;
-    }
+      const fragment = await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-erreur.html");
+      slot.replaceChildren(fragment);
 
-    return new Promise((resolve) => {
-      ok.addEventListener(
-        "click",
-        () => {
-          slot.innerHTML = "";
+      const dialogue = slot.querySelector('[data-lcdp-dialogue-reference="erreur"]');
+      const titre = slot.querySelector("[data-lcdp-dialogue-titre]");
+      const texte = slot.querySelector("[data-lcdp-dialogue-message]");
+      const fermer = slot.querySelector('[data-lcdp-dialogue-action="fermer"]');
+      if (!dialogue || !titre || !texte || !fermer) {
+        throw new Error("Structure du dialogue ERREUR incomplète.");
+      }
+
+      titre.textContent = "Une erreur est survenue";
+      texte.textContent = message || "";
+
+      return await new Promise((resolve) => {
+        fermer.addEventListener("click", () => {
+          slot.replaceChildren();
           resolve(true);
-        },
-        { once: true }
-      );
-    });
+        }, { once: true });
+        fermer.focus();
+      });
+    } catch (error) {
+      console.error("CalculPoints : dialogue ERREUR indisponible :", error);
+      slot.replaceChildren();
+      window.alert(message || "");
+      return true;
+    }
   }
 
   function redirigerConnexion() {
