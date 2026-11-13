@@ -184,7 +184,7 @@
 
         bouton.type = "button";
         bouton.className = "lcdp-button lcdp-button-primary";
-        bouton.textContent = "Nouveau parc";
+        bouton.textContent = "Inscrire un parc";
 
         bouton.addEventListener("click", ouvrirFormulaire);
 
@@ -250,7 +250,7 @@
           {
             id: "formulaire-nouveauparc",
             ariaLabel: "Insertion de nouveaux parcs",
-            titre: "Nouveau parc",
+            titre: "Création Parc",
             champs: [
               {
                 label: "Nom du parc",
@@ -557,6 +557,7 @@
           );
 
           reinitialiserFormulaire(form);
+          window.LCDP_CREATION_PARC_ENREGISTRE?.(parcs, data);
         } catch (error) {
           console.error("Erreur NouveauParc :", error);
 
@@ -656,6 +657,9 @@
           initialiserMenuGauche(),
           initialiserMenuWorkflow()
         ]);
+        if (typeof window.LCDP_INITIALISER_CREATION_PARC === "function") {
+          await window.LCDP_INITIALISER_CREATION_PARC();
+        }
 
         const main = document.getElementById(
           "lcdp-main-admin"
