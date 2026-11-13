@@ -720,8 +720,9 @@
         ) {
           // Deux entrées pour la programmation ; les autres rubriques Parcs restent présentes.
           if (categorie.id === "parcs" && [SLOT_HORIZON_PLANNING, SLOT_AJUST_FAMILLE,
-              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION].includes(position)) continue;
+              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION, SLOT_QUALIFICATION_PARC].includes(position)) continue;
           const lien = template.content.firstElementChild.cloneNode(true);
+          lien.dataset.lcdpPosition = String(position);
 
           const configuration = boutonsConfigures.find((bouton) => {
             return (
@@ -734,8 +735,6 @@
             configurerBoutonCarteParc(lien);
           } else if (estSlotCardParc(categorie, position)) {
             configurerBoutonCardParc(lien);
-          } else if (estSlotLocalisationParc(categorie, position)) {
-            configurerBoutonLocalisation(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
             configurerBoutonQualification(lien);
           } else if (estSlotCard1Parc(categorie, position)) {
@@ -775,7 +774,8 @@
             });
           }
 
-          if (estSlotOrangeAdminOuMembres(categorie, position)) {
+          if (estSlotOrangeAdminOuMembres(categorie, position) ||
+              (categorie.id === "parcs" && position === 17)) {
             lien.classList.remove(
               "lcdp-button-primary",
               "lcdp-button-secondary"
