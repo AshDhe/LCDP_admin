@@ -94,7 +94,6 @@
     }
     titre.textContent = "Enregistrement confirmé";
     texte.textContent = message;
-    texte.style.whiteSpace = "pre-line";
     boutonOk.textContent = "OK";
     document.body.appendChild(conteneur);
 
@@ -287,9 +286,6 @@ async function initialiserTable() {
     contenuOriginal = JSON.parse(JSON.stringify(parc.accesdetail || {}));
     formulaires = new Map();
     modifie = false;
-    // Seuls les imports confirmés par GitHub seront annoncés comme réussis.
-    const imagesTeleversees = new Set();
-    const imagesEnEchec = new Set();
 
     const nom = document.createElement("h2");
     nom.textContent = parc.nom + " — " + parc.dptmt;
@@ -370,11 +366,15 @@ async function initialiserTable() {
 
           let fichierSelectionne = null;
           let tentativeEnCours = false;
-          const afficherImageStatut = (message, erreur = false) => {
-            etatImage.textContent = message;
-            etatImage.dataset.state = erreur ? "error" : "success";
-            etatImage.style.color = erreur ? "var(--lcdp-color-danger, #a02020)" : "";
-            etatImage.style.fontWeight = erreur ? "700" : "";
+          const afficherImageStatut = (message, erreur = false, confirme = false) => {
+            etatImage.textContent = confirme ? "✓ Image enregistrée" : message;
+            etatImage.dataset.state = erreur ? "error" : confirme ? "confirmed" : "pending";
+            etatImage.style.color = erreur ? "var(--lcdp-color-danger, #a02020)" :
+              confirme ? "#18733c" : "";
+            etatImage.style.fontWeight = (erreur || confirme) ? "700" : "";
+            etatImage.style.backgroundColor = confirme ? "#e9f7ee" : "";
+            etatImage.style.borderRadius = confirme ? "6px" : "";
+            etatImage.style.padding = confirme ? "8px 12px" : "";
           };
           const televerser = async fichier => {
             if (tentativeEnCours) return;
@@ -407,15 +407,11 @@ async function initialiserTable() {
                   !/^[0-9a-f]{40}$/i.test(String(data.commit || ""))) {
                 throw new Error("Enregistrement non confirmé par GitHub. Ne pas considérer l'image comme enregistrée.");
               }
-              imagesTeleversees.add(nomImage);
-              imagesEnEchec.delete(nomImage);
-              afficherImageStatut("Image téléchargée et enregistrée dans GitHub (commit confirmé).");
+              afficherImageStatut("Image enregistrée", false, true);
               apercu.src = cheminImage(parc, nomImage) + "?v=" + Date.now();
               fichierSelectionne = null;
               input.value = "";
             } catch (erreur) {
-              imagesTeleversees.delete(nomImage);
-              imagesEnEchec.add(nomImage);
               afficherImageStatut("Échec de l'import : " + String(erreur?.message || erreur), true);
               retry.hidden = false;
             } finally {
@@ -426,8 +422,6 @@ async function initialiserTable() {
           const programmerImport = fichier => {
             if (input.disabled || tentativeEnCours) return;
             importsEnCours += 1;
-            imagesTeleversees.delete(nomImage);
-            imagesEnEchec.delete(nomImage);
             input.disabled = true;
             retry.hidden = true;
             afficherImageStatut("En attente d'envoi vers GitHub…");
@@ -516,7 +510,9 @@ async function initialiserTable() {
       for (const item of slot.querySelectorAll("[data-lcdp-acces-image]")) {
         const existe = imagesConfirmees.has(item.dataset.lcdpAccesImage);
         item._lcdpStatutPhoto?.(
-          existe ? "Image présente et vérifiée dans GitHub." : "Aucune image enregistrée dans GitHub."
+          existe ? "Image enregistrée" : "Aucune image enregistrée dans GitHub.",
+          false,
+          existe
         );
       }
     } catch (erreur) {
@@ -553,20 +549,11 @@ async function initialiserTable() {
           contenuOriginal = JSON.parse(JSON.stringify(data.parc.accesdetail));
         }
         modifie = false;
-        const imagesReussies = [...imagesTeleversees].sort();
-        const imagesEchouees = [...imagesEnEchec].sort();
-        let confirmation = changement
-          ? "Les rubriques Accès détail de ce parc ont bien été enregistrées."
-          : "Aucune modification des rubriques n'était nécessaire.";
-        confirmation += imagesReussies.length
-          ? "\nImages téléchargées et enregistrées dans GitHub (" + imagesReussies.length +
-            ") : " + imagesReussies.join(", ") + "."
-          : "\nAucune nouvelle image téléchargée pendant cette édition.";
-        if (imagesEchouees.length) {
-          confirmation += "\nTéléchargement non confirmé pour : " +
-            imagesEchouees.join(", ") + ".";
-        }
-        await afficherConfirmationEnregistrement(confirmation);
+        await afficherConfirmationEnregistrement(
+          changement
+            ? "Les rubriques Accès détail de ce parc ont bien été enregistrées."
+            : "Aucune modification des rubriques n'était nécessaire."
+        );
         fermerEdition();
         const liste = document.getElementById(TABLE_SLOT_ID);
         liste?.scrollIntoView({ behavior: "auto", block: "start" });
