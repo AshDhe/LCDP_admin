@@ -615,6 +615,58 @@
   }
 
   async function demanderConfirmationPublication(options = {}) {
+    if (options.confirmer !== 'Oui') {
+      const slotChoix = document.getElementById('lcdp-lightbox-slot');
+      if (!slotChoix) return false;
+      const hrefCss = typeof window.LCDP_urlObjet === 'function'
+        ? window.LCDP_urlObjet('/CSSBASE/lcdp-lightbox-convergence.css')
+        : null;
+      if (!hrefCss) return false;
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === hrefCss)) {
+        await new Promise((resolve, reject) => {
+          const lien = document.createElement('link');
+          lien.rel = 'stylesheet';
+          lien.href = hrefCss;
+          lien.onload = resolve;
+          lien.onerror = () => { lien.remove(); reject(new Error('CSS CHOIX indisponible.')); };
+          document.head.appendChild(lien);
+        });
+      }
+      slotChoix.replaceChildren();
+      try {
+        slotChoix.appendChild(await chargerFragmentObjet('/HTMLBASE/02-dialogue-reference-choix.html'));
+        const dialogue = slotChoix.querySelector('[data-lcdp-dialogue-reference="choix"]');
+        const heading = slotChoix.querySelector('[data-lcdp-dialogue-titre]');
+        const texte = slotChoix.querySelector('[data-lcdp-dialogue-message]');
+        const non = slotChoix.querySelector('[data-lcdp-dialogue-action="annuler"]');
+        const oui = slotChoix.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+        if (!dialogue || !heading || !texte || !non || !oui) throw new Error('Structure CHOIX incomplète.');
+        heading.textContent = options.titre || 'Publier les FAQ';
+        texte.textContent = options.texte || 'La version affichée sur le site sera remplacée par le contenu actuel.';
+        non.textContent = options.annuler || 'Annuler';
+        oui.textContent = options.confirmer || 'Publier';
+        return await new Promise(resolve => {
+          let termine = false;
+          function fermer(valeur) {
+            if (termine) return;
+            termine = true;
+            document.removeEventListener('keydown', onEscape);
+            slotChoix.replaceChildren();
+            resolve(valeur);
+          }
+          function onEscape(e) { if(e.key === 'Escape') {e.preventDefault(); fermer(false);} }
+          document.addEventListener('keydown', onEscape);
+          non.addEventListener('click', () => fermer(false), {once:true});
+          oui.addEventListener('click', () => fermer(true), {once:true});
+          dialogue.addEventListener('click', e => {if(e.target===dialogue)fermer(false);});
+          non.focus();
+        });
+      } catch (error) {
+        slotChoix.replaceChildren();
+        throw error;
+      }
+    }
+
     const slot = document.getElementById(
       "lcdp-lightbox-slot"
     );
