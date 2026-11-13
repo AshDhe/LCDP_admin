@@ -642,10 +642,7 @@
             erreur.hidden = true;
             erreur.textContent = "";
 
-            const confirme = await afficherAlerte(
-              "Valider le " + formaterDateFr(date) + " ?",
-              { boutonOk: "Valider" }
-            );
+            const confirme = await confirmerDateDecision(formaterDateFr(date));
 
             if (!confirme) {
               input.focus();
@@ -718,6 +715,66 @@
         }
 
         return data;
+      }
+
+      async function confirmerDateDecision(dateFr) {
+        const conteneur = document.createElement("div");
+        document.body.appendChild(conteneur);
+        try {
+          const hrefCss = urlObjet("/CSSBASE/lcdp-lightbox-convergence.css");
+          if (![...document.querySelectorAll('link[rel="stylesheet"]')].some(lien => lien.href === hrefCss)) {
+            await new Promise((resolve, reject) => {
+              const feuille = document.createElement("link");
+              feuille.rel = "stylesheet";
+              feuille.href = hrefCss;
+              feuille.onload = resolve;
+              feuille.onerror = () => {
+                feuille.remove();
+                reject(new Error("CSS CHOIX indisponible."));
+              };
+              document.head.appendChild(feuille);
+            });
+          }
+          conteneur.appendChild(await chargerFragmentObjet("/HTMLBASE/02-dialogue-reference-choix.html"));
+          const dialogue = conteneur.querySelector('[data-lcdp-dialogue-reference="choix"]');
+          const titre = conteneur.querySelector("[data-lcdp-dialogue-titre]");
+          const message = conteneur.querySelector("[data-lcdp-dialogue-message]");
+          const annuler = conteneur.querySelector('[data-lcdp-dialogue-action="annuler"]');
+          const confirmer = conteneur.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+          if (!dialogue || !titre || !message || !annuler || !confirmer)
+            throw new Error("Structure CHOIX incomplète.");
+          titre.textContent = "Confirmer la date de décision";
+          message.textContent = "Valider le " + dateFr + " ?";
+          annuler.textContent = "Annuler";
+          confirmer.textContent = "Valider";
+          return await new Promise(resolve => {
+            let termine = false;
+            const fermer = valeur => {
+              if (termine) return;
+              termine = true;
+              document.removeEventListener("keydown", gererClavier);
+              conteneur.remove();
+              resolve(valeur);
+            };
+            const gererClavier = event => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                fermer(false);
+              }
+            };
+            document.addEventListener("keydown", gererClavier);
+            annuler.addEventListener("click", () => fermer(false), { once: true });
+            confirmer.addEventListener("click", () => fermer(true), { once: true });
+            dialogue.addEventListener("click", event => {
+              if (event.target === dialogue) fermer(false);
+            });
+            annuler.focus();
+          });
+        } catch (erreur) {
+          console.error("Confirmation de décision DA :", erreur);
+          conteneur.remove();
+          return false;
+        }
       }
 
       async function afficherAlerte(message, options = {}) {
