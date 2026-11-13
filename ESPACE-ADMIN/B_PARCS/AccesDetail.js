@@ -94,6 +94,7 @@
     }
     titre.textContent = "Enregistrement confirmé";
     texte.textContent = message;
+    texte.style.whiteSpace = "pre-line";
     boutonOk.textContent = "OK";
     document.body.appendChild(conteneur);
 
@@ -286,6 +287,9 @@ async function initialiserTable() {
     contenuOriginal = JSON.parse(JSON.stringify(parc.accesdetail || {}));
     formulaires = new Map();
     modifie = false;
+    // Seuls les imports confirmés par GitHub seront annoncés comme réussis.
+    const imagesTeleversees = new Set();
+    const imagesEnEchec = new Set();
 
     const nom = document.createElement("h2");
     nom.textContent = parc.nom + " — " + parc.dptmt;
@@ -403,11 +407,15 @@ async function initialiserTable() {
                   !/^[0-9a-f]{40}$/i.test(String(data.commit || ""))) {
                 throw new Error("Enregistrement non confirmé par GitHub. Ne pas considérer l'image comme enregistrée.");
               }
-              afficherImageStatut("Image enregistrée dans GitHub (commit confirmé).");
+              imagesTeleversees.add(nomImage);
+              imagesEnEchec.delete(nomImage);
+              afficherImageStatut("Image téléchargée et enregistrée dans GitHub (commit confirmé).");
               apercu.src = cheminImage(parc, nomImage) + "?v=" + Date.now();
               fichierSelectionne = null;
               input.value = "";
             } catch (erreur) {
+              imagesTeleversees.delete(nomImage);
+              imagesEnEchec.add(nomImage);
               afficherImageStatut("Échec de l'import : " + String(erreur?.message || erreur), true);
               retry.hidden = false;
             } finally {
@@ -418,6 +426,8 @@ async function initialiserTable() {
           const programmerImport = fichier => {
             if (input.disabled || tentativeEnCours) return;
             importsEnCours += 1;
+            imagesTeleversees.delete(nomImage);
+            imagesEnEchec.delete(nomImage);
             input.disabled = true;
             retry.hidden = true;
             afficherImageStatut("En attente d'envoi vers GitHub…");
@@ -543,11 +553,20 @@ async function initialiserTable() {
           contenuOriginal = JSON.parse(JSON.stringify(data.parc.accesdetail));
         }
         modifie = false;
-        await afficherConfirmationEnregistrement(
-          changement
-            ? "Les rubriques Accès détail de ce parc ont bien été enregistrées."
-            : "Aucune modification des rubriques n'était nécessaire."
-        );
+        const imagesReussies = [...imagesTeleversees].sort();
+        const imagesEchouees = [...imagesEnEchec].sort();
+        let confirmation = changement
+          ? "Les rubriques Accès détail de ce parc ont bien été enregistrées."
+          : "Aucune modification des rubriques n'était nécessaire.";
+        confirmation += imagesReussies.length
+          ? "\nImages téléchargées et enregistrées dans GitHub (" + imagesReussies.length +
+            ") : " + imagesReussies.join(", ") + "."
+          : "\nAucune nouvelle image téléchargée pendant cette édition.";
+        if (imagesEchouees.length) {
+          confirmation += "\nTéléchargement non confirmé pour : " +
+            imagesEchouees.join(", ") + ".";
+        }
+        await afficherConfirmationEnregistrement(confirmation);
         fermerEdition();
         const liste = document.getElementById(TABLE_SLOT_ID);
         liste?.scrollIntoView({ behavior: "auto", block: "start" });
