@@ -942,12 +942,20 @@
         event.preventDefault();
 
         const form = event.currentTarget;
-        const boutonEnregistrer = form.querySelector(
-          "#lcdp-parc-edition-enregistrer"
+        // Le bouton unique est déplacé hors du formulaire après l'éditeur photos.
+        // Le retrouver par son ID dans le document, et non dans form.
+        const boutonEnregistrer = document.getElementById(
+          "lcdp-parc-edition-enregistrer"
         );
         const note = form.querySelector(
           "[data-lcdp-formulaire-note]"
         );
+        if (!boutonEnregistrer) {
+          const message = "Bouton d'enregistrement du parc introuvable.";
+          afficherNote(note, message, "error");
+          await afficherAlerteEditionParc(message);
+          return;
+        }
 
         const nomParc = form.elements.namedItem("nom");
         if (nomParc) nomParc.value = nomParc.value.toLocaleUpperCase("fr-FR");
