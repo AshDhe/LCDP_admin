@@ -15,6 +15,34 @@
     { cle: "reglementparc", titre: "Règlement parc", images: [] }
   ];
   const IMAGE_BASE = "/IMAG/ACCESPARC/";
+  // Moteur, filtres et ressource identiques à Mise à jour Parc.
+  const TABLE_SLOT_ID = "lcdp-table-lecture-admin-slot";
+  function endpointAdminData() {
+    return String(
+      configuration.workerAdminDataUrl || configuration.WORKER_ADMIN_DATA_URL ||
+      window.ADMIN_CONFIG?.API_ADMIN_DATA || ""
+    ).replace(/\/+$/, "");
+  }
+  function chargerScriptUneFois(src, attribut, valeur) {
+    if (document.querySelector('script[' + attribut + '="' + valeur + '"]')) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.defer = true;
+      script.setAttribute(attribut, valeur);
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", () => reject(new Error("Module indisponible : " + valeur)), { once: true });
+      document.body.appendChild(script);
+    });
+  }
+  const chargerScriptAdminUneFois = path =>
+    chargerScriptUneFois(urlAdmin(path), "data-lcdp-script-admin", path);
+  const chargerScriptObjetUneFois = path =>
+    chargerScriptUneFois(urlObjet(path), "data-lcdp-script-objet", path);
+
+
   let parcCourant = null;
   let formulaires = new Map();
   let contenuOriginal = {};
@@ -137,30 +165,105 @@
     }
     return result;
   }
-  function remplacerOptions(select, liste, message, valeur) {
-    select.replaceChildren();
-    const vide = new Option(message, "");
-    select.add(vide);
-    for (const item of liste) select.add(new Option(item.label, item.value));
-    select.disabled = !liste.length;
-    if (valeur && liste.some(item => item.value === valeur)) select.value = valeur;
+async function initialiserTable() {
+  const slot = document.getElementById(TABLE_SLOT_ID);
+
+  if (!slot) return;
+
+  const fragment = await chargerFragmentAdmin(
+    "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
+  );
+
+  slot.appendChild(fragment);
+
+  await chargerScriptAdminUneFois(
+    "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+  );
+
+  const table = window.LCDP_TABLE_LECTURE_ADMIN;
+
+  if (!table || typeof table.initialiser !== "function") {
+    throw new Error("Objet table lecture admin indisponible.");
   }
-  async function chargerDepartements() {
-    const sel = document.getElementById("lcdp-accesdetail-departement");
-    const result = await api("/accesdetail/departements");
-    remplacerOptions(sel, result.departements.map(x => ({value:x,label:x})),
-      "Sélectionner un département");
+
+  await chargerScriptObjetUneFois("/JSBASE/07-diginum.js");
+  const cleFiltres = "lcdp-accesdetail-liste-filtres";
+  const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
+  if (!sessionId) throw new Error("Identifiant de session admin absent. Déployez le worker de session et le garde admin.");
+  let initialFilters = {};
+  try {
+    const sauvegarde = JSON.parse(localStorage.getItem(cleFiltres) || "null");
+    if (sauvegarde?.sessionId === sessionId) initialFilters = sauvegarde.filters || {};
+    else localStorage.removeItem(cleFiltres);
+  } catch (_) { /* Le filtrage reste disponible sans stockage navigateur. */ }
+  await table.initialiser({
+    initialFilters,
+    multipleFilterColumns: ["dptmt"],
+    onFiltersChange: filters => {
+      try { localStorage.setItem(cleFiltres, JSON.stringify({ sessionId, filters })); } catch (_) {}
+    },
+    filterOpeners: {
+      dptmt: () => window.LCDP_diginum.ouvrir({
+        titre: "Ajouter un département",
+        placeholder: "exemple 08",
+        longueurMax: 3,
+        autoValider: code => (code.length === 2 && !code.startsWith("97")) ||
+          (code.length === 3 && code.startsWith("97")),
+        verifier: code => /^(?:0[1-9]|1[0-9]|2[1-9]|[3-8][0-9]|9[0-5]|97[1-6])$/.test(code)
+          ? null : "Code de département invalide. Exemple : 08."
+      })
+    },
+    filterOptions: {
+      statut: [
+        { value: "", label: "Tous" },
+        { value: "1-basebrute", label: "1-basebrute" },
+        { value: "2-aqualifier", label: "2-aqualifier" },
+        { value: "2-ademarcher", label: "2-ademarcher" },
+        { value: "3-nonqualifié", label: "3-nonqualifié" },
+        { value: "3-encours", label: "3-encours" },
+        { value: "3-refus", label: "3-refus" },
+        { value: "prepa", label: "prepa" },
+        { value: "enligne", label: "enligne" },
+        { value: "horsligne", label: "horsligne" }
+      ]
+    },
+    slotId: TABLE_SLOT_ID,
+    endpoint: endpointAdminData(),
+    resource: "parcs-statut",
+    interactiveColumns: ["nom"],
+    onCellActivate: ({ row }) => ouvrirAccesDetailParc(row)
+  });
+}
+
+  async function ouvrirAccesDetailParc(row) {
+    const idparc = String(row?.idparc || "").trim();
+    if (!idparc) {
+      statut("Identifiant du parc absent de la ligne.", true);
+      return;
+    }
+    const liste = document.getElementById(TABLE_SLOT_ID);
+    const editeur = document.getElementById("lcdp-accesdetail-edition");
+    if (!liste || !editeur) return;
+    statut("");
+    try {
+      const resultat = await api("/accesdetail?idparc=" + encodeURIComponent(idparc));
+      if (!resultat?.parc || String(resultat.parc.idparc) !== idparc) {
+        throw new Error("La fiche reçue ne correspond pas au parc sélectionné.");
+      }
+      await chargerEditeur(resultat.parc);
+      liste.hidden = true;
+      editeur.scrollIntoView({ behavior: "auto", block: "start" });
+    } catch (error) {
+      liste.hidden = false;
+      editeur.hidden = true;
+      editeur.innerHTML = "";
+      parcCourant = null;
+      modifie = false;
+      formulaires.clear();
+      statut(String(error?.message || error || "Impossible de charger les accès du parc."), true);
+    }
   }
-  async function chargerParcs(departement) {
-    const sel = document.getElementById("lcdp-accesdetail-parc");
-    remplacerOptions(sel, [], departement ? "Chargement des parcs…" : "Choisir un département");
-    if (!departement) return;
-    const data = await api("/accesdetail/parcs?dptmt=" + encodeURIComponent(departement));
-    remplacerOptions(sel, (data.parcs || []).map(p => ({
-      value:p.idparc,
-      label:p.nom + (p.statut ? " (" + p.statut + ")" : "")
-    })), "Sélectionner un parc");
-  }
+
   function nomDossier(nom) {
     return String(nom || "").trim().replace(/\s+/g, "_");
   }
@@ -446,9 +549,8 @@
             : "Aucune modification des rubriques n'était nécessaire."
         );
         fermerEdition();
-        const liste = document.getElementById("lcdp-accesdetail-selection");
+        const liste = document.getElementById(TABLE_SLOT_ID);
         liste?.scrollIntoView({ behavior: "auto", block: "start" });
-        liste?.querySelector('[name="parc"]')?.focus({ preventScroll: true });
       } catch (e) {
         statut(e.message || String(e), true);
       } finally {
@@ -468,44 +570,9 @@
     const editeur = document.getElementById("lcdp-accesdetail-edition");
     editeur.hidden = true;
     editeur.innerHTML = "";
-    document.getElementById("lcdp-accesdetail-selection").hidden = false;
+    const liste = document.getElementById(TABLE_SLOT_ID);
+    if (liste) liste.hidden = false;
     statut("");
-  }
-  async function initialiserSelection() {
-    const slot = document.getElementById("lcdp-accesdetail-selection");
-    const form = await window.LCDP_creerFormulaire(slot, {
-      id:"lcdp-accesdetail-form-selection",
-      titre:"Choisir un parc",
-      champs:[
-        {name:"departement",id:"lcdp-accesdetail-departement",label:"Département",
-          type:"select",required:true,options:[{value:"",label:"Chargement…"}]},
-        {name:"parc",id:"lcdp-accesdetail-parc",label:"Parc",
-          type:"select",required:true,options:[{value:"",label:"Choisir d’abord un département"}]}
-      ],
-      bouton:{type:"submit",label:"Ouvrir les rubriques du parc",style:"lcdp-button-primary"}
-    });
-    if (!form) throw new Error("Sélecteur des parcs non initialisé.");
-    const departement = form.elements.namedItem("departement");
-    const parc = form.elements.namedItem("parc");
-    departement.disabled = true; parc.disabled = true;
-    departement.addEventListener("change", async () => {
-      statut("");
-      try { await chargerParcs(departement.value); }
-      catch (e) { statut(e.message || String(e),true); }
-    });
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-      if (!parc.value || !departement.value) { statut("Sélectionnez un parc.",true); return; }
-      const bouton = form.querySelector('button[type="submit"]');
-      bouton.disabled = true;
-      try {
-        const resultat = await api("/accesdetail?idparc=" + encodeURIComponent(parc.value));
-        await chargerEditeur(resultat.parc);
-        slot.hidden = true;
-      } catch (e) { statut(e.message || String(e),true); }
-      finally { bouton.disabled = false; }
-    });
-    await chargerDepartements();
   }
   async function initialiser() {
     const guard = window.LCDP_GUARD_ADMIN;
@@ -518,10 +585,11 @@
       window.LCDP_MENU_GAUCHE_ADMIN.initialiser({
         slotId:"lcdp-menu-gauche-admin-slot",categorieActive:"parcs"
       }),
-      chargerFormulaire()
+      chargerFormulaire(),
+      initialiserTable()
     ]);
     document.getElementById("lcdp-main-admin").hidden = false;
-    await initialiserSelection();
+    // La liste des parcs est le point d'entrée et la destination après enregistrement.
   }
   initialiser().catch(e => {
     console.error("Accès détail :",e);
