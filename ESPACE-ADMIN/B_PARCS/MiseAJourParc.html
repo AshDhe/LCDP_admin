@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Mise à jour Parc - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Consultation, aperçu public et mise à jour des fiches Parc La Clé du Parc.">
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        if (typeof config.adminUrl === "function") {
+          return config.adminUrl(path);
+        }
+
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        if (typeof config.objetUrl === "function") {
+          return config.objetUrl(path);
+        }
+
+        return construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/CSSBASE/lcdp-central-mobile-first.css",
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+  <style>
+    #lcdp-parc-edition-form #lcdp-parc-edition-enregistrer,
+    #lcdp-parc-edition-form #lcdp-parc-edition-retour {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 154px;
+      max-width: 100%;
+      height: 48px;
+      min-height: 48px;
+      padding: 0 12px;
+      margin: 0;
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-miseajourparc">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Mise à jour des fiches Parc">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <div id="lcdp-table-lecture-admin-slot"></div>
+              <div id="lcdp-parc-edition-slot" hidden></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+      const TABLE_SLOT_ID = "lcdp-table-lecture-admin-slot";
+      const EDITION_SLOT_ID = "lcdp-parc-edition-slot";
+
+      const CHAMPS_MODIFIABLES = [
+        "nom",
+        "latparc",
+        "lngparc",
+        "dptmt",
+        "arrdmt",
+        "localite",
+        "latloc",
+        "lngloc",
+        "prez",
+        "statut",
+        "adresse1",
+        "adresse2",
+        "adresse3",
+        "entreeparc",
+        "gpeprio",
+        "qualifmotif",
+        "parcprive",
+        "parcpleinair",
+        "pleinairexception",
+        "notoriete",
+        "validcarte",
+        "tiktok"
+      ];
+
+      let parcEditionCourant = null;
+
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
+      }
+
+      function urlPublic(path) {
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(path)
+          : path;
+      }
+
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
+      }
+
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : urlPublic(path)
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+
+        return template.content.cloneNode(true);
+      }
+
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
+      }
+
+      function chargerScriptUneFois(src, attribut, valeur) {
+        if (document.querySelector(`script[${attribut}="${valeur}"]`)) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.setAttribute(attribut, valeur);
+          script.onload = resolve;
+          script.onerror = () => reject(
+            new Error("Script introuvable : " + valeur)
+          );
+          document.body.appendChild(script);
+        });
+      }
+
+      function chargerScriptAdminUneFois(path) {
+        return chargerScriptUneFois(
+          urlAdmin(path),
+          "data-lcdp-script-admin",
+          path
+        );
+      }
+
+      function chargerScriptObjetUneFois(path) {
+        return chargerScriptUneFois(
+          urlObjet(path),
+          "data-lcdp-script-objet",
+          path
+        );
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) return;
+
+        slot.innerHTML = "";
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+        );
+
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      function endpointParcAdmin() {
+        return String(
+          config.workerParcAdminUrl ||
+          config.WORKER_PARC_ADMIN_URL ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN ||
+          window.ADMIN_CONFIG?.API_PARC_ADMIN_URL ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (!moduleMenu || typeof moduleMenu.initialiser !== "function") {
+          throw new Error("Menu gauche admin centralisé indisponible.");
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "parcs"
+        });
+      }
+
+      async function initialiserTable() {
+        const slot = document.getElementById(TABLE_SLOT_ID);
+
+        if (!slot) return;
+
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
+        );
+
+        slot.appendChild(fragment);
+
+        await chargerScriptAdminUneFois(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+        );
+
+        const table = window.LCDP_TABLE_LECTURE_ADMIN;
+
+        if (!table || typeof table.initialiser !== "function") {
+          throw new Error("Objet table lecture admin indisponible.");
+        }
+
+        await chargerScriptObjetUneFois("/JSBASE/07-diginum.js");
+        const cleFiltres = "lcdp-miseajourparc-filtres";
+        const sessionId = window.LCDP_ADMIN_AUTORISATION?.sessionId;
+        if (!sessionId) throw new Error("Identifiant de session admin absent. Déployez le worker de session et le garde admin.");
+        let initialFilters = {};
+        try {
+          const sauvegarde = JSON.parse(localStorage.getItem(cleFiltres) || "null");
+          if (sauvegarde?.sessionId === sessionId) initialFilters = sauvegarde.filters || {};
+          else localStorage.removeItem(cleFiltres);
+        } catch (_) { /* Le filtrage reste disponible sans stockage navigateur. */ }
+        await table.initialiser({
+          initialFilters,
+          multipleFilterColumns: ["dptmt"],
+          onFiltersChange: filters => {
+            try { localStorage.setItem(cleFiltres, JSON.stringify({ sessionId, filters })); } catch (_) {}
+          },
+          filterOpeners: {
+            dptmt: () => window.LCDP_diginum.ouvrir({
+              titre: "Ajouter un département",
+              placeholder: "exemple 08",
+              longueurMax: 3,
+              autoValider: code => (code.length === 2 && !code.startsWith("97")) ||
+                (code.length === 3 && code.startsWith("97")),
+              verifier: code => /^(?:0[1-9]|1[0-9]|2[1-9]|[3-8][0-9]|9[0-5]|97[1-6])$/.test(code)
+                ? null : "Code de département invalide. Exemple : 08."
+            })
+          },
+          filterOptions: {
+            statut: [
+              { value: "", label: "Tous" },
+              { value: "1-basebrute", label: "1-basebrute" },
+              { value: "2-aqualifier", label: "2-aqualifier" },
+              { value: "2-ademarcher", label: "2-ademarcher" },
+              { value: "3-nonqualifié", label: "3-nonqualifié" },
+              { value: "3-encours", label: "3-encours" },
+              { value: "3-refus", label: "3-refus" },
+              { value: "prepa", label: "prepa" },
+              { value: "enligne", label: "enligne" },
+              { value: "horsligne", label: "horsligne" }
+            ]
+          },
+          slotId: TABLE_SLOT_ID,
+          endpoint: endpointAdminData(),
+          resource: "parcs-statut",
+          interactiveColumns: ["nom"],
+          onCellActivate: ({ row }) => ouvrirEditionParc(row)
+        });
+      }
+
+      async function ouvrirEditionParc(row) {
+        const idparc = String(row?.idparc || "").trim();
+        const endpoint = endpointParcAdmin();
+
+        if (!idparc) {
+          throw new Error("Identifiant du parc absent de la ligne.");
+        }
+
+        if (!endpoint) {
+          throw new Error("Endpoint du worker parc admin manquant.");
+        }
+
+        const tableSlot = document.getElementById(TABLE_SLOT_ID);
+        const editionSlot = document.getElementById(EDITION_SLOT_ID);
+
+        tableSlot.hidden = true;
+        editionSlot.hidden = false;
+        editionSlot.innerHTML =
+          '<p class="lcdp-parc-edition-loading">Chargement de la fiche du parc…</p>';
+
+        try {
+          const requestUrl = new URL(endpoint + "/edition-parc");
+          requestUrl.searchParams.set("idparc", idparc);
+
+          const response = await fetch(requestUrl.toString(), {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" }
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (response.status === 401 || response.status === 403) {
+            redirigerConnexion();
+            return;
+          }
+
+          if (!response.ok || !data || data.success !== true || !data.parc) {
+            throw new Error(
+              data?.message || data?.detail || "Impossible de lire le parc."
+            );
+          }
+
+          parcEditionCourant = data.parc;
+          await rendreFormulaireEdition(data.parc);
+        } catch (error) {
+          editionSlot.innerHTML = "";
+          const message = document.createElement("p");
+          message.className = "lcdp-parc-edition-loading";
+          message.textContent = String(
+            error?.message || error || "Erreur de chargement."
+          );
+          editionSlot.appendChild(message);
+
+          const retour = document.createElement("button");
+          retour.type = "button";
+          retour.className = "lcdp-button lcdp-button-secondary";
+          retour.textContent = "Retour à la liste";
+          retour.addEventListener("click", fermerEditionParc);
+          editionSlot.appendChild(retour);
+        }
+      }
+
+      async function rendreFormulaireEdition(parc, message = "", etat = "") {
+        await chargerScriptObjetUneFois(
+          "/JSBASE/03-formulaire.js"
+        );
+
+        if (typeof window.LCDP_creerFormulaire !== "function") {
+          throw new Error("Objet formulaire indisponible.");
+        }
+
+        const form = await window.LCDP_creerFormulaire(
+          EDITION_SLOT_ID,
+          {
+            id: "lcdp-parc-edition-form",
+            ariaLabel: "Modification du parc " + String(parc.nom || ""),
+            titre: "Mettre à jour le parc",
+            sousTitre: String(parc.nom || ""),
+            introHtml:
+              "<p>Les champs techniques sont affichés en lecture seule. " +
+              "La date du statut est actualisée automatiquement lorsque le statut change.</p>",
+            validationNative: true,
+            champs: construireChampsEdition(parc),
+            boutons: [
+              {
+                id: "lcdp-parc-edition-enregistrer",
+                type: "submit",
+                style: "lcdp-button-orange",
+                label: "Enregistrer"
+              },
+              {
+                id: "lcdp-parc-edition-retour",
+                type: "button",
+                style: "lcdp-button-secondary",
+                label: "Retour à la liste"
+              }
+            ],
+            noteHtml: message || ""
+          }
+        );
+
+        if (!form) {
+          throw new Error("Formulaire du parc non créé.");
+        }
+
+        // Aperçu réel de la fiche publique, avant toute modification.
+        // Le public et les membres réutilisent les composants de fiche Parc.
+        const slotEdition = document.getElementById(EDITION_SLOT_ID);
+        const apercu = document.createElement("section");
+        apercu.className = "lcdp-box-formulaire";
+        apercu.setAttribute("aria-label", "Aperçu de la fiche Parc");
+        const titreApercu = document.createElement("h2");
+        titreApercu.className = "lcdp-box-formulaire__title";
+        titreApercu.textContent = "Aperçu de la fiche Parc";
+        apercu.appendChild(titreApercu);
+
+        if (["prepa", "enligne"].includes(String(parc.statut || ""))) {
+          const url = urlPublic("/ESPACE-PUBLIC/fiche-parc.html?idparc=" +
+            encodeURIComponent(String(parc.idparc || "")));
+          const lienApercu = document.createElement("a");
+          lienApercu.className = "lcdp-button lcdp-button-secondary";
+          lienApercu.href = url;
+          lienApercu.target = "_blank";
+          lienApercu.rel = "noopener noreferrer";
+          lienApercu.textContent = "Ouvrir la fiche publique";
+          apercu.appendChild(lienApercu);
+
+          const frame = document.createElement("iframe");
+          frame.src = url;
+          frame.title = "Aperçu de la fiche du parc " + String(parc.nom || "");
+          frame.setAttribute("loading", "lazy");
+          frame.setAttribute("width", "100%");
+          frame.setAttribute("height", "720");
+          frame.style.border = "1px solid var(--lcdp-color-border-strong, #ddd)";
+          frame.style.maxWidth = "100%";
+          apercu.appendChild(frame);
+        } else {
+          const information = document.createElement("p");
+          information.textContent =
+            "La fiche publique n’est pas accessible pour le statut " +
+            String(parc.statut || "non renseigné") +
+            ". Les champs administratifs restent modifiables ci-dessous.";
+          apercu.appendChild(information);
+        }
+        slotEdition.prepend(apercu);
+
+        const note = form.querySelector("[data-lcdp-formulaire-note]");
+
+        if (note) {
+          note.hidden = !message;
+          note.dataset.state = etat;
+        }
+
+        const nomParc = form.elements.namedItem("nom");
+        if (nomParc) {
+          const convertirNomEnMajuscules = () => {
+            const debut = nomParc.selectionStart;
+            const fin = nomParc.selectionEnd;
+            const valeur = nomParc.value;
+            const nouvelleValeur = valeur.toLocaleUpperCase("fr-FR");
+            if (valeur === nouvelleValeur) return;
+            nomParc.value = nouvelleValeur;
+            if (debut !== null && fin !== null) {
+              nomParc.setSelectionRange(
+                valeur.slice(0, debut).toLocaleUpperCase("fr-FR").length,
+                valeur.slice(0, fin).toLocaleUpperCase("fr-FR").length
+              );
+            }
+          };
+          convertirNomEnMajuscules();
+          nomParc.addEventListener("input", convertirNomEnMajuscules);
+        }
+
+        form.addEventListener("submit", enregistrerEditionParc);
+
+        form.querySelector("#lcdp-parc-edition-retour")
+          ?.addEventListener("click", fermerEditionParc);
+
+        document.getElementById(EDITION_SLOT_ID)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function construireChampsEdition(parc) {
+        const choixVide = { value: "", label: "Non renseigné" };
+        const ouiNonNa = [
+          choixVide,
+          { value: "oui", label: "Oui" },
+          { value: "non", label: "Non" },
+          { value: "na", label: "Non déterminé" }
+        ];
+
+        return [
+          champLectureSeule("idparc", "Identifiant du parc", parc.idparc),
+          {
+            name: "nom",
+            label: "Nom du parc",
+            type: "text",
+            value: parc.nom,
+            required: true,
+            validationNative: true,
+            description:
+              "Attention : modifier le nom peut nécessiter de renommer le dossier d’images du parc."
+          },
+          {
+            name: "dptmt",
+            label: "Département",
+            type: "text",
+            value: parc.dptmt,
+            required: true,
+            validationNative: true,
+            maxlength: 3,
+            description:
+              "Attention : modifier le département peut nécessiter de déplacer le dossier d’images du parc."
+          },
+          champTexte("arrdmt", "Arrondissement", parc.arrdmt),
+          champTexte("localite", "Localité", parc.localite),
+          champNombre("latparc", "Latitude du parc", parc.latparc, -90, 90),
+          champNombre("lngparc", "Longitude du parc", parc.lngparc, -180, 180),
+          champNombre("latloc", "Latitude de la localité", parc.latloc, -90, 90),
+          champNombre("lngloc", "Longitude de la localité", parc.lngloc, -180, 180),
+          {
+            name: "prez",
+            label: "Présentation du parc",
+            type: "textarea",
+            value: parc.prez,
+            className: "lcdp-box-champ-formulaire--wide"
+          },
+          {
+            name: "statut",
+            label: "Statut",
+            type: "select",
+            value: parc.statut,
+            options: [
+              choixVide,
+              { value: "1-basebrute", label: "1-basebrute" },
+              { value: "2-aqualifier", label: "2-aqualifier" },
+              { value: "2-ademarcher", label: "2-ademarcher" },
+              { value: "3-nonqualifié", label: "3-nonqualifié" },
+              { value: "3-encours", label: "3-encours" },
+              { value: "3-refus", label: "3-refus" },
+              { value: "prepa", label: "prepa" },
+              { value: "enligne", label: "enligne" },
+              { value: "horsligne", label: "horsligne" }
+            ]
+          },
+          champLectureSeule(
+            "datestatut",
+            "Date du statut",
+            formaterDateHeure(parc.datestatut)
+          ),
+          champTexte("adresse1", "Adresse 1", parc.adresse1),
+          champTexte("adresse2", "Adresse 2", parc.adresse2),
+          champTexte("adresse3", "Adresse 3", parc.adresse3),
+          champTexte("entreeparc", "Entrée du parc", parc.entreeparc),
+          {
+            name: "gpeprio",
+            label: "Groupe de priorité",
+            type: "number",
+            value: parc.gpeprio,
+            min: 1,
+            step: 1,
+            required: true,
+            validationNative: true
+          },
+          {
+            name: "qualifmotif",
+            label: "Motif de qualification",
+            type: "textarea",
+            value: parc.qualifmotif,
+            className: "lcdp-box-champ-formulaire--wide"
+          },
+          {
+            name: "parcprive",
+            label: "Parc privé",
+            type: "select",
+            value: parc.parcprive,
+            options: ouiNonNa
+          },
+          {
+            name: "parcpleinair",
+            label: "Parc de plein air",
+            type: "select",
+            value: parc.parcpleinair,
+            options: ouiNonNa
+          },
+          {
+            name: "pleinairexception",
+            label: "Plein air d’exception",
+            type: "select",
+            value: parc.pleinairexception,
+            options: ouiNonNa
+          },
+          {
+            name: "notoriete",
+            label: "Notoriété",
+            type: "select",
+            value: parc.notoriete,
+            options: [
+              choixVide,
+              { value: "elevee", label: "Élevée" },
+              { value: "neutre", label: "Neutre" },
+              { value: "nulle", label: "Nulle" }
+            ]
+          },
+          {
+            name: "validcarte",
+            label: "Validation de la carte",
+            type: "checkbox",
+            checked: parc.validcarte === true,
+            checkboxLabel: "Le parc est validé sur la carte"
+          },
+          {
+            name: "tiktok",
+            label: "TikTok",
+            type: "text",
+            value: parc.tiktok === true ? "true" : "false",
+            required: true,
+            validationNative: true,
+            autocomplete: "off",
+            autocapitalize: "none",
+            spellcheck: "false",
+            description: "Saisir exactement true ou false."
+          },
+          champLectureSeule("imageparc", "Image du parc", parc.imageparc),
+          champLectureSeule(
+            "datecreationparc",
+            "Date de création du parc",
+            formaterDateHeure(parc.datecreationparc)
+          ),
+          champLectureSeule(
+            "horaire",
+            "Ouverture du parc — mois en cours",
+            texteOuvertureParc(parc),
+            "textarea",
+            "lcdp-box-champ-formulaire--wide"
+          ),
+          champLectureSeule(
+            "datemajhoraire",
+            "Actualisation du taux d’ouverture",
+            formaterDateHeure(parc.ouverture_parc?.datemaj)
+          )
+        ];
+      }
+
+      function texteOuvertureParc(parc) {
+        const ouverture = parc?.ouverture_parc;
+        const taux = valeur => Number.isInteger(valeur) ? valeur + " %" : "Non renseigné";
+        return [
+          "Taux d’ouverture du parc de 10h à 17h ce mois-ci : " + taux(ouverture?.taux),
+          "Invités FAMILLE autorisés : " + taux(ouverture?.tauxFamille),
+          "Invités COACH autorisés : " + taux(ouverture?.tauxCoach),
+          "Connectez-vous à votre compte membre pour le planning détaillé du parc sur le mois et les mois suivants. Consultez les horaires d’accès en dehors de la plage 10h-17h."
+        ].join("\n");
+      }
+
+      function champTexte(name, label, value) {
+        return { name, label, type: "text", value };
+      }
+
+      function champNombre(name, label, value, min, max) {
+        return {
+          name,
+          label,
+          type: "number",
+          value,
+          min,
+          max,
+          step: "any"
+        };
+      }
+
+      function champLectureSeule(
+        name,
+        label,
+        value,
+        type = "text",
+        className = ""
+      ) {
+        return {
+          name,
+          label,
+          type,
+          value,
+          readonly: true,
+          className
+        };
+      }
+
+      async function enregistrerEditionParc(event) {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const boutonEnregistrer = form.querySelector(
+          "#lcdp-parc-edition-enregistrer"
+        );
+        const boutonRetour = form.querySelector(
+          "#lcdp-parc-edition-retour"
+        );
+        const note = form.querySelector(
+          "[data-lcdp-formulaire-note]"
+        );
+
+        const nomParc = form.elements.namedItem("nom");
+        if (nomParc) nomParc.value = nomParc.value.toLocaleUpperCase("fr-FR");
+        validerChampTikTok(form);
+
+        if (!form.reportValidity()) return;
+
+        const changes = construireModifications(
+          form,
+          parcEditionCourant
+        );
+
+        if (Object.keys(changes).length < 1) {
+          afficherNote(note, "Aucune modification à enregistrer.", "success");
+          return;
+        }
+
+        boutonEnregistrer.disabled = true;
+        boutonRetour.disabled = true;
+        afficherNote(note, "Enregistrement en cours…", "");
+
+        const original = {};
+        Object.keys(changes).forEach((champ) => {
+          original[champ] = parcEditionCourant?.[champ] ?? null;
+        });
+
+        try {
+          const response = await fetch(
+            endpointParcAdmin() + "/edition-parc",
+            {
+              method: "POST",
+              credentials: "include",
+              cache: "no-store",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                idparc: parcEditionCourant.idparc,
+                changes,
+                original
+              })
+            }
+          );
+
+          const data = await response.json().catch(() => null);
+
+          if (response.status === 401 || response.status === 403) {
+            redirigerConnexion();
+            return;
+          }
+
+          if (!response.ok || !data || data.success !== true || !data.parc) {
+            throw new Error(
+              data?.message || data?.detail || "Échec de l’enregistrement."
+            );
+          }
+
+          parcEditionCourant = data.parc;
+
+          if (data.modifie === false) {
+            boutonEnregistrer.disabled = false;
+            boutonRetour.disabled = false;
+            await afficherAlerteEditionParc(
+              "Aucune modification à enregistrer."
+            );
+            return;
+          }
+
+          await afficherAlerteEditionParc(
+            "Modification enregistrée."
+          );
+
+          window.location.reload();
+        } catch (error) {
+          boutonEnregistrer.disabled = false;
+          boutonRetour.disabled = false;
+
+          const messageErreur = String(
+            error?.message ||
+            error ||
+            "Erreur d’enregistrement."
+          );
+
+          afficherNote(note, messageErreur, "error");
+          await afficherAlerteEditionParc(messageErreur);
+        }
+      }
+
+      function construireModifications(form, parc) {
+        const changes = {};
+
+        CHAMPS_MODIFIABLES.forEach((nomChamp) => {
+          const controle = form.elements.namedItem(nomChamp);
+
+          if (!controle) return;
+
+          let valeur;
+
+          if (controle.type === "checkbox") {
+            valeur = controle.checked;
+          } else if (nomChamp === "tiktok") {
+            valeur = controle.value.trim().toLowerCase() === "true";
+          } else if (controle.type === "number") {
+            valeur = controle.value.trim() === ""
+              ? null
+              : Number(controle.value);
+          } else {
+            valeur = controle.value.trim() === ""
+              ? null
+              : controle.value.trim();
+          }
+
+          if (!valeursClientEgales(parc?.[nomChamp], valeur)) {
+            changes[nomChamp] = valeur;
+          }
+        });
+
+        return changes;
+      }
+
+      function validerChampTikTok(form) {
+        const controle = form.elements.namedItem("tiktok");
+
+        if (!controle) return;
+
+        const valeur = String(controle.value || "")
+          .trim()
+          .toLowerCase();
+
+        controle.setCustomValidity(
+          valeur === "true" || valeur === "false"
+            ? ""
+            : "Saisir exactement true ou false."
+        );
+      }
+
+      function valeursClientEgales(a, b) {
+        if (
+          (a === null || a === undefined || a === "") &&
+          (b === null || b === undefined || b === "")
+        ) {
+          return true;
+        }
+
+        if (typeof a === "boolean" || typeof b === "boolean") {
+          return a === b;
+        }
+
+        if (
+          typeof a === "number" ||
+          typeof b === "number"
+        ) {
+          return Number(a) === Number(b);
+        }
+
+        return String(a) === String(b);
+      }
+
+      async function afficherAlerteEditionParc(message) {
+        const conteneur = document.createElement("div");
+        conteneur.className = "lcdp-parc-edition-alerte";
+        document.body.appendChild(conteneur);
+
+        let fragment;
+
+        try {
+          fragment = await chargerFragment(
+            urlObjet("/HTMLBASE/02-alerte.html"),
+            "AlertBox"
+          );
+        } catch (error) {
+          console.error("AlertBox édition parc indisponible :", error);
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        conteneur.appendChild(fragment);
+
+        const alerte = conteneur.querySelector(
+          "[data-lcdp-box-alerte]"
+        );
+        const texte = conteneur.querySelector(
+          "[data-lcdp-alerte-message]"
+        );
+        const boutonFermer = conteneur.querySelector(
+          "[data-lcdp-alerte-close]"
+        );
+        const boutonOk = conteneur.querySelector(
+          "[data-lcdp-alerte-ok]"
+        );
+
+        if (!alerte || !texte || !boutonOk) {
+          conteneur.remove();
+          window.alert(message || "");
+          return true;
+        }
+
+        texte.textContent = message || "";
+
+        if (boutonFermer) {
+          boutonFermer.hidden = true;
+        }
+
+        return new Promise((resolve) => {
+          let resolu = false;
+
+          function fermer() {
+            if (resolu) return;
+            resolu = true;
+            conteneur.remove();
+            resolve(true);
+          }
+
+          boutonOk.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            fermer();
+          });
+        });
+      }
+
+      function afficherNote(note, texte, etat) {
+        if (!note) return;
+
+        note.textContent = texte;
+        note.hidden = !texte;
+        note.dataset.state = etat || "";
+      }
+
+      function fermerEditionParc() {
+        const tableSlot = document.getElementById(TABLE_SLOT_ID);
+        const editionSlot = document.getElementById(EDITION_SLOT_ID);
+
+        parcEditionCourant = null;
+        editionSlot.innerHTML = "";
+        editionSlot.hidden = true;
+        tableSlot.hidden = false;
+        tableSlot.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function formaterDateHeure(value) {
+        if (!value) return "";
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) return String(value);
+
+        return new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(date);
+      }
+
+      function redirigerConnexion() {
+        const path = "/ESPACE-ADMIN/connexion-admin.html";
+
+        if (typeof config.adminUrl === "function") {
+          window.location.replace(config.adminUrl(path));
+          return;
+        }
+
+        window.location.replace(urlAdmin(path));
+      }
+
+      async function verifierAcces() {
+        const guard = window.LCDP_GUARD_ADMIN;
+
+        if (!guard || typeof guard.verifierAccesPageAdmin !== "function") {
+          throw new Error("Garde admin centralisé indisponible.");
+        }
+
+        return guard.verifierAccesPageAdmin();
+      }
+
+      async function initialiserPage() {
+        const autorise = await verifierAcces();
+
+        if (!autorise) return;
+
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserMenuGauche(),
+          initialiserTable()
+        ]);
+
+        const main = document.getElementById("lcdp-main-admin");
+
+        if (main) main.hidden = false;
+      }
+
+      initialiserPage().catch((error) => {
+        console.error(error);
+        const message = document.createElement("p");
+        message.className = "lcdp-page-container";
+        message.setAttribute("role", "alert");
+        message.textContent = "Impossible de charger la page Mise à jour Parc. Rechargez la page. Si le problème persiste, reconnectez-vous à l’espace admin.";
+        document.getElementById("lcdp-main-admin")?.before(message);
+      });
+    })();
+  </script>
+</body>
+</html>
