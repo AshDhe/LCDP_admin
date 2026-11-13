@@ -106,19 +106,23 @@
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
   <style>
-    #lcdp-parc-edition-form #lcdp-parc-edition-enregistrer,
-    #lcdp-parc-edition-form #lcdp-parc-edition-retour {
-      display: inline-flex;
+    .lcdp-page-miseajourparc #lcdp-parc-edition-enregistrer {
+      display: flex;
       align-items: center;
       justify-content: center;
       box-sizing: border-box;
-      width: 154px;
-      max-width: 100%;
-      height: 48px;
-      min-height: 48px;
-      padding: 0 12px;
+      width: 100%;
+      min-height: 64px;
+      padding: 14px 20px;
       margin: 0;
-      line-height: 1.2;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .lcdp-page-miseajourparc .lcdp-parc-edition-actions-finales {
+      display: flex;
+      width: 100%;
+      margin: 24px 0 40px;
     }
   </style>
 </head>
@@ -184,6 +188,7 @@
       ];
 
       let parcEditionCourant = null;
+      let editeurPhotosCourant = null;
 
       function urlAdmin(path) {
         return typeof window.LCDP_urlAdmin === "function"
@@ -486,13 +491,7 @@
                 id: "lcdp-parc-edition-enregistrer",
                 type: "submit",
                 style: "lcdp-button-orange",
-                label: "Enregistrer"
-              },
-              {
-                id: "lcdp-parc-edition-retour",
-                type: "button",
-                style: "lcdp-button-secondary",
-                label: "Retour à la liste"
+                label: "Enregistrer les modifications du parc"
               }
             ],
             noteHtml: message || ""
@@ -518,20 +517,20 @@
         retourListeHaut.type = "button";
         retourListeHaut.className = "lcdp-button lcdp-button-secondary";
         retourListeHaut.textContent = "Retour à la liste des parcs";
-        retourListeHaut.addEventListener("click", fermerEditionParc);
+        retourListeHaut.addEventListener("click", async () => {
+          if (formulaireEditionModifie()) {
+            await afficherAlerteEditionParc(
+              "Des modifications ne sont pas enregistrées. Enregistrez-les avant de revenir à la liste."
+            );
+            return;
+          }
+          fermerEditionParc();
+        });
         apercu.appendChild(retourListeHaut);
 
         if (["prepa", "enligne"].includes(String(parc.statut || ""))) {
           const url = urlPublic("/ESPACE-PUBLIC/fiche-parc.html?idparc=" +
             encodeURIComponent(String(parc.idparc || "")));
-          const lienApercu = document.createElement("a");
-          lienApercu.className = "lcdp-button lcdp-button-secondary";
-          lienApercu.href = url;
-          lienApercu.target = "_blank";
-          lienApercu.rel = "noopener noreferrer";
-          lienApercu.textContent = "Ouvrir la fiche publique";
-          apercu.appendChild(lienApercu);
-
           const frame = document.createElement("iframe");
           frame.src = url;
           frame.title = "Aperçu de la fiche du parc " + String(parc.nom || "");
@@ -549,53 +548,22 @@
             ". Les champs administratifs restent modifiables ci-dessous.";
           apercu.appendChild(information);
         }
-        // Outils déjà opérationnels : accès direct aux champs et UploadIMG.
-        const actionsApercu = document.createElement("div");
-        actionsApercu.className = "lcdp-box-formulaire__actions";
-        for (const [libelle, nomChamp] of [
-          ["Modifier la présentation", "prez"],
-          ["Modifier les extérieurs", "exterieur"],
-          ["Modifier les espaces réservés", "espacereserve"],
-          ["Modifier l’accès", "entreeparc"]
-        ]) {
-          const bouton = document.createElement("button");
-          bouton.type = "button";
-          bouton.className = "lcdp-button lcdp-button-secondary";
-          bouton.textContent = libelle;
-          bouton.addEventListener("click", () => {
-            const champ = form.elements.namedItem(nomChamp);
-            if (!champ) return;
-            champ.scrollIntoView({ behavior: "smooth", block: "center" });
-            champ.focus();
-          });
-          actionsApercu.appendChild(bouton);
-        }
-
-        const boutonPhotos = document.createElement("button");
-        boutonPhotos.type = "button";
-        boutonPhotos.className = "lcdp-button lcdp-button-secondary";
-        boutonPhotos.textContent = "Gérer les photographies";
-        boutonPhotos.addEventListener("click", async () => {
-          try {
-            await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_PARCS/upload-img-admin.js");
-            if (typeof window.LCDP_UPLOAD_IMG_ADMIN?.ouvrirWorkflow !== "function") {
-              throw new Error("Outil UploadIMG indisponible.");
-            }
-            await window.LCDP_UPLOAD_IMG_ADMIN.ouvrirWorkflow({ dptmt: parc.dptmt, idparc: parc.idparc });
-          } catch (error) {
-            await afficherAlerteEditionParc(String(error?.message || error));
-          }
-        });
-        actionsApercu.appendChild(boutonPhotos);
-        apercu.appendChild(actionsApercu);
         slotEdition.prepend(apercu);
         const editeurPhotosSlot = document.createElement("div");
         editeurPhotosSlot.id = "lcdp-parc-editeur-photos-slot";
-        slotEdition.insertBefore(
-          editeurPhotosSlot,
-          slotEdition.querySelector(".lcdp-box-formulaire-page")
-        );
-        await initialiserEditeurPhotos(editeurPhotosSlot, parc, apercu);
+        slotEdition.appendChild(editeurPhotosSlot);
+        editeurPhotosCourant = await initialiserEditeurPhotos(editeurPhotosSlot, parc);
+
+        // Le bouton du formulaire principal est déplacé après l'édition photo :
+        // un seul Enregistrer pour les champs du parc et les textes photographiques.
+        const actionsFinales = form.querySelector(".lcdp-box-formulaire__actions");
+        const boutonFinal = form.querySelector("#lcdp-parc-edition-enregistrer");
+        if (!actionsFinales || !boutonFinal) {
+          throw new Error("Bouton final d'enregistrement introuvable.");
+        }
+        boutonFinal.setAttribute("form", form.id);
+        actionsFinales.classList.add("lcdp-parc-edition-actions-finales");
+        slotEdition.appendChild(actionsFinales);
 
         const note = form.querySelector("[data-lcdp-formulaire-note]");
 
@@ -625,9 +593,6 @@
         }
 
         form.addEventListener("submit", enregistrerEditionParc);
-
-        form.querySelector("#lcdp-parc-edition-retour")
-          ?.addEventListener("click", fermerEditionParc);
 
         document.getElementById(EDITION_SLOT_ID)
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -850,11 +815,7 @@
               type: "text", description: "Description accessible aux lecteurs d'écran."
             }
           ],
-          boutons: [{
-            type: "submit",
-            label: "Enregistrer les textes des photographies",
-            style: "lcdp-button-orange"
-          }]
+          boutons: []
         });
         if (!form) throw new Error("Éditeur photographique non initialisé.");
 
@@ -863,16 +824,8 @@
         const legende = form.elements.namedItem("photo_legende");
         const texte = form.elements.namedItem("photo_texte");
         const alt = form.elements.namedItem("photo_alt");
-        const bouton = form.querySelector('button[type="submit"]');
-        const note = form.querySelector("[data-lcdp-formulaire-note]");
         let fichierCourant = selection.value;
 
-        function afficherNotePhoto(message, type = "") {
-          if (!note) return;
-          note.hidden = !message;
-          note.textContent = message;
-          note.dataset.state = type;
-        }
         function lireChampsPhoto() {
           return {
             titre: String(titre.value || "").trim(),
@@ -899,78 +852,57 @@
           memoriserPhoto();
           fichierCourant = selection.value;
           afficherPhoto(fichierCourant);
-          afficherNotePhoto("Textes non enregistrés tant que vous n'avez pas validé.", "");
         });
         afficherPhoto(fichierCourant);
-        for (const champ of [titre, legende, texte, alt]) {
-          champ.addEventListener("input", () => {
-            afficherNotePhoto("Modifications non enregistrées.", "");
-          });
-        }
-        form.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          memoriserPhoto();
-          for (const [fichier, contenu] of Object.entries(brouillon)) {
-            for (const [cle, valeur] of Object.entries(contenu)) {
-              const max = { titre: 160, legende: 500, texte: 4000, alt: 320 }[cle];
-              if (max && valeur.length > max) {
-                afficherNotePhoto(
-                  "Texte trop long : " + fichier + " / " + cle + " (maximum " + max + ").",
-                  "error"
-                );
-                return;
-              }
-            }
-          }
-          const contenuInitial = parcEditionCourant?.photoseditorial || {};
-          if (JSON.stringify(contenuInitial) === JSON.stringify(brouillon)) {
-            afficherNotePhoto("Aucune modification à enregistrer.", "success");
-            return;
-          }
-          bouton.disabled = true;
-          afficherNotePhoto("Enregistrement des textes en cours…");
+        // Les photos se modifient dans cet éditeur ; l'enregistrement
+        // est effectué par le bouton unique placé après tous les champs.
+        form.addEventListener("submit", event => event.preventDefault());
+        const importerPhotos = document.createElement("button");
+        importerPhotos.type = "button";
+        importerPhotos.className = "lcdp-button lcdp-button-secondary";
+        importerPhotos.textContent = "Importer ou remplacer une photographie";
+        importerPhotos.addEventListener("click", async () => {
           try {
-            const endpoint = endpointParcAdmin();
-            if (!endpoint) throw new Error("Worker parc admin non configuré.");
-            const reponse = await fetch(endpoint + "/edition-parc", {
-              method: "POST",
-              credentials: "include",
-              cache: "no-store",
-              headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                idparc: parcEditionCourant.idparc,
-                changes: { photoseditorial: brouillon },
-                original: { photoseditorial: contenuInitial }
-              })
+            await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_PARCS/upload-img-admin.js");
+            if (typeof window.LCDP_UPLOAD_IMG_ADMIN?.ouvrirWorkflow !== "function") {
+              throw new Error("Outil UploadIMG indisponible.");
+            }
+            await window.LCDP_UPLOAD_IMG_ADMIN.ouvrirWorkflow({
+              dptmt: parc.dptmt,
+              idparc: parc.idparc
             });
-            const data = await reponse.json().catch(() => null);
-            if (reponse.status === 401 || reponse.status === 403) {
-              redirigerConnexion();
-              return;
-            }
-            if (!reponse.ok || !data || data.success !== true || !data.parc) {
-              throw new Error(data?.message || data?.detail || "Enregistrement des photos impossible.");
-            }
-            parcEditionCourant = data.parc;
-            Object.keys(brouillon).forEach(cle => delete brouillon[cle]);
-            Object.assign(brouillon, JSON.parse(JSON.stringify(data.parc.photoseditorial || {})));
-            afficherPhoto(fichierCourant);
-            afficherNotePhoto("Textes des photographies enregistrés.", "success");
-            const apercuIframe = zoneApercu.querySelector("iframe");
-            if (apercuIframe) {
-              const url = new URL(apercuIframe.src);
-              url.searchParams.set("actualisation", String(Date.now()));
-              apercuIframe.src = url.toString();
-            }
           } catch (error) {
-            afficherNotePhoto(String(error?.message || error), "error");
-          } finally {
-            bouton.disabled = false;
+            await afficherAlerteEditionParc(String(error?.message || error));
           }
         });
+        slot.prepend(importerPhotos);
+
+        function obtenirBrouillonPhoto() {
+          memoriserPhoto();
+          return JSON.parse(JSON.stringify(brouillon));
+        }
+        return {
+          obtenirBrouillon: obtenirBrouillonPhoto,
+          aDesChangements() {
+            return JSON.stringify(obtenirBrouillonPhoto()) !==
+              JSON.stringify(parcEditionCourant?.photoseditorial || {});
+          },
+          verifierLongueurs() {
+            const contenu = obtenirBrouillonPhoto();
+            for (const [fichier, valeurs] of Object.entries(contenu)) {
+              for (const [cle, valeur] of Object.entries(valeurs)) {
+                const limite = { titre: 160, legende: 500, texte: 4000, alt: 320 }[cle];
+                if (limite && String(valeur).length > limite) {
+                  throw new Error(
+                    "Texte trop long : " + fichier + " / " + cle +
+                    " (maximum " + limite + " caractères)."
+                  );
+                }
+              }
+            }
+            return contenu;
+          }
+        };
       }
 
       function texteOuvertureParc(parc) {
@@ -1024,9 +956,6 @@
         const boutonEnregistrer = form.querySelector(
           "#lcdp-parc-edition-enregistrer"
         );
-        const boutonRetour = form.querySelector(
-          "#lcdp-parc-edition-retour"
-        );
         const note = form.querySelector(
           "[data-lcdp-formulaire-note]"
         );
@@ -1037,10 +966,16 @@
 
         if (!form.reportValidity()) return;
 
-        const changes = construireModifications(
-          form,
-          parcEditionCourant
-        );
+        const changes = construireModifications(form, parcEditionCourant);
+        try {
+          const photoseditorial = editeurPhotosCourant?.verifierLongueurs();
+          if (editeurPhotosCourant?.aDesChangements()) {
+            changes.photoseditorial = photoseditorial;
+          }
+        } catch (error) {
+          afficherNote(note, String(error?.message || error), "error");
+          return;
+        }
 
         if (Object.keys(changes).length < 1) {
           afficherNote(note, "Aucune modification à enregistrer.", "success");
@@ -1048,12 +983,13 @@
         }
 
         boutonEnregistrer.disabled = true;
-        boutonRetour.disabled = true;
         afficherNote(note, "Enregistrement en cours…", "");
 
         const original = {};
         Object.keys(changes).forEach((champ) => {
-          original[champ] = parcEditionCourant?.[champ] ?? null;
+          original[champ] = champ === "photoseditorial"
+            ? (parcEditionCourant?.photoseditorial || {})
+            : (parcEditionCourant?.[champ] ?? null);
         });
 
         try {
@@ -1092,7 +1028,6 @@
 
           if (data.modifie === false) {
             boutonEnregistrer.disabled = false;
-            boutonRetour.disabled = false;
             await afficherAlerteEditionParc(
               "Aucune modification à enregistrer."
             );
@@ -1106,7 +1041,6 @@
           window.location.reload();
         } catch (error) {
           boutonEnregistrer.disabled = false;
-          boutonRetour.disabled = false;
 
           const messageErreur = String(
             error?.message ||
@@ -1261,11 +1195,24 @@
         note.dataset.state = etat || "";
       }
 
+      function formulaireEditionModifie() {
+        const form = document.getElementById("lcdp-parc-edition-form");
+        if (!form || !parcEditionCourant) return false;
+        try {
+          const changes = construireModifications(form, parcEditionCourant);
+          return Object.keys(changes).length > 0 ||
+            Boolean(editeurPhotosCourant?.aDesChangements());
+        } catch (_) {
+          return true;
+        }
+      }
+
       function fermerEditionParc() {
         const tableSlot = document.getElementById(TABLE_SLOT_ID);
         const editionSlot = document.getElementById(EDITION_SLOT_ID);
 
         parcEditionCourant = null;
+        editeurPhotosCourant = null;
         editionSlot.innerHTML = "";
         editionSlot.hidden = true;
         tableSlot.hidden = false;
