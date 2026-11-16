@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invitations mensuelles par membre — La Clé du Parc</title>
+  <meta name="description" content="Nombre d'invitations envoyées chaque mois, par membre et département.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = v => String(v || "").replace(/\\/+$/, "");
+      const join = (a, b) => base(a) + "/" + String(b || "").replace(/^\\/+/, "");
+      const a = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
+      const p = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
+      const o = base(c.objetBaseUrl || c.OBJET_BASE || join(p, "/OBJET"));
+      window.LCDP_urlAdmin = x => typeof c.adminUrl === "function" ? c.adminUrl(x) : join(a, x);
+      window.LCDP_urlPublic = x => typeof c.publicUrl === "function" ? c.publicUrl(x) : join(p, x);
+      window.LCDP_urlObjet = x => typeof c.objetUrl === "function" ? c.objetUrl(x) : join(o, x);
+      ["/CSSBASE/cssbase.css", "/CSSBASE/lcdp-central-mobile-first.css"].forEach(path => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">');
+      });
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+       "/ESPACE-ADMIN/B_PARCS/InvitationsMensuelles.css"].forEach(path => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(path) + '?v=20261116-1">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-invitations-mensuelles">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Suivi des invitations envoyées">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-invitmens__entete">
+                <div>
+                  <h1>Invitations envoyées par membre</h1>
+                  <p>Nombre d'envois par mois. Les invitations créées sans envoi ne sont pas comptées.</p>
+                </div>
+                <button type="button" id="lcdp-invitmens-actualiser" class="lcdp-button lcdp-button-secondary">Actualiser</button>
+              </header>
+              <p id="lcdp-invitmens-statut" role="status" aria-live="polite">Chargement des invitations…</p>
+              <div class="lcdp-invitmens__filtres">
+                <label class="lcdp-invitmens__annee">Année
+                  <select id="lcdp-invitmens-annee" aria-label="Année du bilan"></select>
+                </label>
+                <fieldset class="lcdp-invitmens__choix">
+                  <legend>Départements (sélection multiple)</legend>
+                  <div class="lcdp-invitmens__actions">
+                    <button type="button" id="lcdp-invitmens-tous-departements">Tous</button>
+                    <button type="button" id="lcdp-invitmens-aucun-departement">Aucun</button>
+                  </div>
+                  <div id="lcdp-invitmens-departements" class="lcdp-invitmens__liste" role="group" aria-label="Sélection des départements"></div>
+                </fieldset>
+                <fieldset class="lcdp-invitmens__choix">
+                  <legend>Membres (sélection multiple)</legend>
+                  <label class="lcdp-invitmens__recherche">Rechercher un membre
+                    <input type="search" id="lcdp-invitmens-recherche" placeholder="Nom ou prénom" autocomplete="off">
+                  </label>
+                  <div class="lcdp-invitmens__actions">
+                    <button type="button" id="lcdp-invitmens-tous-membres">Tous</button>
+                    <button type="button" id="lcdp-invitmens-aucun-membre">Aucun</button>
+                  </div>
+                  <div id="lcdp-invitmens-membres" class="lcdp-invitmens__liste lcdp-invitmens__liste--membres" role="group" aria-label="Sélection des membres"></div>
+                </fieldset>
+              </div>
+              <p class="lcdp-invitmens__synthese" id="lcdp-invitmens-synthese" aria-live="polite"></p>
+              <div class="lcdp-table-lecture-admin">
+                <div class="lcdp-table-lecture-admin__scroll lcdp-invitmens__defilement">
+                  <table class="lcdp-table-lecture-admin__table lcdp-invitmens__table">
+                    <caption class="lcdp-invitmens__legende">Invitations envoyées pour l'année et les filtres sélectionnés</caption>
+                    <thead><tr>
+                      <th scope="col">Dpt</th><th scope="col">Nom</th><th scope="col">Prénom</th>
+                      <th scope="col">Jan.</th><th scope="col">Fév.</th><th scope="col">Mars</th><th scope="col">Avr.</th>
+                      <th scope="col">Mai</th><th scope="col">Juin</th><th scope="col">Juil.</th><th scope="col">Août</th>
+                      <th scope="col">Sept.</th><th scope="col">Oct.</th><th scope="col">Nov.</th><th scope="col">Déc.</th>
+                      <th scope="col">Total</th>
+                    </tr></thead>
+                    <tbody id="lcdp-invitmens-lignes"></tbody>
+                    <tfoot id="lcdp-invitmens-totaux"></tfoot>
+                  </table>
+                </div>
+                <p id="lcdp-invitmens-vide" class="lcdp-invitmens__vide" hidden>Aucun membre ne correspond aux filtres sélectionnés.</p>
+              </div>
+              <p class="lcdp-invitmens__note">Comptage selon la date d'envoi, y compris lorsqu'une invitation envoyée est ensuite annulée. Une invitation annulée avant son envoi reste exclue.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./InvitationsMensuelles.js?v=20261116-1"></script>
+</body>
+</html>
