@@ -555,11 +555,11 @@
 }
 
 
-/* Accueil Membres : six séries distinctes de cinq cases, 3 vertes / 3 orange.
+/* Accueil Membres : trois rangées vertes (1–24), trois rangées orange (25–48).
    Les positions et les intitulés des fonctionnalités existantes ne changent pas. */
 .lcdp-page-accueil-admin
 .lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="membres"] {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 .lcdp-page-accueil-admin
 .lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="membres"]
