@@ -1327,7 +1327,7 @@
       preparer.addEventListener("click",async()=>{
         preparer.disabled=true;
         try{
-          const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("w-la-cle-du-parc-api"):"")).replace(/\/+$/,"");
+          const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("la-cle-du-parc-api"):"")).replace(/\/+$/,"");
           if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");
           const r=await fetch(base+"/bracelet/enroll",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({idclemembre:Number(item.idclemembre)})});const d=await r.json();
           if(!r.ok || !d.success)throw Error(d.message || "Génération refusée.");
@@ -1898,7 +1898,7 @@
   }
 
   function elementSuivi(tag,texte,classe){const e=document.createElement(tag);if(texte!==undefined)e.textContent=texte;if(classe)e.className=classe;return e;}
-  function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("w-la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
+  function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
   async function appelSuivi(path,body){const r=await fetch(baseSuivi()+path,{method:body?"POST":"GET",credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok || !d.success)throw Error(d.message || "Suivi indisponible.");return d;}
   async function initialiserSuivi(page=0){
     const zone=document.querySelector('[data-lcdp-contenu-onglet="suivi"]');if(!zone)return;
