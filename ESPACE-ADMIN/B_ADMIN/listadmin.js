@@ -122,19 +122,75 @@
       }
     }
 
+    function confirmerSuppression(c) {
+      const dialogue = document.getElementById("lcdp-admin-confirmation-suppression");
+      if (!dialogue) {
+        informer("Le dialogue de suppression est indisponible.", true);
+        return Promise.resolve(false);
+      }
+
+      const identite = [texte(c.prenomadmin), texte(c.nomadmin)].filter(Boolean).join(" ");
+      const message = dialogue.querySelector("[id='lcdp-ref-suppression-message']");
+      const conserver = dialogue.querySelector('[data-lcdp-dialogue-action="conserver"]');
+      const supprimer = dialogue.querySelector('[data-lcdp-dialogue-action="supprimer"]');
+      if (!message || !conserver || !supprimer) {
+        informer("Le dialogue de suppression est incomplet.", true);
+        return Promise.resolve(false);
+      }
+      message.textContent = "Supprimer définitivement le compte de " + identite +
+        " (" + texte(c.adminemail) + ") ? Tous ses accès et ses sessions seront supprimés.";
+      dialogue.hidden = false;
+      const elementPrecedent = document.activeElement;
+      conserver.focus();
+
+      return new Promise((resolve) => {
+        let termine = false;
+        function fermer(accord) {
+          if (termine) return;
+          termine = true;
+          dialogue.hidden = true;
+          conserver.removeEventListener("click", annuler);
+          supprimer.removeEventListener("click", confirmer);
+          dialogue.removeEventListener("click", clicFond);
+          document.removeEventListener("keydown", touche);
+          if (elementPrecedent?.isConnected && typeof elementPrecedent.focus === "function") {
+            elementPrecedent.focus();
+          }
+          resolve(accord);
+        }
+        function annuler() { fermer(false); }
+        function confirmer() { fermer(true); }
+        function clicFond(event) {
+          if (event.target === dialogue) fermer(false);
+        }
+        function touche(event) {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            fermer(false);
+          } else if (event.key === "Tab") {
+            // Empêcher que le focus sorte du dialogue modal.
+            event.preventDefault();
+            (document.activeElement === conserver ? supprimer : conserver).focus();
+          }
+        }
+        conserver.addEventListener("click", annuler);
+        supprimer.addEventListener("click", confirmer);
+        dialogue.addEventListener("click", clicFond);
+        document.addEventListener("keydown", touche);
+      });
+    }
+
     async function supprimerCompte(c) {
       if (!estRoot || occupe || texte(c.id) === texte(auth.id)) return;
-      const identite = [texte(c.prenomadmin), texte(c.nomadmin)].filter(Boolean).join(" ");
-      const accord = window.confirm("Confirmer la suppression définitive du compte de " + identite +
-        " (" + texte(c.adminemail) + ") ? Toutes ses sessions seront invalidées.");
-      if (!accord) return;
+      const accord = await confirmerSuppression(c);
+      if (!accord || occupe) return;
       occupe = true;
       try {
         await appelerApi("/admin/accounts/delete", "POST", { id: c.id });
-        informer("Compte administrateur supprimé.");
         const result = await appelerApi("/admin/accounts", "GET");
         comptes = Array.isArray(result.accounts) ? result.accounts : [];
         rendreTous();
+        informer("Compte administrateur supprimé.");
       } catch (error) {
         informer(error?.message || "Suppression impossible.", true);
       } finally {
@@ -287,6 +343,7 @@
       TYPES.forEach(rendreOnglet);
     }
 
+    rendreTous();
     await charger();
     return { recharger: charger };
   }
