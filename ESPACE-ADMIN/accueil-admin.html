@@ -799,7 +799,9 @@
               "Ouvrir " + configuration.label
             );
           } else {
-            lien.textContent = categorie.fallback + " " + position;
+            lien.textContent = (categorie.id === "parcs" && position === 41)
+              ? "Bénévolat"
+              : categorie.fallback + " " + position;
             lien.href = "#";
             lien.setAttribute("aria-disabled", "true");
 
