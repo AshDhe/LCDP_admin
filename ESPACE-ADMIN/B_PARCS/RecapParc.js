@@ -227,7 +227,7 @@
     const promesse = (async () => {
       const base = endpointParcs();
       if (!base) throw new Error("Service des fiches parcs non configuré.");
-      const url = new URL(base + "/edition-parc");
+      const url = new URL(base + (mode === "acces" ? "/accesdetail" : "/edition-parc"));
       url.searchParams.set("idparc", id);
       const response = await fetch(url, {
         credentials: "include", cache: "no-store",
