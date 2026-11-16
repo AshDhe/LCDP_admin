@@ -81,6 +81,13 @@
         );
       });
 
+      // Réutilisation des styles existants de l'objet onglets, sans CSS local.
+      document.write(
+        '<link rel="stylesheet" href="' +
+        window.LCDP_urlObjet("/CSSBASE/lcdp-central-module-05.css") +
+        '">'
+      );
+
       ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -243,16 +250,16 @@
           config.WORKER_ADMIN_DATA_URL ||
           window.ADMIN_CONFIG?.API_ADMIN_DATA ||
           ""
-        ).replace(/\\/+$/, "");
+        ).replace(/\/+$/, "");
       }
 
       function endpointAdminSession() {
         return String(
-          config.workerLogSessAdminUrl ||
-          config.WORKER_LOG_SESS_ADMIN_URL ||
-          window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
+          config.workerAdminComptesUrl ||
+          config.WORKER_ADMIN_COMPTES_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_COMPTES ||
           ""
-        ).replace(/\\/+$/, "");
+        ).replace(/\/+$/, "");
       }
 
       async function chargerScriptObjetUneFois(path) {
