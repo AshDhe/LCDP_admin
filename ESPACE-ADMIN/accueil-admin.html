@@ -138,6 +138,7 @@
       const NOMBRE_BOUTONS_ADMIN = 48;
       const SLOT_CARTE_PARC = 1;
       const SLOT_CARD_PARC = 8;
+      const SLOT_INVITATIONS_MENSUELLES_PARC = 11;
       const SLOT_LOCALISATION_PARC = 26;
       const SLOT_QUALIFICATION_PARC = -1;
       const SLOT_CARD1_PARC = -1;
@@ -343,6 +344,19 @@
         lien.removeAttribute("aria-disabled");
         lien.dataset.permissionCode = "parcs.carte";
         lien.setAttribute("aria-label", "Ouvrir CarteParc");
+      }
+
+      function estSlotInvitationsMensuellesParc(categorie, position) {
+        return categorie.id === "parcs" &&
+          Number(position) === SLOT_INVITATIONS_MENSUELLES_PARC;
+      }
+
+      function configurerBoutonInvitationsMensuelles(lien) {
+        lien.textContent = "Invitations/mois";
+        lien.href = urlAdmin("/ESPACE-ADMIN/B_PARCS/InvitationsMensuelles.html");
+        lien.removeAttribute("aria-disabled");
+        lien.dataset.permissionCode = "membres.invitations";
+        lien.setAttribute("aria-label", "Consulter les invitations envoyées par membre et par mois");
       }
 
       function estSlotCardParc(categorie, position) {
@@ -743,6 +757,8 @@
             lien.setAttribute("aria-label", "Ouvrir " + nom);
           } else if (estSlotCarteParc(categorie, position)) {
             configurerBoutonCarteParc(lien);
+          } else if (estSlotInvitationsMensuellesParc(categorie, position)) {
+            configurerBoutonInvitationsMensuelles(lien);
           } else if (estSlotCardParc(categorie, position)) {
             configurerBoutonCardParc(lien);
           } else if (estSlotQualificationParc(categorie, position)) {
