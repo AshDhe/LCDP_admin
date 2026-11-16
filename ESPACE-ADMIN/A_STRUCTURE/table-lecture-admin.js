@@ -46,6 +46,9 @@
     );
     const multiSelectFilters = new Set(Array.isArray(options.multiSelectFilterColumns)
       ? options.multiSelectFilterColumns.map(String) : []);
+    const colonnesSansFiltre = new Set(
+      Array.isArray(options.hiddenFilterColumns) ? options.hiddenFilterColumns.map(String) : []
+    );
     const choixMulti = new Map();
     const cleSession = typeof options.sessionStateKey === "string"
       ? options.sessionStateKey.trim() : "";
@@ -186,6 +189,9 @@
       chargement: false
     };
 
+    // Un ancien filtre mémorisé ne doit pas continuer d'agir après retrait du contrôle.
+    for (const cle of colonnesSansFiltre) delete etat.filters[cle];
+
     function memoriserEtat() {
       if (!cleSession) return;
       try {
@@ -284,11 +290,14 @@
             ? options.columnLabels
             : {};
         const columnsSource = Array.isArray(data.columns)
-          ? data.columns.map((column) => (
-              Object.prototype.hasOwnProperty.call(columnLabels, column.key)
+          ? data.columns.map((column) => {
+              const renommee = Object.prototype.hasOwnProperty.call(columnLabels, column.key)
                 ? { ...column, label: String(columnLabels[column.key]) }
-                : column
-            ))
+                : column;
+              return colonnesSansFiltre.has(column.key)
+                ? { ...renommee, filterable: false }
+                : renommee;
+            })
           : [];
         const columns = ordreStockage
           ? [...columnsSource].sort((a, b) => {
