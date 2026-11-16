@@ -334,3 +334,106 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* LISTADMIN : onglets, ajout contextuel et actions discrètes. */
+.lcdp-page-listadmin .lcdp-listadmin__barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__barre > .lcdp-wraper-onglets__navigation {
+  flex: 0 1 520px;
+  width: min(100%, 520px);
+  margin-inline: 0;
+}
+
+.lcdp-page-listadmin button.lcdp-listadmin__ajouter {
+  flex: 0 0 auto;
+  min-width: 110px;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 18px;
+}
+
+.lcdp-page-listadmin [hidden] {
+  display: none !important;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__formulaire {
+  margin: 0;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__type-fixe {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__formulaire-actions {
+  display: flex;
+  gap: var(--lcdp-space-3);
+  flex-wrap: wrap;
+  margin-top: var(--lcdp-space-2);
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__formulaire-actions > .lcdp-button {
+  margin: 0;
+  width: auto;
+  max-width: 100%;
+}
+
+.lcdp-page-listadmin .lcdp-table-lecture-admin__table td.lcdp-listadmin__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--lcdp-space-2);
+}
+
+.lcdp-page-listadmin .lcdp-table-lecture-admin__table button.lcdp-listadmin__corbeille {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--lcdp-radius-small);
+  background: transparent;
+  color: var(--lcdp-color-text-muted);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__corbeille svg {
+  width: 19px;
+  height: 19px;
+}
+
+.lcdp-page-listadmin .lcdp-table-lecture-admin__table button.lcdp-listadmin__corbeille:hover:not(:disabled),
+.lcdp-page-listadmin .lcdp-table-lecture-admin__table button.lcdp-listadmin__corbeille:focus-visible {
+  color: var(--lcdp-color-orange);
+  border-color: var(--lcdp-color-border);
+}
+
+.lcdp-page-listadmin .lcdp-table-lecture-admin__table button.lcdp-listadmin__corbeille:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 599px) {
+  .lcdp-page-listadmin .lcdp-listadmin__barre > .lcdp-wraper-onglets__navigation {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .lcdp-page-listadmin .lcdp-listadmin__barre > .lcdp-listadmin__ajouter {
+    margin-left: auto;
+  }
+}
