@@ -21,7 +21,7 @@
       optionPath: "/options/parcs",
       optionKey: "idparc",
       optionLabel: "Parc",
-      boutonAjouter: "Ajouter une clé"
+      boutonAjouter: "Ajouter un fix"
     },
     membres: {
       key: "membres",
@@ -261,7 +261,7 @@
       boutons[2],
       panneaux[2],
       "suivi",
-      "Paramétrage",
+      "RefreshApp",
       false
     );
   }
@@ -1900,83 +1900,103 @@
   function elementSuivi(tag,texte,classe){const e=document.createElement(tag);if(texte!==undefined)e.textContent=texte;if(classe)e.className=classe;return e;}
   function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
   async function appelSuivi(path,body){const r=await fetch(baseSuivi()+path,{method:body?"POST":"GET",credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok || !d.success)throw Error(d.message || "Suivi indisponible.");return d;}
-  async function initialiserSuivi(page=0){
-    const zone=document.querySelector('[data-lcdp-contenu-onglet="suivi"]');if(!zone)return;
-    zone.replaceChildren();const statut=elementSuivi("p","Chargement du suivi…");statut.setAttribute("role","status");zone.append(statut);
-    try{
-      const d=await appelSuivi("/admin/monitor?page="+page);zone.replaceChildren();
-      zone.append(elementSuivi("p","Réglages globaux, par parc et par bracelet. Les couleurs restent communes aux bracelets d’un même parc."));
-      const avertissement=elementSuivi("p","Sans réponse du serveur, extinction après deux intervalles réseau + 5 secondes au maximum, et au plus tard à la fin du créneau connue du bracelet. Un check-out est reçu au prochain appel réseau.");zone.append(avertissement);
-      function formulaire(type,id,values,effective){
-        const form=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
-        const fields=type==="bracelet"?[["poll_secondes","Interrogation du bracelet (minutes)"]]:[["bracelet_secondes","Couleur (secondes)"],["image_secondes","Image (secondes)"],["poll_secondes","Interrogation du bracelet (minutes)"]];
-        const inputs={};
-        for(const [key,label] of fields){const l=elementSuivi("label",label),input=elementSuivi("input");input.type="number";input.step="1";input.min=key==="poll_secondes"?"5":"60";input.max=key==="poll_secondes"?"20":"86400";input.value=values?.[key]==null?"":key==="poll_secondes"?values[key]/60:values[key];input.required=type==="global";input.placeholder=type==="global"?"":"Hérité : "+((effective?.[key] ?? d.global[key])/(key==="poll_secondes"?60:1));l.append(input);form.append(l);inputs[key]=input;}
-        const button=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");button.type="submit";const message=elementSuivi("p","");message.setAttribute("role","status");form.append(button,message);
-        form.addEventListener("submit",async e=>{e.preventDefault();button.disabled=true;try{const values={};for(const [key,input] of Object.entries(inputs))values[key]=input.value===""?null:Number(input.value)*(key==="poll_secondes"?60:1);await appelSuivi("/admin/monitor/settings",{type,id,values});message.textContent="Réglages enregistrés. Ils s’appliquent au prochain contact de l’appareil.";}catch(error){message.textContent=error.message;}finally{button.disabled=false;}});return form;
-      }
-      const videoForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
-      const videoLabel=elementSuivi("label","Nombre de séquences vidéo à l’entrée"),videoSelect=elementSuivi("select");
-      for(const [value,label] of [[1,"1 — Boîtier (4 s)"],[2,"2 — Boîtier (4 s), puis selfie et bracelet (6 s)"]]){const option=elementSuivi("option",label);option.value=String(value);videoSelect.append(option);}
-      videoSelect.disabled=true;videoLabel.append(videoSelect);
-      const videoSave=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");videoSave.type="submit";videoSave.disabled=true;
-      const videoStatus=elementSuivi("p","Chargement…");videoStatus.setAttribute("role","status");
-      videoForm.append(videoLabel,elementSuivi("p","En mode automatique, sans bracelet : une seule séquence. Un réglage individuel peut imposer une ou deux séquences. Check-out : une seule séquence. Les six secondes commencent une fois la caméra selfie prête, après appui sur le bouton selfie. Bracelet demandé pendant les trois dernières secondes."),videoSave,videoStatus);
-      zone.append(elementSuivi("h2","Capture vidéo"),videoForm);
-      try{const v=await appelSuivi("/admin/monitor/video");videoSelect.value=String(v.sequenceCount);videoSelect.disabled=false;videoSave.disabled=false;videoStatus.textContent="";}catch(e){videoStatus.textContent=e.message;}
-      videoForm.addEventListener("submit",async e=>{e.preventDefault();videoSave.disabled=true;try{await appelSuivi("/admin/monitor/video",{sequenceCount:Number(videoSelect.value)});videoStatus.textContent="Enregistré. Applicable aux prochaines captures, y compris aux tests.";if(profilMembre.value)await chargerProfil();}catch(e){videoStatus.textContent=e.message;}finally{videoSave.disabled=false;}});
-      const profilForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form");
-      const profilMembre=elementSuivi("select"),profilChoix=elementSuivi("select");
-      const profilLabel=elementSuivi("label","Membre"),choixLabel=elementSuivi("label","Séquences à l’entrée");profilLabel.append(profilMembre);choixLabel.append(profilChoix);
-      const vide=elementSuivi("option","Choisissez un membre");vide.value="";profilMembre.append(vide);
-      for(const [value,label] of [[0,"Automatique"],[1,"Forcer 1"],[2,"Forcer 2"]]){const option=elementSuivi("option",label);option.value=String(value);profilChoix.append(option);}
-      const profilSave=elementSuivi("button","Enregistrer pour ce membre","lcdp-button lcdp-button-orange");profilSave.type="submit";
-      const profilStatus=elementSuivi("p","");profilStatus.setAttribute("role","status");profilChoix.disabled=true;profilSave.disabled=true;
-      profilForm.append(profilLabel,choixLabel,elementSuivi("p","Automatique suit le réglage global et l’attribution d’un bracelet. Forcer 1 ou Forcer 2 est prioritaire, avec ou sans bracelet. Sans bracelet, le selfie ne demande pas de présenter un bracelet. La sortie reste sur une seule séquence."),profilSave,profilStatus);
-      zone.append(elementSuivi("h2","Réglage vidéo par membre"),profilForm);
-      let profilVersion=0;
-      function resultatProfil(r){return (r.hasBracelet?"Bracelet actif attribué. ":"Sans bracelet actif. ")+"Entrée : "+r.effectiveSequenceCount+" séquence(s). Sortie : 1.";}
-      async function chargerProfil(){
-       const version=++profilVersion,id=profilMembre.value;profilChoix.disabled=true;profilSave.disabled=true;profilStatus.textContent="";if(!id)return;
-       try{const r=await appelSuivi("/admin/monitor/video/member?member="+encodeURIComponent(id));if(version!==profilVersion)return;profilChoix.value=String(r.sequenceCount);profilStatus.textContent=resultatProfil(r);profilChoix.disabled=false;profilSave.disabled=false;}catch(e){if(version===profilVersion)profilStatus.textContent=e.message;}
-      }
-      profilMembre.addEventListener("change",chargerProfil);
-      try{const r=await appelerCle("/options/membres");for(const m of r.options || []){const option=elementSuivi("option",m.label);option.value=m.value;profilMembre.append(option);}}catch(e){profilMembre.disabled=true;profilStatus.textContent=e.message;}
-      profilForm.addEventListener("submit",async e=>{e.preventDefault();if(profilSave.disabled || !profilMembre.value)return;profilSave.disabled=true;profilMembre.disabled=true;profilChoix.disabled=true;try{const r=await appelSuivi("/admin/monitor/video/member",{memberId:profilMembre.value,sequenceCount:Number(profilChoix.value)});profilStatus.textContent="Enregistré. "+resultatProfil(r);}catch(e){profilStatus.textContent=e.message;}finally{profilMembre.disabled=false;profilChoix.disabled=false;profilSave.disabled=false;}});
-      zone.append(elementSuivi("h2","Géolocalisation"),elementSuivi("p","geoloc_frq : 0 = désactivée ; 2 = entrée et sortie ; 3 = un contrôle intermédiaire ; 4 = deux. Les contrôles intermédiaires sont espacés selon le délai ci-dessous, uniquement avant la fin de réservation. Ils reprennent à la réouverture de la clé si le navigateur l’a suspendue."));
-      function choixGeoloc(heritage){
-        const select=elementSuivi("select");
-        for(const [value,label] of [...(heritage?[["","Hériter du réglage global"]]:[]),[0,"0 — Désactivée"],...Array.from({length:23},(_,i)=>[i+2,(i+2)+" — Entrée, sortie"+(i?", "+i+" intermédiaire(s)":"")])]){
-          const option=elementSuivi("option",label);option.value=String(value);select.append(option);
+  async function initialiserSuivi() {
+    const zone = document.querySelector('[data-lcdp-contenu-onglet="suivi"]');
+    if (!zone) return;
+    zone.replaceChildren();
+    const statut = elementSuivi("p", "Chargement des réglages RefreshApp…");
+    statut.setAttribute("role", "status");
+    zone.append(statut);
+
+    try {
+      const donnees = await appelSuivi("/admin/monitor?page=0");
+      zone.replaceChildren();
+      zone.append(elementSuivi("p",
+        "Renouvellement des couleurs et des images de présence dans l’application mobile."));
+
+      function formulaireRotation(type, id, valeurs, valeursEffectives) {
+        const formulaire = elementSuivi("form", undefined, "lcdp-cle-suivi__form");
+        const champs = [
+          ["bracelet_secondes", "Renouvellement des couleurs (secondes)"],
+          ["image_secondes", "Renouvellement des images (secondes)"]
+        ];
+        const controles = {};
+        for (const [cle, libelle] of champs) {
+          const label = elementSuivi("label", libelle);
+          const input = elementSuivi("input");
+          input.type = "number";
+          input.min = "60";
+          input.max = "86400";
+          input.step = "1";
+          input.required = type === "global";
+          input.value = valeurs?.[cle] ?? "";
+          if (type === "parc" && input.value === "") {
+            input.placeholder = "Valeur globale : " + String(valeursEffectives?.[cle] ?? "");
+          }
+          label.append(input);
+          formulaire.append(label);
+          controles[cle] = input;
         }
-        return select;
+        const sauvegarder = elementSuivi("button", "Enregistrer", "lcdp-button lcdp-button-orange");
+        sauvegarder.type = "submit";
+        const retour = elementSuivi("p", "");
+        retour.setAttribute("role", "status");
+        formulaire.append(sauvegarder, retour);
+        formulaire.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!formulaire.reportValidity()) return;
+          sauvegarder.disabled = true;
+          retour.textContent = "";
+          try {
+            // Le Worker attend trois clés ; conserver la fréquence réseau
+            // sans l'exposer ni la modifier dans RefreshApp.
+            const valeursEnvoyees = {
+              bracelet_secondes: controles.bracelet_secondes.value === ""
+                ? null : Number(controles.bracelet_secondes.value),
+              image_secondes: controles.image_secondes.value === ""
+                ? null : Number(controles.image_secondes.value),
+              poll_secondes: valeurs?.poll_secondes ?? null
+            };
+            await appelSuivi("/admin/monitor/settings", {
+              type, id, values: valeursEnvoyees
+            });
+            retour.textContent = "Réglages RefreshApp enregistrés.";
+          } catch (error) {
+            retour.textContent = String(error?.message || "Enregistrement impossible.");
+          } finally {
+            sauvegarder.disabled = false;
+          }
+        });
+        return formulaire;
       }
-      const geoForm=elementSuivi("form",undefined,"lcdp-cle-suivi__form"),geoChoix=choixGeoloc(false),geoInterval=elementSuivi("input");
-      geoChoix.disabled=true;geoInterval.type="number";geoInterval.min="1";geoInterval.max="1440";geoInterval.step="1";geoInterval.required=true;geoInterval.value="60";
-      const geoLabel=elementSuivi("label","Fréquence de géolocalisation (geoloc_frq)"),geoDelai=elementSuivi("label","Délai entre contrôles intermédiaires (minutes)");geoLabel.append(geoChoix);geoDelai.append(geoInterval);
-      const geoSave=elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange"),geoStatus=elementSuivi("p","");geoSave.type="submit";geoSave.disabled=true;geoStatus.setAttribute("role","status");geoForm.append(geoLabel,geoDelai,geoSave,geoStatus);zone.append(geoForm);
-      try{const r=await appelSuivi("/admin/monitor/geolocation");geoChoix.value=String(r.geoloc_frq);geoInterval.value=r.intervalMinutes;geoChoix.disabled=false;geoSave.disabled=false;}catch(e){geoStatus.textContent=e.message;}
-      geoForm.addEventListener("submit",async e=>{e.preventDefault();geoSave.disabled=true;try{await appelSuivi("/admin/monitor/geolocation",{geoloc_frq:Number(geoChoix.value),intervalMinutes:Number(geoInterval.value)});geoStatus.textContent="Enregistré. Le nouveau réglage s’applique aux prochains contrôles.";}catch(e){geoStatus.textContent=e.message;}finally{geoSave.disabled=false;}});
-      const geoProfil=elementSuivi("form",undefined,"lcdp-cle-suivi__form"),geoMembre=profilMembre.cloneNode(true),geoOverride=choixGeoloc(true),geoProfilSave=elementSuivi("button","Enregistrer pour ce membre","lcdp-button lcdp-button-orange"),geoProfilStatus=elementSuivi("p","");
-      const geoMembreLabel=elementSuivi("label","Membre"),geoOverrideLabel=elementSuivi("label","geoloc_frq individuel");geoMembreLabel.append(geoMembre);geoOverrideLabel.append(geoOverride);geoMembre.value="";geoOverride.disabled=true;geoProfilSave.type="submit";geoProfilSave.disabled=true;geoProfilStatus.setAttribute("role","status");geoProfil.append(geoMembreLabel,geoOverrideLabel,geoProfilSave,geoProfilStatus);zone.append(elementSuivi("h3","Réglage par membre"),geoProfil);
-      let geoVersion=0;
-      geoMembre.addEventListener("change",async()=>{
-        const version=++geoVersion,id=geoMembre.value;geoOverride.disabled=true;geoProfilSave.disabled=true;geoProfilStatus.textContent="";if(!id)return;
-        try{const r=await appelSuivi("/admin/monitor/geolocation/member?member="+encodeURIComponent(id));if(version!==geoVersion)return;geoOverride.value=r.override===null?"":String(r.override);geoProfilStatus.textContent="Valeur effective : "+r.geoloc_frq;geoOverride.disabled=false;geoProfilSave.disabled=false;}catch(e){if(version===geoVersion)geoProfilStatus.textContent=e.message;}
+
+      zone.append(elementSuivi("h2", "Réglages généraux"),
+        formulaireRotation("global", "", donnees.global, donnees.global),
+        elementSuivi("h2", "Réglages par parc"));
+
+      const recherche = elementSuivi("input");
+      recherche.type = "search";
+      recherche.placeholder = "Rechercher un parc";
+      recherche.setAttribute("aria-label", "Rechercher un parc");
+      zone.append(recherche);
+      const cartes = [];
+      for (const parc of (donnees.parks || [])) {
+        const carte = elementSuivi("section", undefined, "lcdp-cle-suivi__carte");
+        carte.append(elementSuivi("h3", String(parc.nom || "Parc")),
+          formulaireRotation("parc", parc.idparc, parc.overrides, parc.effective));
+        zone.append(carte);
+        cartes.push([carte, String(parc.nom || "").toLocaleLowerCase("fr")]);
+      }
+      recherche.addEventListener("input", () => {
+        const valeur = recherche.value.trim().toLocaleLowerCase("fr");
+        for (const [carte, nom] of cartes) carte.hidden = !nom.includes(valeur);
       });
-      geoProfil.addEventListener("submit",async e=>{e.preventDefault();if(!geoMembre.value||geoProfilSave.disabled)return;geoProfilSave.disabled=true;geoMembre.disabled=true;try{const r=await appelSuivi("/admin/monitor/geolocation/member",{memberId:geoMembre.value,geoloc_frq:geoOverride.value===""?null:Number(geoOverride.value)});geoProfilStatus.textContent="Enregistré. Valeur effective : "+r.geoloc_frq;}catch(e){geoProfilStatus.textContent=e.message;}finally{geoMembre.disabled=false;geoProfilSave.disabled=false;}});
-      zone.append(elementSuivi("h2","Valeurs générales"),formulaire("global","",d.global,d.global));
-      zone.append(elementSuivi("h2","Parcs"));
-      const filtre=elementSuivi("input");filtre.type="search";filtre.placeholder="Rechercher un parc";filtre.setAttribute("aria-label","Rechercher un parc");zone.append(filtre);
-      const cartes=[];
-      for(const p of d.parks){const carte=elementSuivi("section",undefined,"lcdp-cle-suivi__carte");carte.append(elementSuivi("h3",p.nom));const heure=x=>new Date(x).toLocaleTimeString("fr-FR");carte.append(elementSuivi("p","Prochains tirages : couleur "+heure(p.nextColorAt)+", image "+heure(p.nextImageAt)+". Géolocalisation : "+(p.geoConfigured?"zone configurée":"position recueillie, sans rayon configuré")+"."));carte.append(formulaire("parc",p.idparc,p.overrides,p.effective));zone.append(carte);cartes.push([carte,String(p.nom || "").toLowerCase()]);}
-      filtre.addEventListener("input",()=>cartes.forEach(([c,nom])=>{c.hidden=!nom.includes(filtre.value.toLowerCase());}));
-      if(d.parksTruncated)zone.append(elementSuivi("p","Affichage limité à 1 000 parcs."));
-      zone.append(elementSuivi("h2","Bracelets initialisés — page "+(page+1)));
-      for(const b of d.devices){const carte=elementSuivi("section",undefined,"lcdp-cle-suivi__carte");carte.append(elementSuivi("h3",b.memberName+" — "+b.braceletName));carte.append(elementSuivi("p","Dernier contact : "+(b.dernier_contact?new Date(b.dernier_contact).toLocaleString("fr-FR"):"aucun")+". "+(b.online?"Contact récent":"Contact attendu ou appareil hors ligne")+". Dernière commande : "+(b.dernier_mode || "aucune")+(b.dernier_hex?" "+b.dernier_hex:"")+". "+(b.acknowledged?"Réception confirmée.":"Réception non confirmée.")));carte.append(formulaire("bracelet",b.idbracelet,{poll_secondes:b.poll_secondes},{poll_secondes:b.effectivePollSeconds ?? d.global.poll_secondes}));zone.append(carte);}
-      const actions=elementSuivi("div",undefined,"lcdp-cle-admin__barre-actions");
-      for(const [label,target] of [["Actualiser",page],...(page>0?[["Précédent",page-1]]:[]),...(d.hasMore?[["Suivant",page+1]]:[])]){const b=elementSuivi("button",label,"lcdp-button lcdp-button-orange");b.type="button";b.addEventListener("click",()=>initialiserSuivi(target));actions.append(b);}zone.append(actions);
-    }catch(e){statut.textContent=e.message;}
+      if (donnees.parksTruncated) {
+        zone.append(elementSuivi("p", "Affichage limité à 1 000 parcs."));
+      }
+    } catch (error) {
+      statut.textContent = String(error?.message || "Service RefreshApp indisponible.");
+    }
   }
 
   async function initialiserPage() {
