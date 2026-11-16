@@ -105,3 +105,25 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Le nombre total ouvre le détail des membres et des affichages non identifiés. */
+.lcdp-page-affichage-legal .lcdp-afflegal-total {
+  justify-self: start;
+  min-height: 44px;
+  padding: 2px 5px;
+  border: 0;
+  border-bottom: 2px solid var(--lcdp-color-logo-green, #4e6838);
+  background: transparent;
+  color: var(--lcdp-color-text, #222);
+  font: inherit;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.lcdp-page-affichage-legal .lcdp-afflegal-total:hover,
+.lcdp-page-affichage-legal .lcdp-afflegal-total:focus-visible {
+  background: var(--lcdp-color-surface-soft, #f6f8f4);
+  outline-offset: 2px;
+}
