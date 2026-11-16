@@ -804,6 +804,10 @@
               : categorie.fallback + " " + position;
             lien.href = "#";
             lien.setAttribute("aria-disabled", "true");
+            // Bénévolat : même orange plein que les boutons Parcs actifs, sans destination.
+            if (categorie.id === "parcs" && position === 41) {
+              lien.style.setProperty("opacity", "1", "important");
+            }
 
             lien.addEventListener("click", (event) => {
               event.preventDefault();
