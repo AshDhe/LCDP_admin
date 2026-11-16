@@ -71,6 +71,12 @@ async function router(request, env) {
     if (session.admin.type !== "root") return interdit(request, session.cookie);
     return inviter(request, env, session);
   }
+  if (request.method === "GET" && path === "/admin/connexion") {
+    const session = await verifierAdmin(request, env);
+    if (!session.ok) return session.response;
+    if (session.admin.type !== "root") return interdit(request, session.cookie);
+    return statistiquesConnexion(request, env, session);
+  }
   if (request.method === "POST" && path === "/admin/accounts/delete") {
     const session = await verifierAdmin(request, env);
     if (!session.ok) return session.response;
@@ -191,6 +197,38 @@ function htmlEchapper(text) {
   return String(text).replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[c]);
+}
+
+// Comptabilisation des sessions créées, sans journaliser les ouvertures de pages.
+async function statistiquesConnexion(request, env, session) {
+  const recherche = new URL(request.url).searchParams;
+  const debut = recherche.get("debut");
+  const fin = recherche.get("fin");
+  const date = (valeur) => {
+    if (!valeur || !/^\\d{4}-\\d{2}-\\d{2}$/.test(valeur)) return null;
+    const objet = new Date(valeur + "T00:00:00.000Z");
+    return Number.isNaN(objet.getTime()) ||
+      objet.toISOString().slice(0, 10) !== valeur ? null : objet;
+  };
+  const d1 = date(debut);
+  const d2 = date(fin);
+  if (!d1 || !d2 || d2 < d1 || d2 - d1 > 366 * 86400000) {
+    return json(request, {
+      success: false,
+      message: "Sélectionne une période valide de 367 jours maximum."
+    }, 400, session.cookie);
+  }
+
+  // La fonction SQL est accessible uniquement à la clé de service du Worker.
+  // Elle exclut le compte principal marqué dans adminaccount.
+  const lignes = await db(env, "rpc/admin_connexion_statistiques", {
+    method: "POST",
+    body: { p_debut: debut, p_fin: fin }
+  });
+  return json(request, {
+    success: true, debut, fin,
+    comptes: Array.isArray(lignes) ? lignes : []
+  }, 200, session.cookie);
 }
 
 async function lister(request, env, session) {
