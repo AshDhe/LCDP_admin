@@ -1,0 +1,20 @@
+.lcdp-page-invitations-membres-admin .lcdp-admin-page-content,
+#lcdp-invitations-membres-onglets-slot,
+.lcdp-invitations-membres-admin__table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.lcdp-invitations-membres-admin__entete {
+  margin: 0 0 var(--lcdp-space-4);
+}
+
+.lcdp-invitations-membres-admin__titre {
+  margin: 0;
+}
+
+.lcdp-page-invitations-membres-admin
+[data-lcdp-table-lecture-admin-body] td {
+  white-space: pre-line;
+}
