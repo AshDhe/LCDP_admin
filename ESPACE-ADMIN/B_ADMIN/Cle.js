@@ -281,7 +281,7 @@
       "Wi-Fi",
       false
     );
-    configurerOnglet(boutons[3],panneaux[3],"suivi","Paramétrage SNG",false);
+    configurerOnglet(boutons[3],panneaux[3],"suivi","Paramétrage",false);
   }
 
   function assurerTroisiemeOnglet(racine) {
