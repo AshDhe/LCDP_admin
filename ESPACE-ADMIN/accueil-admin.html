@@ -94,7 +94,7 @@
       ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlAdmin(path) +
+          window.LCDP_urlAdmin(path) + '?v=20261116-membres-6series' +
           '">'
         );
       });
@@ -132,6 +132,7 @@
 
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 31;
+      const NOMBRE_BOUTONS_MEMBRES = 30;
       const NOMBRE_BOUTONS_PARCS = 32;
       const NOMBRE_BOUTONS_ADMIN = 48;
       const SLOT_CARTE_PARC = 1;
@@ -677,7 +678,7 @@
           (categorie.id === "membres" && (
             (numero >= 6 && numero <= 10) ||
             (numero >= 16 && numero <= 20) ||
-            (numero >= 26 && numero <= NOMBRE_BOUTONS_PAR_MENU)
+            (numero >= 26 && numero <= NOMBRE_BOUTONS_MEMBRES)
           ))
         );
       }
@@ -718,7 +719,8 @@
         for (
           let position = 1;
           position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN :
-            (categorie.id === "parcs" ? NOMBRE_BOUTONS_PARCS : NOMBRE_BOUTONS_PAR_MENU));
+            (categorie.id === "parcs" ? NOMBRE_BOUTONS_PARCS :
+              (categorie.id === "membres" ? NOMBRE_BOUTONS_MEMBRES : NOMBRE_BOUTONS_PAR_MENU)));
           position += 1
         ) {
           // Tous les emplacements Parcs 1 à 32 restent visibles, y compris les cases libres.
@@ -797,7 +799,13 @@
             });
           }
 
-          if (estSlotOrangeAdminOuMembres(categorie, position) ||
+          if (categorie.id === "membres") {
+            // Trois séries de cinq slots verts et trois séries de cinq slots orange.
+            const orange = estSlotOrangeAdminOuMembres(categorie, position);
+            lien.dataset.lcdpMembreGroupe = orange ? "orange" : "vert";
+            lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
+            lien.classList.add(orange ? "lcdp-button-orange" : "lcdp-button-primary");
+          } else if (estSlotOrangeAdminOuMembres(categorie, position) ||
               (categorie.id === "parcs" && position >= 17 && position <= 32)) {
             if (categorie.id === "parcs") {
               lien.dataset.lcdpGroupeOrange = "true";
