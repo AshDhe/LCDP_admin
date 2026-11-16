@@ -132,6 +132,7 @@
 
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 31;
+      const NOMBRE_BOUTONS_ADMIN = 48;
       const SLOT_CARTE_PARC = 3;
       const SLOT_CARD_PARC = 4;
       const SLOT_LOCALISATION_PARC = 18;
@@ -669,15 +670,10 @@
       }
 
       function estSlotOrangeAdminOuMembres(categorie, position) {
+        const numero = Number(position);
         return (
-          (
-            categorie.id === "admin" ||
-            categorie.id === "membres"
-          ) &&
-          (
-            Number(position) === 25 ||
-            Number(position) === 26
-          )
+          (categorie.id === "admin" && numero >= 17 && numero <= NOMBRE_BOUTONS_ADMIN) ||
+          (categorie.id === "membres" && (numero === 25 || numero === 26))
         );
       }
 
@@ -715,7 +711,7 @@
 
         for (
           let position = 1;
-          position <= NOMBRE_BOUTONS_PAR_MENU;
+          position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN : NOMBRE_BOUTONS_PAR_MENU);
           position += 1
         ) {
           // Deux entrées pour la programmation ; les autres rubriques Parcs restent présentes.
