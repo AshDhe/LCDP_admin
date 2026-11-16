@@ -141,8 +141,8 @@
       const SLOT_CARD1_PARC = -1;
       const SLOT_UPLOAD_IMG_PARC = -1;
       const SLOT_HORIZON_PLANNING = -1;
-      const SLOT_PLANNING_PARC = 22;
-      const SLOT_INSERT_FAMILLE = 25;
+      const SLOT_PLANNING_PARC = 25;
+      const SLOT_INSERT_FAMILLE = 26;
       const SLOT_AJUST_FAMILLE = -1;
       const SLOT_AJUST_COACH = -1;
       const SLOT_AJUST_DUO = -1;
@@ -730,7 +730,7 @@
             1: 3, 2: 1, 7: 2, 8: 4, 9: 12, 10: 9,
             19: 23, 25: 27, 26: 24
           };
-          const positionsLiberees = new Set([12, 23, 27]);
+          const positionsLiberees = new Set([12, 22, 23, 27]);
           const positionSource = categorie.id === "parcs"
             ? (originesParc[position] || position) : position;
           const configuration = (
