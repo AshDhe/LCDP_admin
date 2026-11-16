@@ -109,7 +109,7 @@
     for (const btn of buttons) {
       if (btn?.cat !== cat) continue;
       const position = Number(btn.position);
-      if (!Number.isInteger(position) || position < 1 || position > 31) continue;
+      if (!Number.isInteger(position) || position < 1 || position > 48) continue;
       if (cat === "Parcs" && PARCS_IGNORES.has(position)) continue;
       const label = String(btn.label || "").trim();
       if (label) parPosition.set(position, label);
@@ -183,7 +183,7 @@
       "Aucun slot vert occupé."
     ));
     zone.appendChild(construireListe(
-      "Slots orange — positions 17 à 31",
+      "Slots orange — positions 17 à 48",
       items.filter(item => item.position >= 17),
       "Aucun slot orange occupé."
     ));
