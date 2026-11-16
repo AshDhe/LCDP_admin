@@ -47,6 +47,20 @@
     const multiSelectFilters = new Set(Array.isArray(options.multiSelectFilterColumns)
       ? options.multiSelectFilterColumns.map(String) : []);
     const choixMulti = new Map();
+    const cleSession = typeof options.sessionStateKey === "string"
+      ? options.sessionStateKey.trim() : "";
+    let etatMemorise = {};
+    if (cleSession) {
+      try {
+        const donnees = JSON.parse(window.sessionStorage.getItem(cleSession) || "{}");
+        if (donnees && typeof donnees === "object" && !Array.isArray(donnees)) {
+          etatMemorise = donnees;
+        }
+      } catch (_) { /* Fonctionne aussi sans stockage de session. */ }
+    }
+    const colonnesSansTri = new Set(
+      Array.isArray(options.hiddenSortColumns) ? options.hiddenSortColumns.map(String) : []
+    );
     const ordreStockage = options.reorderableColumns === true
       ? "lcdp-admin-columns:" + resource : null;
     let ordreColonnes = [];
@@ -151,16 +165,38 @@
 
     const etat = {
       columns: [],
-      filters: { ...initialFilters },
-      sortKey: initialSortKey,
-      sortDirection: initialSortDirection,
+      filters: {
+        ...initialFilters,
+        ...(etatMemorise.filters && typeof etatMemorise.filters === "object"
+          && !Array.isArray(etatMemorise.filters)
+          ? Object.fromEntries(Object.entries(etatMemorise.filters)
+              .filter(([cle, valeur]) => typeof cle === "string" && typeof valeur === "string"))
+          : {})
+      },
+      sortKey: typeof etatMemorise.sortKey === "string"
+        ? etatMemorise.sortKey : initialSortKey,
+      sortDirection: etatMemorise.sortDirection === "asc" || etatMemorise.sortDirection === "desc"
+        ? etatMemorise.sortDirection : initialSortDirection,
       filtreTimer: null,
       structureRendue: false,
       limit: normaliserTaillePage(options.pageSize),
-      offset: 0,
+      offset: Number.isInteger(etatMemorise.offset) && etatMemorise.offset >= 0
+        ? etatMemorise.offset : 0,
       total: 0,
       chargement: false
     };
+
+    function memoriserEtat() {
+      if (!cleSession) return;
+      try {
+        window.sessionStorage.setItem(cleSession, JSON.stringify({
+          filters: etat.filters,
+          sortKey: etat.sortKey,
+          sortDirection: etat.sortDirection,
+          offset: etat.offset
+        }));
+      } catch (_) { /* Stockage indisponible : la table reste fonctionnelle. */ }
+    }
 
     if (loading) {
       loading.hidden = true;
@@ -314,7 +350,9 @@
             sortsRow,
             columns,
             etat,
-            chargerDonnees
+            chargerDonnees,
+            colonnesSansTri,
+            memoriserEtat
           );
           rendreFiltres(
             filtersRow,
@@ -324,12 +362,14 @@
             filterOptions,
             options,
             multiSelectFilters,
-            choixMulti
+            choixMulti,
+            memoriserEtat
           );
           etat.structureRendue = true;
         }
 
         actualiserEtatTris(sortsRow, etat);
+        memoriserEtat();
 
         rendreLignes(
           body,
@@ -389,6 +429,7 @@
       }
 
       etat.offset = Math.max(0, etat.offset - etat.limit);
+      memoriserEtat();
       chargerDonnees();
     });
 
@@ -401,12 +442,13 @@
       }
 
       etat.offset += etat.limit;
+      memoriserEtat();
       chargerDonnees();
     });
 
     CONTROLEURS.set(slotId, {
       recharger: chargerDonnees,
-      premierePage: () => { etat.offset = 0; return chargerDonnees(); }
+      premierePage: () => { etat.offset = 0; memoriserEtat(); return chargerDonnees(); }
     });
 
     return chargerDonnees();
@@ -447,13 +489,15 @@
     sortsRow,
     columns,
     etat,
-    chargerDonnees
+    chargerDonnees,
+    colonnesSansTri = new Set(),
+    memoriserEtat = () => {}
   ) {
     sortsRow.innerHTML = "";
 
     columns.forEach((column) => {
       const cellule = document.createElement("th");
-      const sortable = column.sortable === true;
+      const sortable = column.sortable === true && !colonnesSansTri.has(column.key);
       const label = String(column.label || column.key || "");
 
       cellule.scope = "col";
@@ -494,6 +538,7 @@
           etat.sortKey = String(column.key || "");
           etat.sortDirection = action.direction;
           etat.offset = 0;
+          memoriserEtat();
           actualiserEtatTris(sortsRow, etat);
           chargerDonnees();
         });
@@ -526,7 +571,8 @@
     filterOptions,
     options = {},
     multiSelectFilters = new Set(),
-    choixMulti = new Map()
+    choixMulti = new Map(),
+    memoriserEtat = () => {}
   ) {
     filtersRow.innerHTML = "";
 
@@ -544,7 +590,7 @@
 
       const label = String(column.label || column.key || "");
       if (multiSelectFilters.has(column.key)) {
-        cellule.appendChild(creerFiltreMultiselection(column, etat, chargerDonnees, choixMulti.get(column.key) || new Set()));
+        cellule.appendChild(creerFiltreMultiselection(column, etat, chargerDonnees, choixMulti.get(column.key) || new Set(), memoriserEtat));
         filtersRow.appendChild(cellule);
         return;
       }
@@ -566,6 +612,7 @@
         () => {
           etat.filters[column.key] = controle.value;
           etat.offset = 0;
+          memoriserEtat();
           if (typeof options.onFiltersChange === "function") {
             options.onFiltersChange({ ...etat.filters });
           }
@@ -644,7 +691,7 @@
     });
   }
 
-  function creerFiltreMultiselection(column, etat, chargerDonnees, valeurs) {
+  function creerFiltreMultiselection(column, etat, chargerDonnees, valeurs, memoriserEtat = () => {}) {
     const conteneur = document.createElement("details");
     conteneur.className = "lcdp-table-lecture-admin__multi";
     const resume = document.createElement("summary");
@@ -684,6 +731,7 @@
           else valeursChoisies.delete(valeur);
           etat.filters[column.key] = [...valeursChoisies].join("|");
           etat.offset = 0;
+          memoriserEtat();
           afficher();
           chargerDonnees();
         });
@@ -697,6 +745,7 @@
       valeursChoisies.clear();
       etat.filters[column.key] = "";
       etat.offset = 0;
+      memoriserEtat();
       afficher();
       chargerDonnees();
     });
