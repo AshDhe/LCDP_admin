@@ -77,6 +77,12 @@ async function router(request, env) {
     if (session.admin.type !== "root") return interdit(request, session.cookie);
     return statistiquesConnexion(request, env, session);
   }
+  if (request.method === "GET" && path === "/admin/invitations-mensuelles") {
+    const session = await verifierAdmin(request, env);
+    if (!session.ok) return session.response;
+    if (session.admin.type !== "root") return interdit(request, session.cookie);
+    return invitationsMensuelles(request, env, session);
+  }
   if (request.method === "POST" && path === "/admin/accounts/delete") {
     const session = await verifierAdmin(request, env);
     if (!session.ok) return session.response;
@@ -237,6 +243,35 @@ async function statistiquesAffichageLegal(request, env, session) {
     statistiques: Array.isArray(statistiques) ? statistiques : [],
     membres: detail ? (Array.isArray(membres) ? membres : []) : undefined
   }, 200, session.cookie);
+}
+
+async function invitationsMensuelles(request, env, session) {
+  const valeur = new URL(request.url).searchParams.get("annee") || "";
+  const annee = Number(valeur);
+  const anneeEnCours = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Paris", year: "numeric"
+  }).format(new Date()));
+  if (!/^\\d{4}$/.test(valeur) || !Number.isInteger(annee) ||
+      annee < 2020 || annee > anneeEnCours) {
+    return json(request, {
+      success: false, message: "Année non valide."
+    }, 400, session.cookie);
+  }
+  const lignes = [];
+  for (let offset = 0; offset < 10000; offset += 500) {
+    const page = await db(env,
+      "rpc/admin_invitations_mensuelles?limit=500&offset=" + offset, {
+        method: "POST", body: { p_annee: annee }
+      });
+    if (!Array.isArray(page)) throw new Error("Statistiques inexploitables.");
+    lignes.push(...page);
+    if (page.length < 500) {
+      return json(request, {
+        success: true, annee, rows: lignes
+      }, 200, session.cookie);
+    }
+  }
+  throw new Error("Trop de membres pour ce bilan : limite de 10 000.");
 }
 
 async function statistiquesConnexion(request, env, session) {
