@@ -2,7 +2,7 @@
   "use strict";
 
   const TYPES = [
-    { key: "admin", label: "Admin", codes: ["root", "asso"] },
+    { key: "admin", label: "Aso", codes: ["root", "asso"] },
     { key: "resparc", label: "Resparc", codes: ["resparc"] },
     { key: "coach", label: "Coach", codes: ["coach"] }
   ];
@@ -81,8 +81,8 @@
     function mettreAJourBoutonAjouter() {
       if (!ajouter) return;
       ajouter.hidden = !estRoot;
-      ajouter.disabled = !gestionDisponible;
-      ajouter.title = gestionDisponible ? "" : "Service de gestion des comptes indisponible.";
+      ajouter.disabled = !estRoot;
+      ajouter.title = "";
       ajouter.setAttribute("aria-expanded", String(!lightbox.hidden));
       ajouter.setAttribute("aria-controls", "lcdp-listadmin-lightbox");
     }
@@ -99,7 +99,7 @@
     }
 
     function ouvrirLightbox() {
-      if (!estRoot || !gestionDisponible || occupe || !lightbox.hidden) return;
+      if (!estRoot || occupe || !lightbox.hidden) return;
       const def = TYPES.find((item) => item.key === categorieActive);
       if (!def) return;
       formInvitation.reset();
@@ -155,7 +155,7 @@
     });
     formInvitation.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (occupe || !gestionDisponible || !estRoot || !formInvitation.reportValidity()) return;
+      if (occupe || !estRoot || !formInvitation.reportValidity()) return;
       const def = TYPES.find((item) => item.key === categorieActive);
       const code = def?.key === "admin" ? typeInput.value : def?.codes[0];
       if (!def || !def.codes.includes(code) || !TYPES_VALIDES.has(code)) return;
@@ -266,7 +266,7 @@
         }
       } finally {
         occupe = false;
-        envoyerForm.disabled = !gestionDisponible;
+        envoyerForm.disabled = !estRoot;
       }
     }
 
