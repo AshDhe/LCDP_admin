@@ -133,6 +133,7 @@
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 31;
       const NOMBRE_BOUTONS_MEMBRES = 48;
+      const NOMBRE_BOUTONS_COACHS = 48;
       const NOMBRE_BOUTONS_PARCS = 48;
       const NOMBRE_BOUTONS_ADMIN = 48;
       const SLOT_CARTE_PARC = 1;
@@ -175,6 +176,12 @@
                 label: "Membres",
                 cat: "Membres",
                 fallback: "Membres"
+              },
+              {
+                id: "coachs",
+                label: "Coachs",
+                cat: "Coachs",
+                fallback: "Coach"
               }
             ];
 
@@ -716,7 +723,8 @@
           let position = 1;
           position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN :
             (categorie.id === "parcs" ? NOMBRE_BOUTONS_PARCS :
-              (categorie.id === "membres" ? NOMBRE_BOUTONS_MEMBRES : NOMBRE_BOUTONS_PAR_MENU)));
+              (categorie.id === "membres" ? NOMBRE_BOUTONS_MEMBRES :
+                (categorie.id === "coachs" ? NOMBRE_BOUTONS_COACHS : NOMBRE_BOUTONS_PAR_MENU))));
           position += 1
         ) {
           // Parcs : 1 à 24 verts, 25 à 48 orange ; les emplacements libres restent visibles.
@@ -800,6 +808,13 @@
             // Membres : slots 1 à 24 verts ; slots 25 et suivants orange.
             const orange = estSlotOrangeAdminOuMembres(categorie, position);
             lien.dataset.lcdpMembreGroupe = orange ? "orange" : "vert";
+            lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
+            lien.classList.add(orange ? "lcdp-button-orange" : "lcdp-button-primary");
+          } else if (categorie.id === "coachs") {
+            // Coachs : trois rangées vertes, suivies de trois rangées orange.
+            // Les emplacements non attribués restent désactivés et atténués.
+            const orange = position >= 25;
+            lien.dataset.lcdpCoachGroupe = orange ? "orange" : "vert";
             lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
             lien.classList.add(orange ? "lcdp-button-orange" : "lcdp-button-primary");
           } else if (estSlotOrangeAdminOuMembres(categorie, position) ||
