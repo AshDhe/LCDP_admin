@@ -766,11 +766,11 @@
           } else if (estSlotPrivatisation(categorie, position)) {
             configurerBoutonPrivatisation(lien);
           } else if (categorie.id === "membres" && position === 4) {
-            // Emplacement réservé : aucune page ou permission nouvelle n'est définie.
+            // Même vert que les slots actifs ; accès toujours inactif tant qu'aucune page n'est définie.
             lien.textContent = "Invité et invitant";
             lien.href = "#";
-            lien.setAttribute("aria-disabled", "true");
-            lien.setAttribute("aria-label", "Invité et invitant, à configurer");
+            lien.removeAttribute("aria-disabled");
+            lien.setAttribute("aria-label", "Invité et invitant");
             lien.addEventListener("click", (event) => event.preventDefault());
           } else if (configuration) {
             lien.textContent = configuration.label;
