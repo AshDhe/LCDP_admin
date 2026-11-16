@@ -205,7 +205,7 @@ async function statistiquesConnexion(request, env, session) {
   const debut = recherche.get("debut");
   const fin = recherche.get("fin");
   const date = (valeur) => {
-    if (!valeur || !/^\\d{4}-\\d{2}-\\d{2}$/.test(valeur)) return null;
+    if (!valeur || !/^\d{4}-\d{2}-\d{2}$/.test(valeur)) return null;
     const objet = new Date(valeur + "T00:00:00.000Z");
     return Number.isNaN(objet.getTime()) ||
       objet.toISOString().slice(0, 10) !== valeur ? null : objet;
