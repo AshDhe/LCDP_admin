@@ -1345,6 +1345,175 @@
           }
         });
 
+        // Les nouveaux statuts ne sont pas pris en charge par le filtre
+        // historique /carte-parc. Le référentiel parcs-statut les expose via
+        // /read. La fiche administrative fournit les coordonnées si la ligne
+        // de lecture ne les contient pas.
+        function premiereCoordonneeValide(valeurs, borneMinimum, borneMaximum) {
+          for (const brute of valeurs) {
+            if (brute === null || brute === undefined || String(brute).trim() === "") {
+              continue;
+            }
+            const valeur = Number(brute);
+            if (Number.isFinite(valeur) && valeur >= borneMinimum && valeur <= borneMaximum) {
+              return valeur;
+            }
+          }
+          return null;
+        }
+
+        function normaliserParcCarte(parc) {
+          const latitude = premiereCoordonneeValide(
+            [parc?.latitude, parc?.latparc], -90, 90
+          );
+          const longitude = premiereCoordonneeValide(
+            [parc?.longitude, parc?.lngparc], -180, 180
+          );
+
+          if (latitude === null || longitude === null) {
+            return null;
+          }
+
+          return {
+            ...parc,
+            idparc: String(parc.idparc || parc.id || ""),
+            statut: normaliserEtat(parc.statut),
+            latitude,
+            longitude
+          };
+        }
+
+        function localitesDepuisParcs(parcs) {
+          const localites = new Map();
+          parcs.forEach((parc) => {
+            const nom = String(parc.localite || "").trim();
+            const latitude = premiereCoordonneeValide(
+              [parc.latloc], -90, 90
+            );
+            const longitude = premiereCoordonneeValide(
+              [parc.lngloc], -180, 180
+            );
+            if (!nom || latitude === null || longitude === null) return;
+
+            const cle = nom.toLocaleLowerCase("fr-FR") +
+              "|" + latitude + "|" + longitude;
+            if (!localites.has(cle)) {
+              localites.set(cle, { nom, latitude, longitude });
+            }
+          });
+          return [...localites.values()];
+        }
+
+        async function chargerParcsDepuisReferentiel(etat, codes, requeteCourante) {
+          const endpoint = endpointAdminData();
+          const endpointEdition = endpointParcAdmin();
+          const lignes = [];
+          let offset = 0;
+          let total = null;
+
+          // Pagination indispensable : le référentiel peut contenir plus
+          // de lignes que la limite d'une seule réponse.
+          for (let page = 0; page < 100; page++) {
+            const params = new URLSearchParams({
+              resource: "parcs-statut",
+              filter_statut: etat,
+              limit: "100",
+              offset: String(offset)
+            });
+            const response = await fetch(endpoint + "/read?" + params.toString(), {
+              method: "GET",
+              credentials: "include",
+              cache: "no-store",
+              headers: { Accept: "application/json" }
+            });
+            const data = await response.json().catch(() => null);
+            if (requeteCourante !== numeroRequete) return null;
+
+            if (!response.ok || data?.success !== true) {
+              throw new Error(
+                data?.message || data?.detail ||
+                "Lecture du référentiel des statuts impossible."
+              );
+            }
+
+            const lot = Array.isArray(data.rows) ? data.rows : [];
+            lignes.push(...lot);
+
+            if (Number.isFinite(Number(data.total))) {
+              total = Math.max(0, Number(data.total));
+            }
+
+            offset += lot.length;
+            if ((total !== null && offset >= total) || lot.length === 0) {
+              if (total !== null && offset < total) {
+                throw new Error("Le chargement des parcs est incomplet.");
+              }
+              break;
+            }
+            if (page === 99) {
+              throw new Error("Le nombre de pages dépasse la limite de lecture.");
+            }
+          }
+
+          const departements = new Set(codes);
+          const selection = lignes.filter((parc) => {
+            return normaliserEtat(parc?.statut) === etat &&
+              (departements.size === 0 ||
+               departements.has(normaliserDepartement(parc?.dptmt)));
+          });
+
+          if (selection.length === 0) return { rows: [], localites: [] };
+          if (!endpointEdition && selection.some((parc) => !normaliserParcCarte(parc))) {
+            throw new Error("Service de consultation des coordonnées non configuré.");
+          }
+
+          const parcs = [];
+          // Concurrence limitée pour ne pas surcharger le worker d'édition.
+          for (let index = 0; index < selection.length; index += 6) {
+            const lot = selection.slice(index, index + 6);
+            const details = await Promise.all(lot.map(async (ligne) => {
+              const avecCoordonnees = normaliserParcCarte(ligne);
+              if (avecCoordonnees) return avecCoordonnees;
+
+              const idparc = String(ligne?.idparc || ligne?.id || "").trim();
+              if (!idparc) {
+                throw new Error("Identifiant absent d'une ligne de parc.");
+              }
+
+              const params = new URLSearchParams({ idparc });
+              const response = await fetch(
+                endpointEdition + "/edition-parc?" + params.toString(),
+                {
+                  method: "GET",
+                  credentials: "include",
+                  cache: "no-store",
+                  headers: { Accept: "application/json" }
+                }
+              );
+              const data = await response.json().catch(() => null);
+
+              if (!response.ok || data?.success !== true || !data.parc) {
+                throw new Error(
+                  data?.message || data?.detail ||
+                  "Coordonnées du parc indisponibles."
+                );
+              }
+
+              const parc = normaliserParcCarte({ ...ligne, ...data.parc });
+              // Un parc sans coordonnées ne possède pas de position sur la carte.
+              return parc;
+            }));
+
+            if (requeteCourante !== numeroRequete) return null;
+            parcs.push(...details.filter(Boolean));
+          }
+
+          return {
+            rows: parcs.filter((parc) => normaliserEtat(parc.statut) === etat),
+            localites: localitesDepuisParcs(parcs)
+          };
+        }
+
         let temporisation = null;
         let numeroRequete = 0;
 
@@ -1367,6 +1536,23 @@
 
           const requeteCourante = ++numeroRequete;
           statutTexte.textContent = "Chargement des parcs…";
+
+          // Les statuts de suivi sont lus dans le référentiel actuel.
+          // La base brute et le mode « tous » gardent la route historique
+          // optimisée pour leur volume.
+          if (etat && etat !== "1-basebrute") {
+            const resultat = await chargerParcsDepuisReferentiel(
+              etat, codes, requeteCourante
+            );
+            if (requeteCourante !== numeroRequete || !resultat) return;
+
+            dessinerLocalites(resultat.localites);
+            dessinerParcs(resultat.rows);
+            statutTexte.textContent = resultat.rows.length === 0
+              ? "Aucun parc géolocalisé pour les filtres sélectionnés."
+              : "";
+            return;
+          }
 
           // Le service CarteParc ne reconnaît pas tous les statuts SQL
           // du référentiel actuel. On récupère les parcs du périmètre
