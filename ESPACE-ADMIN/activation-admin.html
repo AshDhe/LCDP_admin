@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Activation administrateur — La Clé du Parc</title>
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      const c = window.SITE_CONFIG || {};
+      const objet = c.objetUrl || (path => "/OBJET/" + String(path).replace(/^\/+/, ""));
+      ["/CSSBASE/cssbase.css", "/CSSBASE/lcdp-central-mobile-first.css"].forEach(path => {
+        document.write('<link rel="stylesheet" href="' + objet(path) + '">');
+      });
+      const admin = c.adminUrl || (path => path);
+      document.write('<link rel="stylesheet" href="' +
+        admin("/ESPACE-ADMIN/A_STRUCTURE/css-admin.css") + '">');
+    })();
+  </script>
+</head>
+<body>
+  <div class="lcdp-site-page">
+    <main class="lcdp-site-main">
+      <section class="lcdp-page-section" aria-label="Activation du compte administrateur">
+        <div class="lcdp-page-container">
+          <div class="lcdp-box-formulaire lcdp-stack-large">
+            <h1>La Clé du Parc — espace admin</h1>
+            <h2>Définir mon mot de passe</h2>
+            <p id="lcdp-activation-info">Choisis un mot de passe personnel pour activer ton accès administrateur.</p>
+            <form id="lcdp-activation-form" class="lcdp-stack-large" hidden>
+              <label class="lcdp-box-champ-formulaire">
+                Nouveau mot de passe (12 caractères minimum)
+                <input id="lcdp-activation-pwd" class="lcdp-table-lecture-admin__filter-input"
+                  type="password" name="password" autocomplete="new-password" required minlength="12" maxlength="128">
+              </label>
+              <label class="lcdp-box-champ-formulaire">
+                Confirmer le mot de passe
+                <input id="lcdp-activation-confirm" class="lcdp-table-lecture-admin__filter-input"
+                  type="password" name="confirm" autocomplete="new-password" required minlength="12" maxlength="128">
+              </label>
+              <button type="submit" id="lcdp-activation-submit" class="lcdp-button lcdp-button-orange">
+                Activer mon compte
+              </button>
+            </form>
+            <p id="lcdp-activation-statut" role="status" aria-live="polite"></p>
+            <a id="lcdp-activation-connexion" class="lcdp-button lcdp-button-secondary"
+              href="./connexion-admin.html" hidden>Accéder à la connexion</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./activation-admin.js"></script>
+</body>
+</html>
