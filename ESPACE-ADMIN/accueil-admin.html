@@ -132,20 +132,21 @@
 
       const config = window.SITE_CONFIG || {};
       const NOMBRE_BOUTONS_PAR_MENU = 31;
+      const NOMBRE_BOUTONS_PARCS = 32;
       const NOMBRE_BOUTONS_ADMIN = 48;
-      const SLOT_CARTE_PARC = 3;
-      const SLOT_CARD_PARC = 4;
+      const SLOT_CARTE_PARC = 1;
+      const SLOT_CARD_PARC = 8;
       const SLOT_LOCALISATION_PARC = 18;
-      const SLOT_QUALIFICATION_PARC = 19;
-      const SLOT_CARD1_PARC = 20;
-      const SLOT_UPLOAD_IMG_PARC = 21;
-      const SLOT_HORIZON_PLANNING = 25;
-      const SLOT_PLANNING_PARC = 26;
-      const SLOT_INSERT_FAMILLE = 27;
-      const SLOT_AJUST_FAMILLE = 28;
-      const SLOT_AJUST_COACH = 29;
-      const SLOT_AJUST_DUO = 30;
-      const SLOT_PRIVATISATION = 31;
+      const SLOT_QUALIFICATION_PARC = -1;
+      const SLOT_CARD1_PARC = -1;
+      const SLOT_UPLOAD_IMG_PARC = -1;
+      const SLOT_HORIZON_PLANNING = -1;
+      const SLOT_PLANNING_PARC = 22;
+      const SLOT_INSERT_FAMILLE = 25;
+      const SLOT_AJUST_FAMILLE = -1;
+      const SLOT_AJUST_COACH = -1;
+      const SLOT_AJUST_DUO = -1;
+      const SLOT_PRIVATISATION = -1;
       const CHEMIN_BOX_UPLOAD_IMG =
         "/OBJET/HTMLBASE/04-dialogue-upload-img.html";
 
@@ -715,24 +716,44 @@
 
         for (
           let position = 1;
-          position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN : NOMBRE_BOUTONS_PAR_MENU);
+          position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN :
+            (categorie.id === "parcs" ? NOMBRE_BOUTONS_PARCS : NOMBRE_BOUTONS_PAR_MENU));
           position += 1
         ) {
-          // Deux entrées pour la programmation ; les autres rubriques Parcs restent présentes.
-          if (categorie.id === "parcs" && [SLOT_HORIZON_PLANNING, SLOT_AJUST_FAMILLE,
-              SLOT_AJUST_COACH, SLOT_AJUST_DUO, SLOT_PRIVATISATION, SLOT_QUALIFICATION_PARC,
-              SLOT_CARD1_PARC, SLOT_UPLOAD_IMG_PARC].includes(position)) continue;
+          // Tous les emplacements Parcs 1 à 32 restent visibles, y compris les cases libres.
           const lien = template.content.firstElementChild.cloneNode(true);
           lien.dataset.lcdpPosition = String(position);
 
-          const configuration = boutonsConfigures.find((bouton) => {
-            return (
-              bouton.cat === categorie.cat &&
-              Number(bouton.position) === position
-            );
-          });
+          // On déplace les fonctionnalités existantes sans changer leur permission.
+          const originesParc = {
+            1: 3, 2: 1, 7: 2, 8: 4, 9: 12, 10: 9,
+            19: 23, 25: 27, 26: 24
+          };
+          const positionsLiberees = new Set([12, 23, 27]);
+          const positionSource = categorie.id === "parcs"
+            ? (originesParc[position] || position) : position;
+          const configuration = (
+            categorie.id === "parcs" && positionsLiberees.has(position)
+              ? null
+              : boutonsConfigures.find((bouton) => (
+                  bouton.cat === categorie.cat &&
+                  Number(bouton.position) === positionSource
+                ))
+          );
 
-          if (estSlotCarteParc(categorie, position)) {
+          if (categorie.id === "parcs" && [3, 4, 5].includes(position)) {
+            const vues = {
+              3: ["TexteParc", "parcs.statut.read"],
+              4: ["ImagParc", "parcs.statut.read"],
+              5: ["AccesParc", "parcs.statut.read"]
+            };
+            const [nom, permission] = vues[position];
+            lien.textContent = nom;
+            lien.href = urlAdmin("/ESPACE-ADMIN/B_PARCS/" + nom + ".html");
+            lien.dataset.permissionCode = permission;
+            lien.removeAttribute("aria-disabled");
+            lien.setAttribute("aria-label", "Ouvrir " + nom);
+          } else if (estSlotCarteParc(categorie, position)) {
             configurerBoutonCarteParc(lien);
           } else if (estSlotCardParc(categorie, position)) {
             configurerBoutonCardParc(lien);
@@ -776,7 +797,10 @@
           }
 
           if (estSlotOrangeAdminOuMembres(categorie, position) ||
-              (categorie.id === "parcs" && position === 17)) {
+              (categorie.id === "parcs" && position >= 17 && position <= 32)) {
+            if (categorie.id === "parcs") {
+              lien.dataset.lcdpGroupeOrange = "true";
+            }
             lien.classList.remove(
               "lcdp-button-primary",
               "lcdp-button-secondary"

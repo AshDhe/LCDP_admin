@@ -43,3 +43,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Le numéro reste visible sur chacun des 16 slots orange Parcs (17 à 32). */
+.lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-groupe-orange="true"] {
+  position: relative;
+  padding-top: 18px;
+}
+.lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-groupe-orange="true"]::before {
+  content: attr(data-lcdp-position);
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  opacity: .75;
+}

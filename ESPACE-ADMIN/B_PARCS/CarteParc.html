@@ -489,7 +489,7 @@
         if (inputEtat.tagName === "SELECT") {
           const optionTous = inputEtat.querySelector('option[value=""]');
           const libelleTous = optionTous?.textContent || "Tous";
-          const selectionInitiale = normaliserEtat(inputEtat.value);
+          const selectionInitiale = normaliserEtat(inputEtat.value) || "enligne";
           inputEtat.replaceChildren(
             new Option(libelleTous, ""),
             ...Array.from(STATUTS_AUTORISES, (statut) => new Option(statut, statut))
