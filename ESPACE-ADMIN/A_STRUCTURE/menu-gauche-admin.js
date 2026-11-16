@@ -22,7 +22,7 @@
     }),
     Object.freeze({
       id: "coachs",
-      label: "Coachs",
+      label: "Coach",
       cat: "Coachs",
       fallback: "Coach"
     })
