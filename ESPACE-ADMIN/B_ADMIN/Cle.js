@@ -49,13 +49,13 @@
       actionsId: "lcdp-cle-bluetooth-actions",
       ajouterId: "lcdp-cle-bluetooth-ajouter",
       codeKey: "nomble",
-      codeLabel: "Clé Bluetooth",
+      codeLabel: "Réseau Wi-Fi",
       idKey: "idclebluetooth",
       path: "/cle-bluetooth",
       optionPath: "/options/bracelets",
       optionKey: "idbracelet",
       optionLabel: "Bracelet",
-      boutonAjouter: "Ajouter une clé Bluetooth"
+      boutonAjouter: "Ajouter un réseau Wi-Fi"
     }
   });
 
@@ -475,6 +475,11 @@
         endpoint: endpointCleAdmin(),
         resource: contexte.resource,
         pageSize: 100,
+        columnLabels: contexte.key === "bluetooth"
+          ? { nomble: "Réseau Wi-Fi" }
+          : contexte.key === "membres"
+            ? { brac: "Bracelet" }
+            : { nom: "Parc" },
         initialSortKey:
           contexte.key === "parcs"
             ? "dptmt"
@@ -845,7 +850,7 @@
         },
         {
           name: "nomble",
-          label: "Nom BLE",
+          label: "Réseau Wi-Fi",
           type: "text",
           value: item?.nomble || "",
           required: true,
@@ -857,7 +862,7 @@
           label: "Actif",
           type: "checkbox",
           checked: item?.actif === true,
-          checkboxLabel: "Clé Bluetooth active"
+          checkboxLabel: "Réseau Wi-Fi actif"
         }
       ];
     }
