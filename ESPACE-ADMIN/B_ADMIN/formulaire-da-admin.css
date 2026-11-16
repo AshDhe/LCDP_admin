@@ -51,6 +51,12 @@
   margin: 0;
 }
 
+/* Ne pas afficher les actions avant le chargement effectif de l'éditeur. */
+.lcdp-formulaire-da-admin__actions[hidden],
+.lcdp-formulaire-da-admin__loading[hidden] {
+  display: none !important;
+}
+
 .lcdp-formulaire-da-admin__preview {
   width: 100%;
   padding-top: var(--lcdp-space-3);
