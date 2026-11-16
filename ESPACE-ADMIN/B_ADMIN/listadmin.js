@@ -2,7 +2,7 @@
   "use strict";
 
   const TYPES = [
-    { key: "admin", label: "Aso", codes: ["root", "asso"] },
+    { key: "admin", label: "Asso", codes: ["root", "asso"] },
     { key: "resparc", label: "Resparc", codes: ["resparc"] },
     { key: "coach", label: "Coach", codes: ["coach"] }
   ];
