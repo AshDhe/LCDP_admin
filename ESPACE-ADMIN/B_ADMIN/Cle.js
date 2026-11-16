@@ -32,13 +32,13 @@
       actionsId: "lcdp-cle-membres-actions",
       ajouterId: "lcdp-cle-membres-ajouter",
       codeKey: "brac",
-      codeLabel: "Brac",
+      codeLabel: "Bracelet",
       idKey: "idclemembre",
       path: "/cle-membre",
       optionPath: "/options/membres",
       optionKey: "idmembre",
       optionLabel: "Membre",
-      boutonAjouter: "Ajouter un Brac"
+      boutonAjouter: "Ajouter un bracelet"
     }
   });
 
@@ -1157,6 +1157,102 @@
     return { champParc, champId };
   }
 
+
+  // Sélection d'un seul membre à partir d'une recherche alphabétique progressive.
+  // La valeur envoyée à l'API reste uniquement l'UUID du membre choisi.
+  function initialiserChoixMembreFormulaire(form, item, options) {
+    const candidats = (Array.isArray(options) ? options : [])
+      .filter(x => String(x?.value || "").trim() && String(x?.label || "").trim())
+      .map(x => ({
+        id: String(x.value).trim(),
+        label: String(x.label).trim()
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "fr", {
+        sensitivity: "base", numeric: true
+      }));
+
+    const zone = form.querySelector("[data-lcdp-formulaire-fields]");
+    if (!zone) throw new Error("Zone des champs du formulaire indisponible.");
+    const selection = document.createElement("div");
+    selection.className = "lcdp-cle-admin__selection-membre lcdp-cle-admin__selection-parc";
+
+    const titre = document.createElement("label");
+    titre.className = "lcdp-box-champ-formulaire__label";
+    titre.textContent = "Membre";
+    const etoile = document.createElement("span");
+    etoile.className = "lcdp-box-champ-formulaire__required";
+    etoile.textContent = "*";
+    titre.appendChild(etoile);
+
+    const initial = candidats.find(x => x.id === String(item?.idmembre || ""));
+    const recherche = document.createElement("input");
+    recherche.type = "search";
+    recherche.className = "lcdp-table-lecture-admin__filter-input";
+    recherche.placeholder = "Rechercher par nom, prénom ou email";
+    recherche.autocomplete = "off";
+    recherche.setAttribute("aria-label", "Rechercher un membre par nom, prénom ou email");
+    recherche.setAttribute("aria-autocomplete", "list");
+    recherche.value = initial?.label || "";
+
+    const idMembre = document.createElement("input");
+    idMembre.type = "hidden";
+    idMembre.name = "idmembre";
+    idMembre.id = "idmembre";
+    idMembre.value = initial?.id || "";
+
+    const suggestions = document.createElement("div");
+    suggestions.className = "lcdp-cle-admin__suggestions";
+    suggestions.setAttribute("role", "listbox");
+    suggestions.setAttribute("aria-label", "Suggestions de membres");
+    const statut = document.createElement("p");
+    statut.className = "lcdp-cle-admin__suggestions-info";
+    statut.setAttribute("role", "status");
+
+    const normaliser = value => String(value || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("fr").trim();
+
+    function proposer() {
+      suggestions.replaceChildren();
+      statut.textContent = "";
+      const saisie = normaliser(recherche.value);
+      if (!saisie) return;
+      const resultats = candidats
+        .filter(m => normaliser(m.label).includes(saisie))
+        .sort((a, b) => {
+          const aDebut = normaliser(a.label).startsWith(saisie) ? 0 : 1;
+          const bDebut = normaliser(b.label).startsWith(saisie) ? 0 : 1;
+          return aDebut - bDebut || a.label.localeCompare(b.label, "fr", {
+            sensitivity: "base", numeric: true
+          });
+        });
+      for (const membre of resultats.slice(0, 12)) {
+        const bouton = document.createElement("button");
+        bouton.type = "button";
+        bouton.className = "lcdp-cle-admin__suggestion";
+        bouton.textContent = membre.label;
+        bouton.setAttribute("role", "option");
+        bouton.addEventListener("click", () => {
+          idMembre.value = membre.id;
+          recherche.value = membre.label;
+          suggestions.replaceChildren();
+          statut.textContent = "Membre sélectionné : " + membre.label;
+        });
+        suggestions.appendChild(bouton);
+      }
+      if (!resultats.length) statut.textContent = "Aucun membre correspondant.";
+      else if (resultats.length > 12) statut.textContent = "Affinez la recherche.";
+    }
+    recherche.addEventListener("input", () => {
+      idMembre.value = ""; // Toute retouche exige une nouvelle sélection.
+      proposer();
+    });
+    titre.htmlFor = "lcdp-cle-rechercher-membre";
+    recherche.id = "lcdp-cle-rechercher-membre";
+    selection.append(titre, recherche, suggestions, statut, idMembre);
+    zone.prepend(selection);
+  }
+
   async function rendreFormulaire(contexte, item, options) {
     await chargerScriptObjetUneFois("/JSBASE/03-formulaire.js");
 
@@ -1219,6 +1315,8 @@
 
     if (contexte.key === "parcs") {
       initialiserChoixParcFormulaire(form, item, options);
+    } else if (contexte.key === "membres") {
+      initialiserChoixMembreFormulaire(form, item, options);
     }
     form.addEventListener("submit", enregistrer);
     if(contexte.key==="membres" && modeEdition==="update"){
@@ -1330,17 +1428,8 @@
 
     return [
       {
-        name: "idmembre",
-        label: "Membre",
-        type: "select",
-        value: item?.idmembre || "",
-        options: optionsSelect,
-        required: true,
-        validationNative: true
-      },
-      {
         name: "brac",
-        label: "Brac",
+        label: "Bracelet",
         type: "text",
         value: item?.brac || "",
         required: true,
@@ -1352,7 +1441,7 @@
         label: "Serial",
         type: "text",
         value: item?.serial || "",
-        required: false,
+        required: true,
         validationNative: true,
         maxlength: 100
       },
@@ -1370,7 +1459,7 @@
         label: "Actif",
         type: "checkbox",
         checked: item?.actif === true,
-        checkboxLabel: "Brac actif"
+        checkboxLabel: "Bracelet actif"
       },
       {
         name: "date",
@@ -1431,6 +1520,12 @@
         !String(form.elements.namedItem("idparc")?.value || "").trim()) {
       await afficherAlerte("Choisis d'abord le département, puis sélectionne un parc parmi les résultats proposés.");
       form.querySelector('.lcdp-cle-admin__selection-parc input[type="search"]')?.focus();
+      return;
+    }
+    if (contexteEdition.key === "membres" &&
+        !String(form.elements.namedItem("idmembre")?.value || "").trim()) {
+      await afficherAlerte("Sélectionne un membre parmi les propositions de la recherche.");
+      form.querySelector("#lcdp-cle-rechercher-membre")?.focus();
       return;
     }
 
