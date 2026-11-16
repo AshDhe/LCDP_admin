@@ -5,7 +5,7 @@
   const ONGLET_SLOT_ID = "lcdp-inscrit-onglets-slot";
   const TABLE_SLOT_ID = "lcdp-inscrit-table-slot";
   const FICHE_SLOT_ID = "lcdp-inscrit-fiche-slot";
-  const RESOURCE_CODE = "membres-inscrits";
+  const RESOURCE_CODE = "membres-inscrits-controles";
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -25,22 +25,13 @@
       : path;
   }
 
-  function endpointMembreAdmin() {
-    const configure =
-      config.workerMembreAdminUrl ||
-      config.WORKER_MEMBRE_ADMIN_URL ||
-      window.ADMIN_CONFIG?.API_MEMBRE_ADMIN ||
-      "";
-
-    if (configure) {
-      return String(configure).replace(/\/+$/, "");
-    }
-
-    if (typeof config.apiUrl === "function") {
-      return String(config.apiUrl("membre-admin-api")).replace(/\/+$/, "");
-    }
-
-    return "https://membre-admin-api.lacleduparc.fr";
+  function endpointAdminData() {
+    return String(
+      config.workerAdminDataUrl ||
+      config.WORKER_ADMIN_DATA_URL ||
+      window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+      ""
+    ).replace(/\/+$/, "");
   }
 
   function appliquerRoutes(racine = document) {
@@ -317,13 +308,21 @@
 
     await table.initialiser({
       slotId: TABLE_SLOT_ID,
-      endpoint: endpointMembreAdmin(),
+      endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
       interactiveColumns: ["nommembre"],
       interactiveLabel: "Ouvrir la fiche membre",
       interactiveLabels: {
         nommembre: "Ouvrir la fiche de"
       },
+      filterOptions: Object.fromEntries(
+        ["codea", "coder", "geolocalisation", "bracelet", "selfie", "da", "abonnementencours"]
+          .map((cle) => [cle, [
+            { value: "", label: "Tous" },
+            { value: "Oui", label: "Oui" },
+            { value: "Non", label: "Non" }
+          ]])
+      ),
       initialSortKey: "datecreation",
       initialSortDirection: "desc",
       onCellActivate: ({ row }) => ouvrirFicheMembre(row)
@@ -346,12 +345,19 @@
     donnees.className = "lcdp-inscrit-admin__fiche-donnees";
 
     [
+      ["Département", row?.dptmtmembre],
       ["Nom", row?.nommembre],
       ["Prénom", row?.prenommembre],
       ["E-mail", row?.emailmembre],
       ["DateInsc", formaterDate(row?.datecreation)],
       ["DatEmailValid", formaterDate(row?.dateemailvalid)],
-      ["Dptmt", row?.dptmtmembre]
+      ["Code A", row?.codea],
+      ["Code R", row?.coder],
+      ["Autorisation géolocalisation", row?.geolocalisation],
+      ["Bracelet", row?.bracelet],
+      ["Selfie", row?.selfie],
+      ["DA", row?.da],
+      ["Abonnement en cours", row?.abonnementencours]
     ].forEach(([label, value]) => {
       donnees.appendChild(creerLigneFiche(label, value));
     });
