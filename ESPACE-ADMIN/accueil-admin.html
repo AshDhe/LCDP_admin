@@ -728,14 +728,15 @@
             27: 31, 33: 35, 34: 32
           };
           const positionsLiberees = new Set([12, 30, 31, 35]);
-          // Membres : le suivi des paiements conserve son URL et sa permission,
-          // mais s'affiche au slot 10 au lieu du slot 4.
+          // Membres : VT Abo au slot 9, VT Abo € au slot 10,
+          // Suivi des paiements au slot 11, sans modifier leurs liens ni permissions.
+          const originesMembres = { 9: 8, 10: 9, 11: 4 };
           const positionSource = categorie.id === "parcs"
             ? (originesParc[position] || position)
-            : (categorie.id === "membres" && position === 10 ? 4 : position);
+            : (categorie.id === "membres" ? (originesMembres[position] || position) : position);
           const configuration = (
             (categorie.id === "parcs" && positionsLiberees.has(position)) ||
-            (categorie.id === "membres" && position === 4)
+            (categorie.id === "membres" && [4, 8].includes(position))
               ? null
               : boutonsConfigures.find((bouton) => (
                   bouton.cat === categorie.cat &&
