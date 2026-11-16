@@ -158,7 +158,7 @@
         { id: "admin", label: "Admin", cat: "Admin", fallback: "Admin" },
         { id: "parcs", label: "Parcs", cat: "Parcs", fallback: "Parc" },
         { id: "membres", label: "Membres", cat: "Membres", fallback: "Membres" },
-        { id: "coachs", label: "Coachs", cat: "Coachs", fallback: "Coach" }
+        { id: "coachs", label: "Coach", cat: "Coachs", fallback: "Coach" }
       ];
 
       let boutonsConfigures = [];
@@ -714,10 +714,14 @@
             27: 31, 33: 35, 34: 32
           };
           const positionsLiberees = new Set([12, 30, 31, 35]);
+          // Membres : le suivi des paiements conserve son URL et sa permission,
+          // mais s'affiche au slot 9 au lieu du slot 4.
           const positionSource = categorie.id === "parcs"
-            ? (originesParc[position] || position) : position;
+            ? (originesParc[position] || position)
+            : (categorie.id === "membres" && position === 9 ? 4 : position);
           const configuration = (
-            categorie.id === "parcs" && positionsLiberees.has(position)
+            (categorie.id === "parcs" && positionsLiberees.has(position)) ||
+            (categorie.id === "membres" && position === 4)
               ? null
               : boutonsConfigures.find((bouton) => (
                   bouton.cat === categorie.cat &&
@@ -761,6 +765,13 @@
             configurerBoutonAjustDuo(lien);
           } else if (estSlotPrivatisation(categorie, position)) {
             configurerBoutonPrivatisation(lien);
+          } else if (categorie.id === "membres" && position === 4) {
+            // Emplacement réservé : aucune page ou permission nouvelle n'est définie.
+            lien.textContent = "Invité et invitant";
+            lien.href = "#";
+            lien.setAttribute("aria-disabled", "true");
+            lien.setAttribute("aria-label", "Invité et invitant, à configurer");
+            lien.addEventListener("click", (event) => event.preventDefault());
           } else if (configuration) {
             lien.textContent = configuration.label;
             lien.href = urlAdmin(configuration.href);
