@@ -77,6 +77,12 @@ async function router(request, env) {
     if (session.admin.type !== "root") return interdit(request, session.cookie);
     return statistiquesConnexion(request, env, session);
   }
+  if (request.method === "GET" && path === "/admin/affichage-legal") {
+    const session = await verifierAdmin(request, env);
+    if (!session.ok) return session.response;
+    if (session.admin.type !== "root") return interdit(request, session.cookie);
+    return statistiquesAffichageLegal(request, env, session);
+  }
   if (request.method === "POST" && path === "/admin/accounts/delete") {
     const session = await verifierAdmin(request, env);
     if (!session.ok) return session.response;
@@ -200,6 +206,45 @@ function htmlEchapper(text) {
 }
 
 // Comptabilisation des sessions créées, sans journaliser les ouvertures de pages.
+// Vue administrateur des cinq pages : données nominatives réservées à root.
+async function statistiquesAffichageLegal(request, env, session) {
+  const recherche = new URL(request.url).searchParams;
+  const debut = recherche.get("debut");
+  const fin = recherche.get("fin");
+  const detail = recherche.get("detail") || "";
+  const pages = new Set([
+    "mentions-legales", "reglement-app", "reglement-club",
+    "cgv", "demande-abonnement"
+  ]);
+  const valide = (valeur) => {
+    if (!valeur || !/^\d{4}-\d{2}-\d{2}$/.test(valeur)) return null;
+    const date = new Date(valeur + "T00:00:00.000Z");
+    return Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== valeur ? null : date;
+  };
+  const d1 = valide(debut);
+  const d2 = valide(fin);
+  if (!d1 || !d2 || d2 < d1 || d2 - d1 > 366 * 86400000 ||
+      (detail && !pages.has(detail))) {
+    return json(request, { success: false,
+      message: "Période ou page non valide (367 jours maximum)."
+    }, 400, session.cookie);
+  }
+  const statistiques = await db(env, "rpc/affichagelegal_statistiques", {
+    method: "POST",
+    body: { p_debut: debut, p_fin: fin }
+  });
+  const membres = detail ? await db(env, "rpc/affichagelegal_membres", {
+    method: "POST",
+    body: { p_debut: debut, p_fin: fin, p_code: detail }
+  }) : null;
+  return json(request, {
+    success: true, debut, fin,
+    statistiques: Array.isArray(statistiques) ? statistiques : [],
+    membres: detail ? (Array.isArray(membres) ? membres : []) : undefined
+  }, 200, session.cookie);
+}
+
 async function statistiquesConnexion(request, env, session) {
   const recherche = new URL(request.url).searchParams;
   const debut = recherche.get("debut");
