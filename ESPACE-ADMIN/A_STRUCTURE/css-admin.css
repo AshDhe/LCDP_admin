@@ -386,10 +386,15 @@
 }
 
 .lcdp-page-listadmin .lcdp-table-lecture-admin__table td.lcdp-listadmin__actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--lcdp-space-2);
+  white-space: nowrap;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__actions > button {
+  vertical-align: middle;
+}
+
+.lcdp-page-listadmin .lcdp-listadmin__actions > button + button {
+  margin-left: var(--lcdp-space-2);
 }
 
 .lcdp-page-listadmin .lcdp-table-lecture-admin__table button.lcdp-listadmin__corbeille {
