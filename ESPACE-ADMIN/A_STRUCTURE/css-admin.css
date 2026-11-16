@@ -442,3 +442,112 @@
     margin-left: auto;
   }
 }
+
+/* Liste admin : Ajouter reste sur la même ligne que les trois onglets. */
+.lcdp-page-listadmin .lcdp-listadmin__barre {
+  display: grid;
+  grid-template-columns: minmax(0,420px) max-content;
+  align-items: center;
+  justify-content: start;
+  flex-wrap: nowrap;
+  gap: 12px;
+  width: 100%;
+}
+.lcdp-page-listadmin .lcdp-listadmin__barre > .lcdp-wraper-onglets__navigation {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  flex: initial;
+}
+.lcdp-page-listadmin .lcdp-listadmin__barre > button.lcdp-listadmin__ajouter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 105px;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 16px;
+  white-space: nowrap;
+}
+.lcdp-page-listadmin [hidden] { display: none !important; }
+.lcdp-page-listadmin .lcdp-listadmin__lightbox-card {
+  position: relative;
+  width: min(100%, 450px);
+  max-width: 450px;
+  padding: 22px 24px;
+  text-align: left;
+}
+.lcdp-page-listadmin .lcdp-listadmin__close {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px; height: 32px;
+  padding: 6px; margin: 0;
+  min-height: 0; min-width: 0;
+  border: 0; border-radius: 50%;
+  color: var(--lcdp-color-text);
+  background: var(--lcdp-color-surface-soft);
+  cursor: pointer;
+}
+.lcdp-page-listadmin .lcdp-listadmin__close svg { width: 18px; height: 18px; }
+.lcdp-page-listadmin .lcdp-listadmin__lightbox-titre {
+  margin: 0 34px 8px 0;
+  font-size: 1.23rem; line-height: 1.3; color: var(--lcdp-color-text);
+}
+.lcdp-page-listadmin .lcdp-listadmin__lightbox-description {
+  margin: 0 0 16px;
+  font-size: 0.85rem; line-height: 1.45; color: var(--lcdp-color-text-muted);
+}
+.lcdp-page-listadmin .lcdp-listadmin__formulaire { display: grid; gap: 12px; }
+.lcdp-page-listadmin .lcdp-listadmin__champ {
+  display: grid; gap: 5px;
+  font-size: 0.86rem;
+  color: var(--lcdp-color-text);
+}
+.lcdp-page-listadmin .lcdp-listadmin__champ > :is(input,select) {
+  box-sizing: border-box;
+  width: 100%; height: 38px;
+  min-width: 0; margin: 0; padding: 6px 10px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: 8px;
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+}
+.lcdp-page-listadmin .lcdp-listadmin__champ > :is(input,select):focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 2px;
+}
+.lcdp-page-listadmin .lcdp-listadmin__type-fixe {
+  margin: 0; font-size: 0.85rem; color: var(--lcdp-color-text);
+}
+.lcdp-page-listadmin .lcdp-listadmin__erreur {
+  margin: 0; color: #9f2c24; font-size: 0.83rem;
+}
+.lcdp-page-listadmin .lcdp-listadmin__formulaire-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.lcdp-page-listadmin .lcdp-listadmin__formulaire-actions > .lcdp-button {
+  width: auto; min-width: 125px; min-height: 38px;
+  margin: 0; padding: 8px 14px;
+}
+@media (max-width: 650px) {
+  .lcdp-page-listadmin .lcdp-listadmin__barre {
+    grid-template-columns: minmax(0,1fr) max-content; gap: 8px;
+  }
+  .lcdp-page-listadmin .lcdp-listadmin__barre > button.lcdp-listadmin__ajouter {
+    min-width: 82px; padding: 6px 8px; min-height: 38px;
+  }
+  .lcdp-page-listadmin .lcdp-listadmin__barre .lcdp-wraper-onglets__tab {
+    padding: 7px 3px; min-height: 38px; font-size: .77rem;
+  }
+  .lcdp-page-listadmin .lcdp-listadmin__lightbox-card { padding: 20px 16px; }
+}
