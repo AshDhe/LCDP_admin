@@ -1217,7 +1217,7 @@
         brac: "",
         brightd: 58,
         poll_secondes: 300,
-        geoloc_frq: null,
+        geoloc_frq: 2,
         geoloc_interval_minutes: null,
         actif: false,
         date: "",
@@ -1676,15 +1676,6 @@
         maxlength: 100
       },
       {
-        name: "brightd",
-        label: "Délai BRIGHT-A (minutes)",
-        type: "number",
-        value: Number(item?.brightd || 58),
-        required: true,
-        validationNative: true,
-        min: 1
-      },
-      {
         name: "poll_minutes",
         label: "Communication du bracelet (minutes)",
         type: "number",
@@ -1699,7 +1690,7 @@
         name: "geoloc_frq",
         label: "Contrôles de géolocalisation",
         type: "select",
-        value: item?.geoloc_frq == null ? "" : String(item.geoloc_frq),
+        value: item?.geoloc_frq == null ? "2" : String(item.geoloc_frq),
         options: [
           { value: "", label: "Réglage général" },
           { value: "0", label: "Désactivés" },
@@ -1900,9 +1891,8 @@
       brac: String(
         form.elements.namedItem("brac")?.value || ""
       ).trim(),
-      brightd: Number(
-        form.elements.namedItem("brightd")?.value || 58
-      ),
+      // Compatibilité du Worker : valeur interne conservée, sans champ BRIGHT-A.
+      brightd: Number(ligneEdition?.brightd ?? 58),
       poll_secondes: Number(
         form.elements.namedItem("poll_minutes")?.value || 5
       ) * 60,
