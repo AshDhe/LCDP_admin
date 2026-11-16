@@ -39,23 +39,6 @@
       optionKey: "idmembre",
       optionLabel: "Membre",
       boutonAjouter: "Ajouter un Brac"
-    },
-    bluetooth: {
-      key: "bluetooth",
-      label: "Wi-Fi",
-      resource: "cles-bluetooth",
-      tableSlotId: "lcdp-cle-bluetooth-table-slot",
-      editionSlotId: "lcdp-cle-bluetooth-edition-slot",
-      actionsId: "lcdp-cle-bluetooth-actions",
-      ajouterId: "lcdp-cle-bluetooth-ajouter",
-      codeKey: "nomble",
-      codeLabel: "Réseau Wi-Fi",
-      idKey: "idclebluetooth",
-      path: "/cle-bluetooth",
-      optionPath: "/options/bracelets",
-      optionKey: "idbracelet",
-      optionLabel: "Bracelet",
-      boutonAjouter: "Ajouter un réseau Wi-Fi"
     }
   });
 
@@ -250,8 +233,8 @@
       racine.querySelectorAll("[data-lcdp-panneau-onglet]")
     );
 
-    if (boutons.length < 4 || panneaux.length < 4) {
-      throw new Error("Structure des onglets incomplète.");
+    if (boutons.length !== 3 || panneaux.length !== 3) {
+      throw new Error("Structure des trois onglets incomplète.");
     }
 
     racine.setAttribute("aria-label", "Administration des clés");
@@ -277,11 +260,10 @@
     configurerOnglet(
       boutons[2],
       panneaux[2],
-      "bluetooth",
-      "Wi-Fi",
+      "suivi",
+      "Paramétrage",
       false
     );
-    configurerOnglet(boutons[3],panneaux[3],"suivi","Paramétrage",false);
   }
 
   function assurerTroisiemeOnglet(racine) {
@@ -292,7 +274,9 @@
       racine.querySelectorAll("[data-lcdp-panneau-onglet]")
     );
 
-    if (boutons.length >= 4 && panneaux.length >= 4) {
+    // L'objet partagé contient deux onglets : le troisième est Paramétrage.
+    // Aucun panneau Wi-Fi n'est créé côté admin.
+    if (boutons.length === 3 && panneaux.length === 3) {
       return;
     }
 
@@ -309,7 +293,7 @@
       throw new Error("Structure des onglets incomplète.");
     }
 
-    while (boutons.length < 4) {
+    while (boutons.length < 3) {
       const bouton = modeleBouton.cloneNode(true);
       bouton.removeAttribute("id");
       bouton.removeAttribute("aria-controls");
@@ -319,7 +303,7 @@
       boutons.push(bouton);
     }
 
-    while (panneaux.length < 4) {
+    while (panneaux.length < 3) {
       const panneau = modelePanneau.cloneNode(true);
       panneau.removeAttribute("id");
       panneau.removeAttribute("aria-labelledby");
