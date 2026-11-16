@@ -797,6 +797,8 @@
         toutesLesCles = tous;
         const ids = new Set(tous.map(idParc));
         for (const id of [...selection.parcs]) if (!ids.has(id)) selection.parcs.delete(id);
+        defilement.hidden = false;
+        statut.setAttribute("role", "status");
         rendreFiltres();
         rendreLignes();
       } catch (error) {
