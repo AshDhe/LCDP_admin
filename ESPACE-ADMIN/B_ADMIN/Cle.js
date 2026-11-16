@@ -1213,7 +1213,6 @@
       return {
         idmembre: "",
         brac: "",
-        serial: "",
         brightd: 58,
         poll_secondes: 300,
         geoloc_frq: null,
@@ -1675,17 +1674,8 @@
         maxlength: 100
       },
       {
-        name: "serial",
-        label: "Serial",
-        type: "text",
-        value: item?.serial || "",
-        required: true,
-        validationNative: true,
-        maxlength: 100
-      },
-      {
         name: "brightd",
-        label: "Brightd",
+        label: "Délai BRIGHT-A (minutes)",
         type: "number",
         value: Number(item?.brightd || 58),
         required: true,
@@ -1907,9 +1897,6 @@
       ).trim(),
       brac: String(
         form.elements.namedItem("brac")?.value || ""
-      ).trim(),
-      serial: String(
-        form.elements.namedItem("serial")?.value || ""
       ).trim(),
       brightd: Number(
         form.elements.namedItem("brightd")?.value || 58
