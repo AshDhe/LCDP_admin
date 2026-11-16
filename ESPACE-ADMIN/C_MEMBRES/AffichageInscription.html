@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr" data-lcdp-css="c081">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Affichage inscription - La Clé du Parc</title>
+  <meta name="description" content="Compteurs de consultation des quatre pages du parcours d’inscription de La Clé du Parc.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const config = window.SITE_CONFIG || {};
+      const nettoyer = (value) => String(value || "").replace(/\/+$/, "");
+      const construire = (base, path) => nettoyer(base) + "/" + String(path || "").replace(/^\/+/, "");
+      const adminBase = nettoyer(config.adminBaseUrl || config.ADMIN_BASE || config.siteBase || "");
+      const publicBase = nettoyer(config.publicBaseUrl || config.PUBLIC_BASE || "");
+      const objetBase = nettoyer(config.objetBaseUrl || config.OBJET_BASE || construire(publicBase, "/OBJET"));
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+      window.LCDP_urlAdmin = (path) => typeof config.adminUrl === "function" ? config.adminUrl(path) : construire(adminBase, path);
+      window.LCDP_urlPublic = (path) => typeof config.publicUrl === "function" ? config.publicUrl(path) : construire(publicBase, path);
+      window.LCDP_urlObjet = (path) => typeof config.objetUrl === "function" ? config.objetUrl(path) : construire(objetBase, path);
+      [
+        "/CSSBASE/cssbase.css",
+        "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-central-module-05.css"
+      ].forEach(path => document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">'));
+      document.write('<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/css-admin.css") + '">');
+    })();
+  </script>
+  <link rel="stylesheet" href="../B_ADMIN/AffichageLegal.css">
+  <link rel="stylesheet" href="./AffichageInscription.css">
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-affichage-legal lcdp-page-affichage-inscription">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Statistiques d’affichage inscription">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <h1>Affichage inscription</h1>
+              <p class="lcdp-afflegal-intro">Affichages des quatre étapes d’inscription. Les totaux comprennent les consultations identifiées et non identifiées.</p>
+              <section class="lcdp-wraper-onglets" data-lcdp-wraper-onglets
+                aria-label="Pages suivies">
+                <div class="lcdp-wraper-onglets__navigation"
+                  role="tablist" aria-label="Pages suivies" data-lcdp-wraper-onglets-navigation></div>
+                <div class="lcdp-wraper-onglets__contenu"></div>
+              </section>
+              <p id="lcdp-affinsc-statut" class="lcdp-table-lecture-admin__status"
+                role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./AffichageInscription.js"></script>
+</body>
+</html>
