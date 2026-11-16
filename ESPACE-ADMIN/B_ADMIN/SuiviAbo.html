@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuiviAbo — Administration La Clé du Parc</title>
+  <meta name="description" content="Synthèse des formules d'abonnement commercialisées et des souscriptions des membres.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = v => String(v || "").replace(/\/+$/, "");
+      const lien = (b, p) => base(b) + "/" + String(p || "").replace(/^\/+/, "");
+      const a = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
+      const p = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
+      const o = base(c.objetBaseUrl || c.OBJET_BASE || lien(p, "/OBJET"));
+      window.LCDP_urlAdmin = x => typeof c.adminUrl === "function" ? c.adminUrl(x) : lien(a, x);
+      window.LCDP_urlObjet = x => typeof c.objetUrl === "function" ? c.objetUrl(x) : lien(o, x);
+      ["/CSSBASE/cssbase.css", "/CSSBASE/lcdp-central-mobile-first.css"].forEach(path => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">');
+      });
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css", "/ESPACE-ADMIN/B_ADMIN/SuiviAbo.css"].forEach(path => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(path) + '">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-suiviabo">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Suivi des abonnements">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-suiviabo__entete">
+                <div>
+                  <h1>Suivi des abonnements</h1>
+                  <p>Formules PrixAbo actuellement commercialisées et abonnements réellement souscrits.</p>
+                </div>
+                <button type="button" class="lcdp-button lcdp-button-secondary" id="lcdp-suiviabo-actualiser">Actualiser</button>
+              </header>
+              <p class="lcdp-suiviabo__statut" id="lcdp-suiviabo-statut" role="status" aria-live="polite">Chargement de la synthèse…</p>
+              <section class="lcdp-suiviabo__chiffres" aria-label="Indicateurs de suivi" hidden id="lcdp-suiviabo-chiffres">
+                <div><span>Offres en cours</span><strong id="lcdp-suiviabo-offres">—</strong></div>
+                <div><span>Abonnements en cours</span><strong id="lcdp-suiviabo-abonnements">—</strong></div>
+                <div><span>Membres concernés</span><strong id="lcdp-suiviabo-membres">—</strong></div>
+                <div><span>Abonnements à venir</span><strong id="lcdp-suiviabo-avenir">—</strong></div>
+              </section>
+              <div class="lcdp-table-lecture-admin">
+                <div class="lcdp-table-lecture-admin__scroll">
+                  <table class="lcdp-table-lecture-admin__table">
+                    <caption>Abonnements en cours, par formule et type d'abonnement</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Formule</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Prix TTC actuel</th>
+                        <th scope="col">Abonnements en cours</th>
+                        <th scope="col">Membres concernés</th>
+                        <th scope="col">Abonnements à venir</th>
+                      </tr>
+                    </thead>
+                    <tbody id="lcdp-suiviabo-lignes"></tbody>
+                  </table>
+                </div>
+              </div>
+              <p class="lcdp-suiviabo__precision">« En cours » : souscription payée et active, dont les dates d'accès incluent aujourd'hui. « À venir » : souscription payée et active dont la date de début n'est pas encore atteinte. Une ancienne formule reste comptabilisée même si son tarif n'est plus proposé dans PrixAbo. Le prix affiché est le tarif actuel du catalogue, pas nécessairement le tarif payé par le membre.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./SuiviAbo.js"></script>
+</body>
+</html>
