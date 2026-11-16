@@ -274,6 +274,19 @@
         appliquerRoutes(slot);
       }
 
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (!moduleMenu || typeof moduleMenu.initialiser !== "function") {
+          throw new Error("Menu gauche admin centralisé indisponible.");
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "admin"
+        });
+      }
+
       function endpointAdminData() {
         return String(
           config.workerAdminDataUrl ||
