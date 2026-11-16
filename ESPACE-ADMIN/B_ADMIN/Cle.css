@@ -248,3 +248,84 @@
     width: 100%;
   }
 }
+
+
+/* RefreshApp : tableau des seuls parcs en ligne et actions groupées. */
+.lcdp-page-cle-admin .lcdp-cle-suivi__filtres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__filtres > .lcdp-button {
+  flex: 0 0 185px;
+  width: 185px;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__filtres > .lcdp-cle-admin__jetons {
+  flex: 0 1 auto;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__recherche {
+  flex: 1 1 230px;
+  max-width: 420px;
+  min-width: 180px;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__recherche > input {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__selection .lcdp-button {
+  width: auto;
+  min-width: 170px;
+  min-height: 42px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__nom {
+  border: 0;
+  padding: 3px 2px;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__nom:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__edition:not([hidden]) {
+  padding: 14px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-medium);
+  margin: 12px 0;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__table td,
+.lcdp-page-cle-admin .lcdp-cle-suivi__table th {
+  vertical-align: middle;
+}
+.lcdp-page-cle-admin .lcdp-cle-suivi__table input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+@media (max-width: 580px) {
+  .lcdp-page-cle-admin .lcdp-cle-suivi__filtres > .lcdp-button,
+  .lcdp-page-cle-admin .lcdp-cle-suivi__recherche,
+  .lcdp-page-cle-admin .lcdp-cle-suivi__selection .lcdp-button {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+}
