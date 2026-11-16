@@ -2206,21 +2206,21 @@
         const resultats = elementSuivi("p","");
         resultats.setAttribute("role","status");
         const champs = [
-          ["bracelet_secondes","Refresh couleurs (secondes)"],
-          ["image_secondes","Refresh images (secondes)"]
+          ["bracelet_secondes","Renouvellement des couleurs (minutes)"],
+          ["image_secondes","Renouvellement des images (minutes)"]
         ];
         const inputs = {};
         for (const [cle,libelle] of champs) {
           const label = elementSuivi("label",libelle);
           const champ = elementSuivi("input");
           champ.type = "number";
-          champ.min = "60";
-          champ.max = "86400";
-          champ.step = "1";
+          champ.min = "1";
+          champ.max = "1440";
+          champ.step = "any";
           champ.required = type === "global";
-          champ.value = valeurs?.[cle] ?? "";
+          champ.value = valeurs?.[cle] == null ? "" : String(Number(valeurs[cle]) / 60);
           if (type === "parc") champ.placeholder =
-            "Général : " + String(valeurGlobale?.[cle] ?? "");
+            "Général : " + String(Number(valeurGlobale?.[cle] ?? 300) / 60) + " min";
           inputs[cle] = champ;
           label.append(champ);
           formulaire.appendChild(label);
@@ -2237,9 +2237,9 @@
             // La fréquence de communication du bracelet n'est pas modifiée ici.
             const valeursNouvelles = {
               bracelet_secondes: inputs.bracelet_secondes.value === ""
-                ? null : Number(inputs.bracelet_secondes.value),
+                ? null : Math.round(Number(inputs.bracelet_secondes.value) * 60),
               image_secondes: inputs.image_secondes.value === ""
-                ? null : Number(inputs.image_secondes.value),
+                ? null : Math.round(Number(inputs.image_secondes.value) * 60),
               poll_secondes: valeurs?.poll_secondes ?? null
             };
             await appelSuivi("/admin/monitor/settings",{
