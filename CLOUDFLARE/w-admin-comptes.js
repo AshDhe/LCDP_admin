@@ -51,6 +51,9 @@ async function router(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors(request) });
   }
+  if (request.method === "GET" && path === "/health") {
+    return json(request, { success: true, service: "admin-comptes" });
+  }
   // Origine stricte : également appliquée à l'activation.
   if (!adminOrigin(request)) {
     return json(request, { success: false, message: "Origine non autorisée." }, 403);
@@ -84,7 +87,7 @@ function interdit(request, cookie) {
 async function verifierAdmin(request, env) {
   const url = API_AUTH + "/authorize?path=" +
     encodeURIComponent("/ESPACE-ADMIN/B_ADMIN/listadmin.html");
-  const response = await fetch(url, {
+  const authRequest = new Request(url, {
     method: "GET",
     headers: {
       Origin: ORIGINE_ADMIN,
@@ -93,6 +96,11 @@ async function verifierAdmin(request, env) {
     },
     redirect: "manual"
   });
+  // Service Binding si le Worker d'auth tourne sur une Route Cloudflare.
+  // Sinon, fetch direct fonctionne sur un Custom Domain Cloudflare.
+  const response = env.ADMIN_AUTH_WORKER
+    ? await env.ADMIN_AUTH_WORKER.fetch(authRequest)
+    : await fetch(authRequest);
   const payload = await response.json().catch(() => null);
   const cookie = response.headers.get("Set-Cookie");
   if (!response.ok || payload?.success !== true || !payload?.admin?.id) {
