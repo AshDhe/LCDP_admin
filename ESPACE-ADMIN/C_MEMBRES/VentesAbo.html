@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VT Abo — Administration La Clé du Parc</title>
+  <meta name="description" content="Ventes mensuelles d'abonnements : quantités et montants TTC.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = v => String(v || "").replace(/\/+$/, "");
+      const join = (b,p) => base(b) + "/" + String(p || "").replace(/^\/+/, "");
+      const admin = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
+      const publicBase = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
+      const objet = base(c.objetBaseUrl || c.OBJET_BASE || join(publicBase,"/OBJET"));
+      window.LCDP_urlAdmin = p => typeof c.adminUrl === "function" ? c.adminUrl(p) : join(admin,p);
+      window.LCDP_urlPublic = p => typeof c.publicUrl === "function" ? c.publicUrl(p) : join(publicBase,p);
+      window.LCDP_urlObjet = p => typeof c.objetUrl === "function" ? c.objetUrl(p) : join(objet,p);
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css"].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(p) + '">');
+      });
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css"
+      ].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-ventesabo">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Ventes d'abonnements">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-ventesabo__entete">
+                <div>
+                  <h1 id="lcdp-ventesabo-titre">VT Abo</h1>
+                  <p id="lcdp-ventesabo-sous-titre">Ventes mensuelles d’abonnements</p>
+                </div>
+                <button id="lcdp-ventesabo-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
+              </header>
+
+              <nav class="lcdp-ventesabo__vues" aria-label="Vue des ventes">
+                <a id="lcdp-ventesabo-lien-quantites" href="?vue=quantites">Quantités vendues</a>
+                <a id="lcdp-ventesabo-lien-euros" href="?vue=euros">Montants en euros</a>
+              </nav>
+
+              <p id="lcdp-ventesabo-statut" role="status" aria-live="polite">Chargement des ventes…</p>
+              <div class="lcdp-ventesabo__synthese">
+                <span id="lcdp-ventesabo-periode">Année en cours</span>
+                <strong id="lcdp-ventesabo-total">—</strong>
+              </div>
+              <div class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
+                <div class="lcdp-table-lecture-admin__scroll" tabindex="0" aria-label="Tableau des ventes par mois, défilement horizontal">
+                  <table class="lcdp-table-lecture-admin__table" id="lcdp-ventesabo-table">
+                    <caption id="lcdp-ventesabo-legende">Ventes par formule, mois et total annuel en cours</caption>
+                    <thead><tr id="lcdp-ventesabo-entetes"></tr></thead>
+                    <tbody id="lcdp-ventesabo-lignes"></tbody>
+                    <tfoot><tr id="lcdp-ventesabo-totaux"></tr></tfoot>
+                  </table>
+                </div>
+              </div>
+              <p id="lcdp-ventesabo-note" class="lcdp-ventesabo__note">
+                Ventes comptées à la création de l’abonnement (heure de Paris) : abonnement actif, paiement confirmé et mode test exclu. Les montants correspondent au TTC net des remises, et non aux encaissements par échéance. Les anciennes formules vendues restent visibles.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./VentesAbo.js"></script>
+</body>
+</html>
