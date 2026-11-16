@@ -981,6 +981,9 @@
         brac: "",
         serial: "",
         brightd: 58,
+        poll_secondes: 300,
+        geoloc_frq: null,
+        geoloc_interval_minutes: null,
         actif: false,
         date: "",
         datemaj: ""
@@ -1456,6 +1459,44 @@
         min: 1
       },
       {
+        name: "poll_minutes",
+        label: "Communication du bracelet (minutes)",
+        type: "number",
+        value: Number(item?.poll_secondes ?? 300) / 60,
+        required: true,
+        validationNative: true,
+        min: 5,
+        max: 20,
+        step: 1
+      },
+      {
+        name: "geoloc_frq",
+        label: "Contrôles de géolocalisation",
+        type: "select",
+        value: item?.geoloc_frq == null ? "" : String(item.geoloc_frq),
+        options: [
+          { value: "", label: "Réglage général" },
+          { value: "0", label: "Désactivés" },
+          { value: "2", label: "Entrée et sortie" },
+          ...Array.from({ length: 22 }, (_, i) => ({
+            value: String(i + 3),
+            label: String(i + 1) + " contrôle(s) intermédiaire(s), entrée et sortie"
+          }))
+        ],
+        required: false
+      },
+      {
+        name: "geoloc_interval_minutes",
+        label: "Intervalle entre contrôles GPS (minutes)",
+        type: "number",
+        value: item?.geoloc_interval_minutes ?? "",
+        required: false,
+        validationNative: true,
+        min: 1,
+        max: 1440,
+        step: 1
+      },
+      {
         name: "actif",
         label: "Actif",
         type: "checkbox",
@@ -1639,6 +1680,13 @@
       brightd: Number(
         form.elements.namedItem("brightd")?.value || 58
       ),
+      poll_secondes: Number(
+        form.elements.namedItem("poll_minutes")?.value || 5
+      ) * 60,
+      geoloc_frq: form.elements.namedItem("geoloc_frq")?.value === ""
+        ? null : Number(form.elements.namedItem("geoloc_frq")?.value),
+      geoloc_interval_minutes: form.elements.namedItem("geoloc_interval_minutes")?.value === ""
+        ? null : Number(form.elements.namedItem("geoloc_interval_minutes")?.value),
       actif:
         form.elements.namedItem("actif")?.checked === true,
       date: String(
