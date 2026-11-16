@@ -34,7 +34,7 @@
   const WORKERS = {
     logSessAdmin: "https://ad-log-sess-api.lacleduparc.fr",
     adminData: "https://admin-data-api.lacleduparc.fr",
-    adminComptes: "https://ad-admin-comptes-api.lacleduparc.fr",
+    adminComptes: "https://w-admin-comptes-api.lacleduparc.fr",
     parcAdmin: "https://parc-admin-api.lacleduparc.fr",
     parcPlanning: "https://parc-planning-api.lacleduparc.fr",
     parcPlanningAdmin: "https://parc-planning-api.lacleduparc.fr",
