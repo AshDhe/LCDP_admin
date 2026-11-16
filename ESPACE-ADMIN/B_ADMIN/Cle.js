@@ -444,6 +444,35 @@
   }
 
 
+
+  // Les départements sont sélectionnés avec l'objet centralisé 07-DIGINUM.
+  async function choisirDepartementCle(codes, titre) {
+    await chargerScriptObjetUneFois("/JSBASE/07-diginum.js");
+    if (!window.LCDP_diginum?.ouvrir) throw new Error("Objet Diginum indisponible.");
+    const valides = new Set([...codes].map(x => String(x).trim().toUpperCase()).filter(Boolean));
+    if (!valides.size) throw new Error("Aucun département disponible.");
+    return window.LCDP_diginum.ouvrir({
+      titre: titre || "Choisir un département",
+      placeholder: "exemple 41",
+      longueurMax: Math.max(2, ...[...valides].map(x => x.length)),
+      codesSpeciaux: [...valides].filter(x => /^[0-9][A-Z]$/.test(x)),
+      autoValider: code => valides.has(String(code).toUpperCase()),
+      verifier: code => valides.has(String(code).toUpperCase())
+        ? null : "Aucun parc dans ce département."
+    });
+  }
+
+  function decomposerOptionParc(option) {
+    const label = String(option?.label || "").trim();
+    const match = label.match(/^([0-9]{2,3}|2[AB])\s*[—-]\s*(.+)$/i);
+    return {
+      value: String(option?.value || "").trim(),
+      departement: match ? match[1].toUpperCase() : "",
+      nom: match ? match[2].trim() : label,
+      label
+    };
+  }
+
   // Tableau spécialisé de l'onglet Parc : filtres multisélection exhaustifs.
   // Les valeurs sont chargées par lots via /read ; aucun Worker n'est modifié.
   let rechargerTableParcs = null;
@@ -453,8 +482,6 @@
       departements: new Set(),
       parcs: new Set(),
       active: "",
-      cle: "",
-      instal: "",
       ordre: "",
       nombreVisible: 200
     };
@@ -544,114 +571,145 @@
       });
     }
 
-    function filtreMultiple(intitule, choisis, listeOptions, apresChangement) {
-      const details = element("details", "lcdp-table-lecture-admin__multi");
-      const resume = element("summary", "lcdp-table-lecture-admin__multi-resume");
-      resume.setAttribute("aria-label", "Filtrer par " + intitule);
-      const panneau = element("div", "lcdp-table-lecture-admin__multi-panel");
-      const recherche = element("input", "lcdp-table-lecture-admin__filter-input");
-      recherche.type = "search";
-      recherche.placeholder = "Rechercher";
-      recherche.setAttribute("aria-label", "Rechercher : " + intitule);
-      const cases = element("div", "lcdp-table-lecture-admin__multi-options");
-      const effacer = element("button", "lcdp-table-lecture-admin__multi-clear", "Tout afficher");
-      effacer.type = "button";
-      panneau.append(recherche, cases, effacer);
-      details.append(resume, panneau);
-
-      const actualiser = () => {
-        const count = choisis.size;
-        resume.textContent = count
-          ? count + " sélectionné" + (count > 1 ? "s" : "")
-          : intitule;
-        const options = listeOptions();
-        resume.title = count
-          ? options.filter(x => choisis.has(x.value)).map(x => x.label).join(", ")
-          : "Tous les " + intitule;
-        cases.replaceChildren();
-        const cherche = recherche.value.trim().toLocaleLowerCase("fr");
-        for (const option of options) {
-          if (cherche && !option.label.toLocaleLowerCase("fr").includes(cherche)) continue;
-          const ligne = element("label", "lcdp-table-lecture-admin__multi-choice");
-          const coche = document.createElement("input");
-          coche.type = "checkbox";
-          coche.checked = choisis.has(option.value);
-          coche.addEventListener("change", () => {
-            if (coche.checked) choisis.add(option.value);
-            else choisis.delete(option.value);
-            selection.nombreVisible = 200;
-            actualiser();
-            apresChangement();
-          });
-          ligne.append(coche, document.createTextNode(" " + option.label));
-          cases.appendChild(ligne);
-        }
-        effacer.disabled = count === 0;
-      };
-      recherche.addEventListener("input", actualiser);
-      effacer.addEventListener("click", () => {
-        choisis.clear();
-        selection.nombreVisible = 200;
-        actualiser();
-        apresChangement();
-      });
-      actualiser();
-      return { details, actualiser };
-    }
-
     function rendreFiltres() {
       filtres.replaceChildren();
 
-      const tousDepartements = [...new Set(toutesLesCles.map(x => String(x.dptmt || "").trim()))]
-        .filter(Boolean).sort(comparer).map(value => ({ value, label: value }));
+      const departements = [...new Set(toutesLesCles
+        .map(x => String(x.dptmt || "").trim().toUpperCase()))]
+        .filter(Boolean).sort(comparer);
+
       const parcsParId = new Map();
       for (const cle of toutesLesCles) {
         const id = idParc(cle);
         if (!parcsParId.has(id)) {
           parcsParId.set(id, {
             value: id,
-            dptmt: String(cle.dptmt || "").trim(),
-            label: nomParc(cle) + " (" + String(cle.dptmt || "").trim() + ")"
+            departement: String(cle.dptmt || "").trim().toUpperCase(),
+            nom: nomParc(cle)
           });
         }
       }
-      const tousParcs = [...parcsParId.values()].sort((a, b) => comparer(a.label, b.label));
-      let filtreParcs;
-      const filtreDepartements = filtreMultiple(
-        "Départements", selection.departements,
-        () => tousDepartements,
-        () => {
-          filtreParcs?.actualiser();
-          rendreLignes();
-        }
-      );
-      filtreParcs = filtreMultiple(
-        "Parcs", selection.parcs,
-        () => tousParcs.filter(x => !selection.departements.size ||
-          selection.departements.has(x.dptmt) || selection.parcs.has(x.value)),
-        rendreLignes
-      );
+      const tousParcs = [...parcsParId.values()].sort((a, b) =>
+        comparer(a.nom, b.nom) || comparer(a.departement, b.departement));
 
       function ajouterCellule(contenu) {
         const cellule = document.createElement("th");
         cellule.scope = "col";
-        cellule.appendChild(contenu);
+        if (contenu) cellule.appendChild(contenu);
         filtres.appendChild(cellule);
       }
-      ajouterCellule(filtreDepartements.details);
-      ajouterCellule(filtreParcs.details);
 
-      const filtreCle = element("input", "lcdp-table-lecture-admin__filter-input");
-      filtreCle.type = "search";
-      filtreCle.placeholder = "Filtrer";
-      filtreCle.setAttribute("aria-label", "Filtrer par Clé");
-      filtreCle.value = selection.cle;
-      filtreCle.addEventListener("input", () => {
-        selection.cle = filtreCle.value;
-        selection.nombreVisible = 200;
-        rendreLignes();
+      const departementZone = element("div", "lcdp-cle-admin__departements");
+      const choisirDepartement = element("button", "lcdp-table-lecture-admin__multi-resume", "Ajouter un département");
+      choisirDepartement.type = "button";
+      choisirDepartement.setAttribute("aria-label", "Ajouter un département avec le pavé Diginum");
+      const departementsRetenus = element("div", "lcdp-cle-admin__jetons");
+      const afficherDepartements = () => {
+        departementsRetenus.replaceChildren();
+        for (const departement of [...selection.departements].sort(comparer)) {
+          const retirer = element("button", "lcdp-table-lecture-admin__pagination-button", departement + " ×");
+          retirer.type = "button";
+          retirer.setAttribute("aria-label", "Retirer le département " + departement);
+          retirer.addEventListener("click", () => {
+            selection.departements.delete(departement);
+            selection.nombreVisible = 200;
+            afficherDepartements();
+            mettreAJourRechercheParcs();
+            rendreLignes();
+          });
+          departementsRetenus.appendChild(retirer);
+        }
+      };
+      choisirDepartement.addEventListener("click", async () => {
+        choisirDepartement.disabled = true;
+        try {
+          const dpt = await choisirDepartementCle(departements, "Ajouter un département");
+          if (dpt) {
+            selection.departements.add(String(dpt).toUpperCase());
+            selection.nombreVisible = 200;
+            afficherDepartements();
+            mettreAJourRechercheParcs();
+            rendreLignes();
+          }
+        } catch (error) {
+          await afficherAlerte(error?.message || "Sélecteur de département indisponible.");
+        } finally {
+          choisirDepartement.disabled = false;
+        }
       });
-      ajouterCellule(filtreCle);
+      departementZone.append(choisirDepartement, departementsRetenus);
+      ajouterCellule(departementZone);
+
+      const parcZone = element("div", "lcdp-cle-admin__parcs-recherche");
+      const parcRecherche = element("input", "lcdp-table-lecture-admin__filter-input");
+      parcRecherche.type = "search";
+      parcRecherche.autocomplete = "off";
+      parcRecherche.placeholder = "Rechercher un parc";
+      parcRecherche.setAttribute("aria-label", "Rechercher un parc par son nom");
+      const parcSuggestions = element("div", "lcdp-cle-admin__suggestions");
+      parcSuggestions.setAttribute("role", "listbox");
+      parcSuggestions.setAttribute("aria-label", "Parcs proposés");
+      const parcsRetenus = element("div", "lcdp-cle-admin__jetons");
+      const parcMessage = element("p", "lcdp-cle-admin__suggestions-info");
+      parcMessage.setAttribute("role", "status");
+      parcZone.append(parcRecherche, parcSuggestions, parcsRetenus, parcMessage);
+      ajouterCellule(parcZone);
+
+      function afficherParcsRetenus() {
+        parcsRetenus.replaceChildren();
+        for (const parcId of selection.parcs) {
+          const parc = parcsParId.get(parcId);
+          if (!parc) continue;
+          const retirer = element("button", "lcdp-table-lecture-admin__pagination-button",
+            parc.nom + " ×");
+          retirer.type = "button";
+          retirer.setAttribute("aria-label", "Retirer le parc " + parc.nom);
+          retirer.addEventListener("click", () => {
+            selection.parcs.delete(parcId);
+            selection.nombreVisible = 200;
+            afficherParcsRetenus();
+            mettreAJourRechercheParcs();
+            rendreLignes();
+          });
+          parcsRetenus.appendChild(retirer);
+        }
+      }
+      function mettreAJourRechercheParcs() {
+        parcSuggestions.replaceChildren();
+        parcMessage.textContent = "";
+        const saisie = parcRecherche.value.trim().toLocaleLowerCase("fr");
+        if (!saisie) return;
+        const candidats = tousParcs.filter(parc =>
+          (!selection.departements.size || selection.departements.has(parc.departement)) &&
+          !selection.parcs.has(parc.value) &&
+          parc.nom.toLocaleLowerCase("fr").includes(saisie));
+        for (const parc of candidats.slice(0, 12)) {
+          const choisir = element("button", "lcdp-cle-admin__suggestion",
+            parc.nom + " (" + parc.departement + ")");
+          choisir.type = "button";
+          choisir.setAttribute("role", "option");
+          choisir.addEventListener("click", () => {
+            selection.parcs.add(parc.value);
+            selection.nombreVisible = 200;
+            parcRecherche.value = "";
+            afficherParcsRetenus();
+            mettreAJourRechercheParcs();
+            rendreLignes();
+            parcRecherche.focus();
+          });
+          parcSuggestions.appendChild(choisir);
+        }
+        if (!candidats.length) {
+          parcMessage.textContent = "Aucun parc correspondant.";
+        } else if (candidats.length > 12) {
+          parcMessage.textContent = "Affinez la recherche pour voir les autres parcs.";
+        }
+      }
+      parcRecherche.addEventListener("input", mettreAJourRechercheParcs);
+      afficherParcsRetenus();
+      afficherDepartements();
+
+      ajouterCellule(null); // La clé se lit dans le tableau, sans filtre textuel.
 
       const filtreActif = element("select", "lcdp-table-lecture-admin__filter-input");
       filtreActif.setAttribute("aria-label", "Filtrer les clés actives ou inactives");
@@ -667,32 +725,16 @@
         rendreLignes();
       });
       ajouterCellule(filtreActif);
-
-      const filtreDate = element("input", "lcdp-table-lecture-admin__filter-input");
-      filtreDate.type = "search";
-      filtreDate.placeholder = "Filtrer";
-      filtreDate.setAttribute("aria-label", "Filtrer par date d'installation");
-      filtreDate.value = selection.instal;
-      filtreDate.addEventListener("input", () => {
-        selection.instal = filtreDate.value;
-        selection.nombreVisible = 200;
-        rendreLignes();
-      });
-      ajouterCellule(filtreDate);
+      ajouterCellule(null); // Instal : tri uniquement, pas de filtre.
     }
 
     function rendreLignes() {
-      const motsCle = selection.cle.toLocaleLowerCase("fr").trim();
-      const motsDate = selection.instal.toLocaleLowerCase("fr").trim();
       const lignes = toutesLesCles.filter(cle => {
         const dpt = String(cle.dptmt || "").trim();
         if (selection.departements.size && !selection.departements.has(dpt)) return false;
         if (selection.parcs.size && !selection.parcs.has(idParc(cle))) return false;
         if (selection.active === "oui" && !estActive(cle)) return false;
         if (selection.active === "non" && estActive(cle)) return false;
-        if (motsCle && !String(cle.cle || "").toLocaleLowerCase("fr").includes(motsCle)) return false;
-        if (motsDate && !String(cle.instal || "").toLocaleLowerCase("fr").includes(motsDate) &&
-          !dateInstallation(cle).includes(motsDate)) return false;
         return true;
       });
       if (selection.ordre) {
@@ -1020,6 +1062,115 @@
     editionSlot.appendChild(retour);
   }
 
+
+  // Sélection dépendante dans les formulaires Ajouter/Modifier Clé :
+  // Diginum (département), puis autocomplétion du parc.
+  function initialiserChoixParcFormulaire(form, item, options) {
+    const parcOptions = (Array.isArray(options) ? options : [])
+      .map(decomposerOptionParc)
+      .filter(x => x.value && x.nom && x.departement)
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base", numeric: true }));
+    const dptDisponibles = [...new Set(parcOptions.map(x => x.departement))].sort();
+    const initial = parcOptions.find(x => x.value === String(item?.idparc || ""));
+    let departement = initial?.departement || "";
+    const champId = document.createElement("input");
+    champId.type = "hidden";
+    champId.name = "idparc";
+    champId.id = "idparc";
+    champId.value = initial?.value || "";
+
+    const conteneur = document.createElement("div");
+    conteneur.className = "lcdp-cle-admin__selection-parc";
+    const labelDpt = document.createElement("label");
+    labelDpt.className = "lcdp-box-champ-formulaire__label";
+    labelDpt.textContent = "Département*";
+    const boutonDpt = document.createElement("button");
+    boutonDpt.type = "button";
+    boutonDpt.className = "lcdp-button lcdp-button-secondary";
+    const labelParc = document.createElement("label");
+    labelParc.className = "lcdp-box-champ-formulaire__label";
+    labelParc.textContent = "Parc*";
+    const champParc = document.createElement("input");
+    champParc.type = "search";
+    champParc.className = "lcdp-table-lecture-admin__filter-input";
+    champParc.placeholder = "Rechercher un parc par son nom";
+    champParc.autocomplete = "off";
+    champParc.setAttribute("aria-label", "Rechercher un parc après avoir choisi le département");
+    champParc.value = initial?.nom || "";
+    champParc.disabled = !departement;
+    const suggestions = document.createElement("div");
+    suggestions.className = "lcdp-cle-admin__suggestions";
+    suggestions.setAttribute("role", "listbox");
+    suggestions.setAttribute("aria-label", "Parcs du département");
+    const statut = document.createElement("p");
+    statut.className = "lcdp-cle-admin__suggestions-info";
+    statut.setAttribute("role", "status");
+    const liberer = () => {
+      champId.value = "";
+      suggestions.replaceChildren();
+      statut.textContent = "";
+    };
+
+    const mettreBouton = () => {
+      boutonDpt.textContent = departement
+        ? "Département " + departement + " — Changer"
+        : "Choisir un département";
+    };
+    mettreBouton();
+    const rechercher = () => {
+      suggestions.replaceChildren();
+      statut.textContent = "";
+      if (!departement || !champParc.value.trim()) return;
+      const texte = champParc.value.trim().toLocaleLowerCase("fr");
+      const candidats = parcOptions.filter(parc =>
+        parc.departement === departement &&
+        parc.nom.toLocaleLowerCase("fr").includes(texte));
+      for (const parc of candidats.slice(0, 12)) {
+        const suggestion = document.createElement("button");
+        suggestion.type = "button";
+        suggestion.className = "lcdp-cle-admin__suggestion";
+        suggestion.setAttribute("role", "option");
+        suggestion.textContent = parc.nom;
+        suggestion.addEventListener("click", () => {
+          champId.value = parc.value;
+          champParc.value = parc.nom;
+          suggestions.replaceChildren();
+          statut.textContent = "Parc sélectionné : " + parc.nom;
+        });
+        suggestions.appendChild(suggestion);
+      }
+      if (!candidats.length) statut.textContent = "Aucun parc correspondant.";
+      else if (candidats.length > 12) statut.textContent = "Affinez la recherche.";
+    };
+    boutonDpt.addEventListener("click", async () => {
+      boutonDpt.disabled = true;
+      try {
+        const choisi = await choisirDepartementCle(dptDisponibles, "Choisir le département du parc");
+        if (choisi && choisi !== departement) {
+          departement = choisi;
+          champParc.disabled = false;
+          champParc.value = "";
+          liberer();
+          mettreBouton();
+          champParc.focus();
+        }
+      } catch (error) {
+        await afficherAlerte(error?.message || "Sélection du département indisponible.");
+      } finally {
+        boutonDpt.disabled = false;
+      }
+    });
+    champParc.addEventListener("input", () => {
+      liberer();
+      rechercher();
+    });
+    conteneur.append(labelDpt, boutonDpt, labelParc, champParc, suggestions, statut, champId);
+    const zone = form.querySelector("[data-lcdp-formulaire-fields]");
+    if (!zone) throw new Error("Zone des champs Clé indisponible.");
+    zone.prepend(conteneur);
+    return { champParc, champId };
+  }
+
   async function rendreFormulaire(contexte, item, options) {
     await chargerScriptObjetUneFois("/JSBASE/03-formulaire.js");
 
@@ -1080,6 +1231,9 @@
       throw new Error("Formulaire Clé non créé.");
     }
 
+    if (contexte.key === "parcs") {
+      initialiserChoixParcFormulaire(form, item, options);
+    }
     form.addEventListener("submit", enregistrer);
     if(contexte.key==="membres" && modeEdition==="update"){
       const preparer=document.createElement("button");preparer.type="button";preparer.className="lcdp-button lcdp-button-secondary";preparer.textContent="Générer le secret du bracelet Wi-Fi";
@@ -1131,15 +1285,6 @@
 
     if (contexte.key === "parcs") {
       return [
-        {
-          name: "idparc",
-          label: "Parc",
-          type: "select",
-          value: item?.idparc || "",
-          options: optionsSelect,
-          required: true,
-          validationNative: true
-        },
         {
           name: "cle",
           label: "Clé",
@@ -1294,6 +1439,12 @@
     const form = event.currentTarget;
 
     if (!form.reportValidity() || !contexteEdition) {
+      return;
+    }
+    if (contexteEdition.key === "parcs" &&
+        !String(form.elements.namedItem("idparc")?.value || "").trim()) {
+      await afficherAlerte("Choisis d'abord le département, puis sélectionne un parc parmi les résultats proposés.");
+      form.querySelector('.lcdp-cle-admin__selection-parc input[type="search"]')?.focus();
       return;
     }
 
