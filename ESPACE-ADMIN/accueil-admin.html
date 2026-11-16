@@ -673,7 +673,11 @@
         const numero = Number(position);
         return (
           (categorie.id === "admin" && numero >= 17 && numero <= NOMBRE_BOUTONS_ADMIN) ||
-          (categorie.id === "membres" && (numero === 25 || numero === 26))
+          (categorie.id === "membres" && (
+            (numero >= 6 && numero <= 10) ||
+            (numero >= 16 && numero <= 20) ||
+            (numero >= 26 && numero <= NOMBRE_BOUTONS_PAR_MENU)
+          ))
         );
       }
 
