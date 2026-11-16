@@ -77,12 +77,6 @@ async function router(request, env) {
     if (session.admin.type !== "root") return interdit(request, session.cookie);
     return statistiquesConnexion(request, env, session);
   }
-  if (request.method === "GET" && path === "/admin/affichage-legal") {
-    const session = await verifierAdmin(request, env);
-    if (!session.ok) return session.response;
-    if (session.admin.type !== "root") return interdit(request, session.cookie);
-    return statistiquesAffichageLegal(request, env, session);
-  }
   if (request.method === "POST" && path === "/admin/accounts/delete") {
     const session = await verifierAdmin(request, env);
     if (!session.ok) return session.response;
