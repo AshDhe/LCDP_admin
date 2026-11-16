@@ -136,3 +136,32 @@
     width: 100%;
   }
 }
+
+
+/* Boutons du même formulaire : même dimension et même ligne de base. */
+.lcdp-page-cle-admin #lcdp-cle-form [data-lcdp-formulaire-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+}
+.lcdp-page-cle-admin #lcdp-cle-form [data-lcdp-formulaire-actions] > .lcdp-button {
+  display: inline-flex;
+  flex: 0 0 170px;
+  width: 170px;
+  height: 64px;
+  min-height: 64px;
+  margin: 0;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__selection-membre .lcdp-table-lecture-admin__filter-input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+}
