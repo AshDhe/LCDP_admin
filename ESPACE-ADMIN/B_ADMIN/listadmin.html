@@ -333,28 +333,45 @@
         return guard.verifierAccesPageAdmin();
       }
 
+      function afficherErreurPage(message) {
+        const statut = document.getElementById("lcdp-listadmin-statut");
+        const main = document.getElementById("lcdp-main-admin");
+        if (main) main.hidden = false;
+        if (statut) {
+          statut.hidden = false;
+          statut.setAttribute("role", "alert");
+          statut.textContent = message || "Impossible de charger cette page.";
+        }
+      }
+
       async function initialiserPage() {
         const autorise = await verifierAcces();
+        if (!autorise) return;
 
-        if (!autorise) {
-          return;
-        }
+        // Dès que le droit d'accès est confirmé, afficher la page,
+        // indépendamment du chargement du menu, du bandeau et du Worker.
+        const main = document.getElementById("lcdp-main-admin");
+        if (main) main.hidden = false;
 
-        await Promise.all([
+        const resultats = await Promise.allSettled([
           initialiserBandeau(),
           initialiserMenuGauche(),
           initialiserListe()
         ]);
 
-        const main = document.getElementById("lcdp-main-admin");
+        const erreurs = resultats
+          .filter((resultat) => resultat.status === "rejected")
+          .map((resultat) => resultat.reason?.message || "Composant indisponible.");
 
-        if (main) {
-          main.hidden = false;
+        if (erreurs.length > 0) {
+          console.error("Initialisation partielle de ListAdmin :", erreurs);
+          afficherErreurPage("Certains éléments n'ont pas pu être chargés : " + erreurs.join(" ; "));
         }
       }
 
       initialiserPage().catch((error) => {
-        console.error(error);
+        console.error("Erreur ListAdmin :", error);
+        afficherErreurPage(error?.message || "Erreur technique lors du chargement de la page.");
       });
     })();
   </script>
