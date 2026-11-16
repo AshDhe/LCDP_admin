@@ -2161,174 +2161,299 @@
   function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
   async function appelSuivi(path,body){const r=await fetch(baseSuivi()+path,{method:body?"POST":"GET",credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok || !d.success)throw Error(d.message || "Suivi indisponible.");return d;}
 
+  // RefreshApp : uniquement les parcs en ligne. Chaque parc conserve deux
+  // fréquences : couleur du bracelet et combinaison de trois couleurs du mobile.
   async function initialiserSuivi() {
     const zone = document.querySelector('[data-lcdp-contenu-onglet="suivi"]');
     if (!zone) return;
-    zone.replaceChildren();
-    const statut = elementSuivi("p", "Chargement des réglages RefreshApp…");
-    statut.setAttribute("role","status");
-    zone.appendChild(statut);
+    const creer = (tag, classe, texte) => {
+      const e = document.createElement(tag);
+      if (classe) e.className = classe;
+      if (texte !== undefined) e.textContent = texte;
+      return e;
+    };
+    const normaliser = v => String(v ?? "").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr").trim();
+    const minutes = n => n == null || !Number.isFinite(Number(n))
+      ? "—" : String(Number(n) / 60);
+    const statut = creer("p", "lcdp-table-lecture-admin__status",
+      "Chargement des parcs en ligne…");
+    statut.setAttribute("role", "status");
+    zone.replaceChildren(statut);
 
+    let parcs = [];
     try {
-      const [donnees, optionsParcs] = await Promise.all([
-        appelSuivi("/admin/monitor?page=0"),
-        chargerOptions(CONTEXTES.parcs)
-      ]);
-      const options = optionsParcs.map(decomposerOptionParc)
-        .filter(p => p.value && p.departement && p.nom)
-        .sort((a,b) => a.nom.localeCompare(b.nom,"fr",{sensitivity:"base",numeric:true}));
-      const parcsRegles = new Map((donnees.parks || []).map(p => [String(p.idparc),p]));
-      const departements = [...new Set(options.map(p => p.departement))]
-        .sort((a,b) => a.localeCompare(b,"fr",{numeric:true}));
-      const normaliser = v => String(v ?? "").normalize("NFD")
-        .replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr").trim();
-      zone.replaceChildren();
-      zone.append(
-        elementSuivi("p","Actualisation des couleurs et des images de présence sur le téléphone."),
-        elementSuivi("h2","Réglages généraux")
-      );
-
-      function formulaireRotation(type, id, valeurs, valeurGlobale) {
-        const formulaire = elementSuivi("form",undefined,"lcdp-cle-suivi__form");
-        const resultats = elementSuivi("p","");
-        resultats.setAttribute("role","status");
-        const champs = [
-          ["bracelet_secondes","Renouvellement des couleurs (minutes)"],
-          ["image_secondes","Renouvellement des images (minutes)"]
-        ];
-        const inputs = {};
-        for (const [cle,libelle] of champs) {
-          const label = elementSuivi("label",libelle);
-          const champ = elementSuivi("input");
-          champ.type = "number";
-          champ.min = "1";
-          champ.max = "1440";
-          champ.step = "any";
-          champ.required = type === "global";
-          champ.value = valeurs?.[cle] == null ? "" : String(Number(valeurs[cle]) / 60);
-          if (type === "parc") champ.placeholder =
-            "Général : " + String(Number(valeurGlobale?.[cle] ?? 300) / 60) + " min";
-          inputs[cle] = champ;
-          label.append(champ);
-          formulaire.appendChild(label);
-        }
-        const bouton = elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");
-        bouton.type = "submit";
-        formulaire.append(bouton,resultats);
-        formulaire.addEventListener("submit",async event => {
-          event.preventDefault();
-          if (!formulaire.reportValidity()) return;
-          bouton.disabled = true;
-          resultats.textContent = "";
-          try {
-            // La fréquence de communication du bracelet n'est pas modifiée ici.
-            const valeursNouvelles = {
-              bracelet_secondes: inputs.bracelet_secondes.value === ""
-                ? null : Math.round(Number(inputs.bracelet_secondes.value) * 60),
-              image_secondes: inputs.image_secondes.value === ""
-                ? null : Math.round(Number(inputs.image_secondes.value) * 60),
-              poll_secondes: valeurs?.poll_secondes ?? null
-            };
-            await appelSuivi("/admin/monitor/settings",{
-              type,id,values:valeursNouvelles
-            });
-            Object.assign(valeurs,valeursNouvelles);
-            resultats.textContent = "Réglages enregistrés.";
-          } catch(error) {
-            resultats.textContent = String(error?.message || "Enregistrement indisponible.");
-          } finally {
-            bouton.disabled = false;
-          }
-        });
-        return formulaire;
+      for (let offset = 0; offset < 10000; offset += 250) {
+        const page = await appelSuivi(
+          "/admin/monitor/parks?offset=" + offset + "&limit=250"
+        );
+        if (!Array.isArray(page.parks)) throw Error("Liste des parcs invalide.");
+        parcs.push(...page.parks);
+        if (!page.hasMore) break;
       }
-
-      zone.appendChild(formulaireRotation("global","",donnees.global,donnees.global));
-      zone.appendChild(elementSuivi("h2","Réglages d’un parc"));
-
-      const selecteur = elementSuivi("div",undefined,"lcdp-cle-suivi__choix-parc");
-      const departement = elementSuivi("button","Choisir un département",
-        "lcdp-button lcdp-button-secondary");
-      departement.type = "button";
-      const recherche = elementSuivi("input");
-      recherche.type = "search";
-      recherche.autocomplete = "off";
-      recherche.placeholder = "Rechercher un parc par son nom";
-      recherche.setAttribute("aria-label","Recherche alphabétique du parc");
-      recherche.setAttribute("aria-autocomplete","list");
-      recherche.disabled = true;
-      const suggestions = elementSuivi("div",undefined,"lcdp-cle-admin__suggestions");
-      suggestions.setAttribute("role","listbox");
-      suggestions.setAttribute("aria-label","Parcs du département");
-      const carte = elementSuivi("div",undefined,"lcdp-cle-suivi__parc-unique");
-      const note = elementSuivi("p","");
-      note.setAttribute("role","status");
-      selecteur.append(departement,recherche,suggestions,note,carte);
-      zone.appendChild(selecteur);
-      let dptCourant = "";
-      function proposerParcs() {
-        suggestions.replaceChildren();
-        note.textContent = "";
-        if (!dptCourant || !recherche.value.trim()) return;
-        const rechercheTexte = normaliser(recherche.value);
-        const resultats = options.filter(p => p.departement === dptCourant &&
-          normaliser(p.nom).includes(rechercheTexte));
-        for (const p of resultats.slice(0,12)) {
-          const b = elementSuivi("button",p.nom,"lcdp-cle-admin__suggestion");
-          b.type = "button";
-          b.setAttribute("role","option");
-          b.addEventListener("click",() => {
-            const parc = parcsRegles.get(p.value);
-            recherche.value = p.nom;
-            suggestions.replaceChildren();
-            carte.replaceChildren();
-            if (!parc) {
-              note.textContent = "Réglages de ce parc non disponibles dans la réponse du service.";
-              return;
-            }
-            note.textContent = "";
-            const bloc = elementSuivi("section",undefined,"lcdp-cle-suivi__carte");
-            bloc.append(
-              elementSuivi("h3",p.nom + " (" + p.departement + ")"),
-              formulaireRotation("parc",parc.idparc,parc.overrides,parc.effective)
-            );
-            carte.appendChild(bloc);
-          });
-          suggestions.appendChild(b);
-        }
-        if (!resultats.length) note.textContent = "Aucun parc correspondant.";
-        else if(resultats.length>12) note.textContent = "Affinez la recherche.";
-      }
-      departement.addEventListener("click",async() => {
-        departement.disabled = true;
-        try {
-          const dpt = await choisirDepartementCle(departements,"Sélectionner un département");
-          if(dpt) {
-            dptCourant = String(dpt).toUpperCase();
-            departement.textContent = "Dptmt " + dptCourant + " — Changer";
-            recherche.disabled = false;
-            recherche.value = "";
-            suggestions.replaceChildren();
-            carte.replaceChildren();
-            note.textContent = "";
-            recherche.focus();
-          }
-        }catch(error) {
-          note.textContent = String(error?.message || "Sélection du département impossible.");
-        }finally {
-          departement.disabled = false;
-        }
-      });
-      recherche.addEventListener("input",() => {
-        carte.replaceChildren();
-        proposerParcs();
-      });
-      if(donnees.parksTruncated) {
-        zone.append(elementSuivi("p","Le suivi contient plus de 1 000 parcs ; le service ne fournit qu'une partie de leurs réglages."));
-      }
-    }catch(error) {
-      statut.textContent = String(error?.message || "RefreshApp indisponible.");
+    } catch (error) {
+      statut.textContent = String(error?.message || "Liste RefreshApp indisponible.");
+      return;
     }
+    parcs.sort((a, b) =>
+      String(a.dptmt || "").localeCompare(String(b.dptmt || ""), "fr", {numeric:true})
+      || String(a.nom || "").localeCompare(String(b.nom || ""), "fr", {sensitivity:"base"})
+    );
+    const departements = [...new Set(parcs.map(p =>
+      String(p.dptmt || "").trim().toUpperCase()
+    ))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"fr",{numeric:true}));
+    const dptsChoisis = new Set();
+    const parcsChoisis = new Set();
+    let texteRecherche = "";
+    let affiches = 200;
+
+    const barre = creer("div", "lcdp-cle-suivi__filtres");
+    const departement = creer("button", "lcdp-button lcdp-button-secondary",
+      "Départements");
+    departement.type = "button";
+    const jetons = creer("div", "lcdp-cle-admin__jetons");
+    const rechercheZone = creer("div", "lcdp-cle-suivi__recherche");
+    const recherche = creer("input", "lcdp-table-lecture-admin__filter-input");
+    recherche.type = "search";
+    recherche.autocomplete = "off";
+    recherche.placeholder = "Rechercher un parc";
+    recherche.setAttribute("aria-label", "Rechercher un parc par son nom");
+    const suggestions = creer("div", "lcdp-cle-admin__suggestions");
+    suggestions.setAttribute("role", "listbox");
+    rechercheZone.append(recherche, suggestions);
+    barre.append(departement, jetons, rechercheZone);
+
+    const actions = creer("div", "lcdp-cle-suivi__selection");
+    const selectionner = creer("button", "lcdp-button lcdp-button-secondary",
+      "Sélectionner les parcs filtrés");
+    selectionner.type = "button";
+    const effacer = creer("button", "lcdp-button lcdp-button-secondary",
+      "Effacer la sélection");
+    effacer.type = "button";
+    const grouper = creer("button", "lcdp-button lcdp-button-orange",
+      "Modifier les parcs sélectionnés");
+    grouper.type = "button";
+    const indication = creer("span", "lcdp-cle-suivi__selection-etat");
+    actions.append(selectionner, effacer, grouper, indication);
+
+    const edition = creer("section", "lcdp-cle-suivi__edition");
+    edition.hidden = true;
+    const cadre = creer("section", "lcdp-table-lecture-admin");
+    const defilement = creer("div", "lcdp-table-lecture-admin__scroll");
+    const tableau = creer("table", "lcdp-table-lecture-admin__table");
+    const entete = creer("thead");
+    const enteteLigne = creer("tr");
+    for (const titre of ["Choix", "Dptmt", "Parc", "Couleur bracelet (min)",
+      "Combinaison 3 couleurs (min)"]) {
+      const th = creer("th", "", titre);
+      th.scope = "col";
+      enteteLigne.appendChild(th);
+    }
+    entete.appendChild(enteteLigne);
+    const corps = creer("tbody");
+    tableau.append(entete, corps);
+    defilement.appendChild(tableau);
+    const suite = creer("button", "lcdp-table-lecture-admin__pagination-button",
+      "Afficher 200 parcs supplémentaires");
+    suite.type = "button";
+    cadre.append(defilement, suite);
+    const note = creer("p", "lcdp-cle-suivi__note");
+    note.setAttribute("role", "status");
+    zone.replaceChildren(
+      creer("p", "", "Refresh par parc : couleur du bracelet et combinaison des trois couleurs de l’application."),
+      barre, actions, edition, cadre, note
+    );
+
+    const filtrer = () => parcs.filter(p =>
+      (!dptsChoisis.size || dptsChoisis.has(String(p.dptmt || "").toUpperCase()))
+      && (!texteRecherche || normaliser(p.nom).includes(normaliser(texteRecherche)))
+    );
+    function majSelection() {
+      indication.textContent = parcsChoisis.size
+        ? parcsChoisis.size + " parc(s) sélectionné(s)" : "";
+      grouper.disabled = parcsChoisis.size === 0;
+      effacer.disabled = parcsChoisis.size === 0;
+    }
+    function afficherJetons() {
+      jetons.replaceChildren();
+      for (const code of [...dptsChoisis].sort()) {
+        const bouton = creer("button", "lcdp-table-lecture-admin__pagination-button",
+          code + " ×");
+        bouton.type = "button";
+        bouton.setAttribute("aria-label", "Retirer le département " + code);
+        bouton.addEventListener("click", () => {
+          dptsChoisis.delete(code);
+          affiches = 200;
+          afficherJetons(); rendre();
+        });
+        jetons.appendChild(bouton);
+      }
+    }
+    function rendre() {
+      const lignes = filtrer();
+      const fragment = document.createDocumentFragment();
+      for (const parc of lignes.slice(0, affiches)) {
+        const tr = creer("tr");
+        const choix = creer("td");
+        const caseParc = creer("input");
+        caseParc.type = "checkbox";
+        caseParc.checked = parcsChoisis.has(String(parc.idparc));
+        caseParc.setAttribute("aria-label", "Sélectionner le parc " + parc.nom);
+        caseParc.addEventListener("change", () => {
+          if (caseParc.checked) parcsChoisis.add(String(parc.idparc));
+          else parcsChoisis.delete(String(parc.idparc));
+          majSelection();
+        });
+        choix.appendChild(caseParc);
+        const nom = creer("td");
+        const ouvrir = creer("button", "lcdp-cle-suivi__nom", String(parc.nom));
+        ouvrir.type = "button";
+        ouvrir.addEventListener("click", () => modifier([parc]));
+        nom.appendChild(ouvrir);
+        tr.append(choix, creer("td", "", String(parc.dptmt || "")),
+          nom, creer("td", "", minutes(parc.effective?.bracelet_secondes)),
+          creer("td", "", minutes(parc.effective?.image_secondes)));
+        fragment.appendChild(tr);
+      }
+      corps.replaceChildren(fragment);
+      suite.hidden = lignes.length <= affiches;
+      note.textContent = lignes.length ? "" : "Aucun parc en ligne ne correspond aux filtres.";
+      majSelection();
+    }
+    function proposer() {
+      suggestions.replaceChildren();
+      if (!normaliser(recherche.value)) return;
+      const mots = [...new Set(parcs.filter(p => !dptsChoisis.size ||
+        dptsChoisis.has(String(p.dptmt || "").toUpperCase()))
+        .map(p => String(p.nom || "")))].filter(n =>
+        normaliser(n).includes(normaliser(recherche.value)));
+      mots.sort((a, b) =>
+        Number(normaliser(b).startsWith(normaliser(recherche.value))) -
+        Number(normaliser(a).startsWith(normaliser(recherche.value)))
+        || a.localeCompare(b, "fr", {sensitivity:"base"})
+      );
+      for (const mot of mots.slice(0, 12)) {
+        const bouton = creer("button", "lcdp-cle-admin__suggestion", mot);
+        bouton.type = "button";
+        bouton.addEventListener("click", () => {
+          recherche.value = mot; texteRecherche = mot; affiches = 200;
+          suggestions.replaceChildren(); rendre();
+        });
+        suggestions.appendChild(bouton);
+      }
+    }
+    departement.addEventListener("click", async () => {
+      departement.disabled = true;
+      try {
+        const code = await choisirDepartementCle(departements, "Filtrer par département");
+        if (code) {
+          dptsChoisis.add(String(code).toUpperCase());
+          affiches = 200;
+          afficherJetons(); proposer(); rendre();
+        }
+      } catch (error) {
+        note.textContent = String(error?.message || "Département indisponible.");
+      } finally {
+        departement.disabled = false;
+      }
+    });
+    recherche.addEventListener("input", () => {
+      texteRecherche = recherche.value;
+      affiches = 200;
+      proposer(); rendre();
+    });
+    selectionner.addEventListener("click", () => {
+      for (const parc of filtrer()) parcsChoisis.add(String(parc.idparc));
+      rendre();
+    });
+    effacer.addEventListener("click", () => {
+      parcsChoisis.clear();
+      rendre();
+    });
+    suite.addEventListener("click", () => {
+      affiches += 200;
+      rendre();
+    });
+    grouper.addEventListener("click", () => {
+      modifier(parcs.filter(p => parcsChoisis.has(String(p.idparc))));
+    });
+
+    function modifier(cibles) {
+      if (!cibles.length) return;
+      edition.replaceChildren();
+      const formulaire = creer("form", "lcdp-cle-suivi__form");
+      const groupe = cibles.length > 1;
+      const titre = creer("h3", "", groupe
+        ? "Modifier " + cibles.length + " parcs"
+        : "Modifier " + cibles[0].nom);
+      const champs = [
+        ["bracelet_secondes", "Refresh couleur du bracelet (minutes)"],
+        ["image_secondes", "Refresh des trois couleurs de l’application (minutes)"]
+      ];
+      const controles = {};
+      for (const [cle, libelle] of champs) {
+        const label = creer("label", "", libelle);
+        const champ = creer("input");
+        champ.type = "number";
+        champ.min = "1";
+        champ.max = "1440";
+        champ.step = "any";
+        champ.required = true;
+        champ.value = groupe ? "" : minutes(cibles[0].effective?.[cle]);
+        champ.placeholder = groupe ? "Valeur commune en minutes" : "";
+        controles[cle] = champ;
+        label.appendChild(champ);
+        formulaire.appendChild(label);
+      }
+      const enregistrer = creer("button", "lcdp-button lcdp-button-orange", "Enregistrer");
+      enregistrer.type = "submit";
+      const annuler = creer("button", "lcdp-button lcdp-button-secondary", "Annuler");
+      annuler.type = "button";
+      const retour = creer("p", "");
+      retour.setAttribute("role", "status");
+      annuler.addEventListener("click", () => { edition.hidden = true; });
+      formulaire.append(enregistrer, annuler, retour);
+      edition.append(titre, formulaire);
+      edition.hidden = false;
+      edition.scrollIntoView({block:"nearest",behavior:"smooth"});
+      formulaire.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!formulaire.reportValidity()) return;
+        const valeurs = {
+          bracelet_secondes: Math.round(Number(controles.bracelet_secondes.value) * 60),
+          image_secondes: Math.round(Number(controles.image_secondes.value) * 60)
+        };
+        if (Object.values(valeurs).some(v => !Number.isInteger(v) ||
+            v < 60 || v > 86400)) {
+          retour.textContent = "Valeurs invalides.";
+          return;
+        }
+        enregistrer.disabled = true;
+        annuler.disabled = true;
+        retour.textContent = "";
+        try {
+          const resultat = await appelSuivi("/admin/monitor/settings/bulk", {
+            ids: cibles.map(p => String(p.idparc)),
+            values: valeurs
+          });
+          if (Number(resultat.updated) !== cibles.length)
+            throw Error("Nombre de parcs modifiés inattendu.");
+          for (const parc of cibles) {
+            parc.effective = {...parc.effective, ...valeurs};
+            parc.overrides = {...parc.overrides, ...valeurs};
+          }
+          edition.hidden = true;
+          rendre();
+          note.textContent = "Refresh enregistré pour " + cibles.length + " parc(s).";
+        } catch (error) {
+          retour.textContent = String(error?.message || "Enregistrement impossible.");
+        } finally {
+          enregistrer.disabled = false;
+          annuler.disabled = false;
+        }
+      });
+    }
+    rendre();
   }
 
   async function initialiserPage() {
