@@ -243,6 +243,16 @@
   border-color: var(--lcdp-color-primary);
 }
 
+/* RUBRIQUES : ALIGNER LES COLONNES DES DEUX TABLEAUX (VERT / ORANGE) */
+
+.lcdp-page-rubriques-admin .lcdp-table-lecture-admin__table {
+  table-layout: fixed;
+}
+
+.lcdp-page-rubriques-admin .lcdp-table-lecture-admin__table th:first-child {
+  width: 35%;
+}
+
 /* WORKFLOW ADMIN PARCS - NOUVEAUPARC */
 
 .lcdp-page-nouveauparc .lcdp-box-formulaire-page {
