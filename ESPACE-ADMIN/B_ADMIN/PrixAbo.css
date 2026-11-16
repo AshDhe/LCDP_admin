@@ -57,3 +57,21 @@
     margin: 0;
   }
 }
+
+/* Filtres calendaires : Création, Début et Fin, indépendamment de l'ordre des colonnes. */
+.lcdp-page-prixabo #lcdp-prixabo-table-slot
+.lcdp-table-lecture-admin__filters input[type="date"] {
+  box-sizing: border-box;
+  width: 158px;
+  min-width: 158px;
+  min-height: 36px;
+  padding: 6px 8px;
+  font-variant-numeric: tabular-nums;
+  accent-color: var(--lcdp-color-primary);
+  cursor: pointer;
+}
+.lcdp-page-prixabo #lcdp-prixabo-table-slot
+.lcdp-table-lecture-admin__filters input[type="date"]:focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 2px;
+}
