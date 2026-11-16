@@ -94,7 +94,7 @@
       ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
-          window.LCDP_urlAdmin(path) +
+          window.LCDP_urlAdmin(path) + "?v=20261116-lightbox" +
           '">'
         );
       });
@@ -121,7 +121,7 @@
               <section class="lcdp-wraper-onglets" data-lcdp-wraper-onglets aria-label="Comptes de l'espace admin">
                 <div class="lcdp-listadmin__barre">
                   <div class="lcdp-wraper-onglets__navigation" role="tablist" aria-label="Types de comptes" data-lcdp-wraper-onglets-navigation></div>
-                  <button type="button" id="lcdp-listadmin-ajouter" class="lcdp-button lcdp-button-orange lcdp-listadmin__ajouter" hidden>Ajouter</button>
+                  <button type="button" id="lcdp-listadmin-ajouter" class="lcdp-button lcdp-button-orange lcdp-listadmin__ajouter" aria-expanded="false" aria-controls="lcdp-listadmin-lightbox" hidden>Ajouter</button>
                 </div>
                 <div class="lcdp-wraper-onglets__contenu"></div>
               </section>
@@ -132,6 +132,43 @@
         </div>
       </section>
     </main>
+
+    <!-- Invitation : lightbox indépendante de la liste et masquée à l'ouverture. -->
+    <div id="lcdp-listadmin-lightbox" class="lcdp-dialogue-ref lcdp-listadmin__lightbox"
+      role="dialog" aria-modal="true" aria-labelledby="lcdp-listadmin-form-title" hidden>
+      <div class="lcdp-dialogue-ref__card lcdp-listadmin__lightbox-card">
+        <button type="button" class="lcdp-listadmin__close" data-lcdp-listadmin-fermer aria-label="Fermer">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+        <h2 id="lcdp-listadmin-form-title" class="lcdp-listadmin__lightbox-titre">Nouvel administrateur</h2>
+        <p class="lcdp-listadmin__lightbox-description">Un email sera envoyé à cette adresse pour permettre au destinataire de définir son mot de passe.</p>
+        <form id="lcdp-listadmin-form" class="lcdp-listadmin__formulaire">
+          <label class="lcdp-listadmin__champ">Nom
+            <input name="nomadmin" type="text" maxlength="120" autocomplete="family-name" required>
+          </label>
+          <label class="lcdp-listadmin__champ">Prénom
+            <input name="prenomadmin" type="text" maxlength="120" autocomplete="given-name" required>
+          </label>
+          <label class="lcdp-listadmin__champ">Email
+            <input name="adminemail" type="email" maxlength="254" autocomplete="email" required>
+          </label>
+          <label id="lcdp-listadmin-type-champ" class="lcdp-listadmin__champ">Type
+            <select name="type" id="lcdp-listadmin-type" required>
+              <option value="">Choisir un type</option>
+              <option value="root">Root</option><option value="asso">Asso</option>
+            </select>
+          </label>
+          <p id="lcdp-listadmin-type-fixe" class="lcdp-listadmin__type-fixe" hidden></p>
+          <p id="lcdp-listadmin-erreur" class="lcdp-listadmin__erreur" role="alert" hidden></p>
+          <div class="lcdp-listadmin__formulaire-actions">
+            <button type="button" class="lcdp-button lcdp-button-secondary" data-lcdp-listadmin-fermer>Annuler</button>
+            <button type="submit" id="lcdp-listadmin-envoyer" class="lcdp-button lcdp-button-orange">Envoyer l'invitation</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Profil SUPPRESSION du système de dialogue centralisé : aucun CSS local. -->
     <div class="lcdp-dialogue-ref lcdp-dialogue-ref--suppression"
@@ -237,7 +274,7 @@
       }
 
       function chargerScriptAdminUneFois(path) {
-        const src = urlAdmin(path);
+        const src = urlAdmin(path) + "?v=20261116-lightbox";
 
         if (
           document.querySelector(
