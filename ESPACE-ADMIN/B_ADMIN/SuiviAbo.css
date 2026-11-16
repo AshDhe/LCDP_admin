@@ -1,0 +1,90 @@
+/* SuiviAbo : synthèse compacte, lecture seule, dans le wrapper admin. */
+.lcdp-page-suiviabo .lcdp-suiviabo__entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__entete h1 {
+  margin: 0 0 8px;
+  font-size: 1.55rem;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__entete p {
+  margin: 0;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__entete button {
+  margin: 0;
+  min-height: 42px;
+  width: auto;
+  flex: 0 0 auto;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__statut {
+  min-height: 22px;
+  margin: 0 0 12px;
+  font-size: 0.84rem;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__chiffres {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__chiffres[hidden] {
+  display: none;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__chiffres > div {
+  border: 1px solid var(--lcdp-color-border);
+  background: var(--lcdp-color-surface);
+  border-radius: var(--lcdp-radius-small);
+  padding: 13px;
+  min-width: 0;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__chiffres span {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__chiffres strong {
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.1;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.lcdp-page-suiviabo .lcdp-table-lecture-admin__table {
+  min-width: 680px;
+}
+.lcdp-page-suiviabo .lcdp-table-lecture-admin__table caption {
+  text-align: left;
+  padding: 0 0 10px;
+  font-weight: 600;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__nombre {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__total {
+  font-weight: 700;
+  border-top: 2px solid var(--lcdp-color-border);
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__historique th {
+  font-weight: 600;
+}
+.lcdp-page-suiviabo .lcdp-suiviabo__precision {
+  font-size: 0.83rem;
+  line-height: 1.45;
+  margin: 12px 0 0;
+  color: var(--lcdp-color-text-muted);
+}
+@media (max-width: 940px) {
+  .lcdp-page-suiviabo .lcdp-suiviabo__chiffres {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width: 470px) {
+  .lcdp-page-suiviabo .lcdp-suiviabo__chiffres {
+    grid-template-columns: 1fr;
+  }
+}
