@@ -38,7 +38,7 @@
 /* Page Clé : les trois onglets restent sur une seule ligne. */
 .lcdp-page-cle-admin #lcdp-cle-onglets-slot [data-lcdp-wraper-onglets-navigation] {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
 }
 
