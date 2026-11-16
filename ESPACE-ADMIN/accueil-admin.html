@@ -675,11 +675,7 @@
         const numero = Number(position);
         return (
           (categorie.id === "admin" && numero >= 17 && numero <= NOMBRE_BOUTONS_ADMIN) ||
-          (categorie.id === "membres" && (
-            (numero >= 6 && numero <= 10) ||
-            (numero >= 16 && numero <= 20) ||
-            (numero >= 26 && numero <= NOMBRE_BOUTONS_MEMBRES)
-          ))
+          (categorie.id === "membres" && numero >= 25)
         );
       }
 
@@ -800,7 +796,7 @@
           }
 
           if (categorie.id === "membres") {
-            // Trois séries de cinq slots verts et trois séries de cinq slots orange.
+            // Membres : slots 1 à 24 verts ; slots 25 et suivants orange.
             const orange = estSlotOrangeAdminOuMembres(categorie, position);
             lien.dataset.lcdpMembreGroupe = orange ? "orange" : "vert";
             lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
