@@ -10,8 +10,8 @@
     (() => {
       "use strict";
       const c = window.SITE_CONFIG || {};
-      const base = v => String(v || "").replace(/\\/+$/, "");
-      const join = (a, b) => base(a) + "/" + String(b || "").replace(/^\\/+/, "");
+      const base = v => String(v || "").replace(new RegExp("/+$"), "");
+      const join = (a, b) => base(a) + "/" + String(b || "").replace(new RegExp("^/+"), "");
       const a = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
       const p = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
       const o = base(c.objetBaseUrl || c.OBJET_BASE || join(p, "/OBJET"));
