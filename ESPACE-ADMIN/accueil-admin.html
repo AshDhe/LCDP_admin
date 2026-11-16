@@ -131,7 +131,8 @@
       "use strict";
 
       const config = window.SITE_CONFIG || {};
-      const NOMBRE_BOUTONS_PAR_MENU = 32;
+      const NOMBRE_BOUTONS_PAR_MENU = 31;
+      const NOMBRE_BOUTONS_PARCS = 32;
       const NOMBRE_BOUTONS_ADMIN = 48;
       const SLOT_CARTE_PARC = 1;
       const SLOT_CARD_PARC = 8;
@@ -711,7 +712,8 @@
 
         for (
           let position = 1;
-          position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN : NOMBRE_BOUTONS_PAR_MENU);
+          position <= (categorie.id === "admin" ? NOMBRE_BOUTONS_ADMIN :
+            (categorie.id === "parcs" ? NOMBRE_BOUTONS_PARCS : NOMBRE_BOUTONS_PAR_MENU));
           position += 1
         ) {
           // Tous les emplacements Parcs 1 à 32 restent visibles, y compris les cases libres.
