@@ -146,6 +146,23 @@
   color: var(--lcdp-color-text);
 }
 
+/* Parcs : les slots 17 à 24 appartiennent à la troisième rangée verte.
+   Priorité explicite sur la couleur orange historique de cette rangée. */
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="parcs"]
+> .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24) {
+  background: var(--lcdp-color-primary);
+  border-color: var(--lcdp-color-primary);
+  color: #ffffff;
+}
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="parcs"]
+> .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24):hover:not([aria-disabled="true"]) {
+  background: var(--lcdp-color-primary);
+  border-color: var(--lcdp-color-primary);
+  color: #ffffff;
+}
+
 @media (max-width: 1100px) {
   .lcdp-mini-galerie-menu-centre-admin__grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
