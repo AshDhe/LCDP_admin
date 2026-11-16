@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Responsables de parc - La Clé du Parc</title>
+  <meta name="description" content="Liste des responsables de parc enregistrés dans l’espace admin.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = x => String(x || "").replace(/\/+$/, "");
+      const join = (x,p) => base(x) + "/" + String(p || "").replace(/^\/+/, "");
+      const a=base(c.adminBaseUrl||c.ADMIN_BASE||c.siteBase||"");
+      const p=base(c.publicBaseUrl||c.PUBLIC_BASE||"");
+      const o=base(c.objetBaseUrl||c.OBJET_BASE||join(p,"/OBJET"));
+      window.LCDP_urlAdmin=x=>typeof c.adminUrl==="function"?c.adminUrl(x):join(a,x);
+      window.LCDP_urlPublic=x=>typeof c.publicUrl==="function"?c.publicUrl(x):join(p,x);
+      window.LCDP_urlObjet=x=>typeof c.objetUrl==="function"?c.objetUrl(x):join(o,x);
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css"].forEach(x=>{
+        document.write('<link rel="stylesheet" href="'+window.LCDP_urlObjet(x)+'">');
+      });
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+       "/ESPACE-ADMIN/B_PARCS/ResponsablesParc.css"].forEach(x=>{
+        document.write('<link rel="stylesheet" href="'+window.LCDP_urlAdmin(x)+'">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-responsablesparc-admin">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Responsables de parc">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-responsablesparc-admin__entete">
+                <div>
+                  <h1>Responsables de parc</h1>
+                  <p>Responsables référencés, département, parc attribué et état de validation de l’adresse email.</p>
+                </div>
+                <button type="button" class="lcdp-button lcdp-button-secondary"
+                  id="lcdp-responsablesparc-actualiser">Actualiser</button>
+              </header>
+              <p class="lcdp-responsablesparc-admin__precision">Les responsables sans parc attribué restent visibles.</p>
+              <p id="lcdp-responsablesparc-statut" role="status" aria-live="polite">Chargement des données…</p>
+              <div id="lcdp-responsablesparc-chiffres" class="lcdp-responsablesparc-admin__chiffres" hidden></div>
+              <div class="lcdp-responsablesparc-admin__filtres">
+                <label>Département
+                  <select id="lcdp-responsablesparc-departement">
+                    <option value="">Tous les départements</option>
+                  </select>
+                </label>
+                <label>Recherche
+                  <input type="search" id="lcdp-responsablesparc-recherche"
+                    placeholder="Nom, prénom, parc ou email" autocomplete="off">
+                </label>
+              </div>
+              <div class="lcdp-table-lecture-admin">
+                <div class="lcdp-table-lecture-admin__scroll">
+                  <table class="lcdp-table-lecture-admin__table">
+                    <thead><tr id="lcdp-responsablesparc-entetes"></tr></thead>
+                    <tbody id="lcdp-responsablesparc-lignes"></tbody>
+                  </table>
+                </div>
+                <p id="lcdp-responsablesparc-vide" hidden>Aucune fiche pour les critères sélectionnés.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./ResponsablesParc.js"></script>
+</body>
+</html>
