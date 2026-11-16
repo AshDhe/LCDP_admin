@@ -8,7 +8,7 @@
   const CONTEXTES = Object.freeze({
     parcs: {
       key: "parcs",
-      label: "Parc",
+      label: "FixParc",
       resource: "cle-parcs",
       tableSlotId: "lcdp-cle-parcs-table-slot",
       editionSlotId: "lcdp-cle-parcs-edition-slot",
@@ -25,7 +25,7 @@
     },
     membres: {
       key: "membres",
-      label: "Membre",
+      label: "Présence",
       resource: "cle-membres",
       tableSlotId: "lcdp-cle-membres-table-slot",
       editionSlotId: "lcdp-cle-membres-edition-slot",
@@ -262,7 +262,7 @@
       boutons[0],
       panneaux[0],
       "parcs",
-      "Parc",
+      "FixParc",
       true
     );
 
@@ -270,7 +270,7 @@
       boutons[1],
       panneaux[1],
       "membres",
-      "Membre",
+      "Présence",
       false
     );
 
