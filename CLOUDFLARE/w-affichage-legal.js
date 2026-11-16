@@ -20,6 +20,7 @@ export default {
     const origine = request.headers.get("Origin") || "";
     const headers = new Headers({
       "Cache-Control": "no-store",
+      "Access-Control-Allow-Credentials": "true",
       "Content-Type": "application/json; charset=utf-8",
       "Vary": "Origin",
       "X-Content-Type-Options": "nosniff",
