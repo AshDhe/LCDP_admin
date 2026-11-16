@@ -832,7 +832,7 @@
     suite.type = "button";
     suite.hidden = true;
     suite.addEventListener("click", () => { selection.limite += 200; rendre(); });
-    for (const nom of ["Dptmt", "Nom", "Prénom", "Bracelet", "Refresh", "Actif", "Date"]) {
+    for (const nom of ["Dptmt", "Nom", "Prénom", "Bracelet", "Refresh bracelet (min)", "GPS suppl. (min)", "Actif", "Date"]) {
       const th = creer("th", "", nom);
       th.scope = "col";
       noms.appendChild(th);
@@ -948,7 +948,8 @@
         rendre();
       });
       cellule(prefixe);
-      cellule(null); // Refresh n'est pas un filtre de recherche.
+      cellule(null); // Refresh : valeur informative.
+      cellule(null); // GPS supplémentaire : valeur informative.
       const actif = creer("select", "lcdp-table-lecture-admin__filter-input");
       actif.setAttribute("aria-label", "Filtrer les bracelets par état");
       for (const [valeur,texte] of [["","Tous"],["oui","Actifs"],["non","Inactifs"]]) {
@@ -976,7 +977,7 @@
       const portion = document.createDocumentFragment();
       for (const row of correspondants.slice(0, selection.limite)) {
         const tr = document.createElement("tr");
-        for (const col of ["dptmt","nom","prenom","brac","refresh","actif","date"]) {
+        for (const col of ["dptmt","nom","prenom","brac","refresh","gps","actif","date"]) {
           const td = document.createElement("td");
           if (col === "brac") {
             const bouton = creer("button", "lcdp-table-lecture-admin__cell-action",
