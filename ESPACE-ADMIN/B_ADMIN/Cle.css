@@ -54,3 +54,77 @@
 .lcdp-cle-suivi__form label{display:flex;flex-direction:column;gap:.4rem;}
 .lcdp-cle-suivi__form input{max-width:12rem;}
 @media(max-width:700px){.lcdp-page-cle-admin #lcdp-cle-onglets-slot [data-lcdp-wraper-onglets-navigation]{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+
+/* Clé : boutons d'action homogènes, sans modifier les composants communs. */
+.lcdp-page-cle-admin .lcdp-cle-admin__barre-actions .lcdp-button {
+  width: 200px;
+  min-height: 42px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__edition [data-lcdp-formulaire-actions] .lcdp-button {
+  width: 160px;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__departements .lcdp-table-lecture-admin__multi-resume,
+.lcdp-page-cle-admin .lcdp-cle-admin__parcs-recherche .lcdp-table-lecture-admin__filter-input {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__selection-parc .lcdp-button {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__jetons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__jetons .lcdp-table-lecture-admin__pagination-button {
+  min-height: 30px;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 190px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__suggestion {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+  background: var(--lcdp-color-surface);
+  color: var(--lcdp-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__suggestion:hover,
+.lcdp-page-cle-admin .lcdp-cle-admin__suggestion:focus-visible {
+  background: var(--lcdp-color-surface-soft);
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__suggestions-info {
+  margin: 4px 0 0;
+  font-size: .81rem;
+}
+.lcdp-page-cle-admin .lcdp-cle-admin__selection-parc {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+@media (max-width: 540px) {
+  .lcdp-page-cle-admin .lcdp-cle-admin__barre-actions .lcdp-button,
+  .lcdp-page-cle-admin .lcdp-cle-admin__edition [data-lcdp-formulaire-actions] .lcdp-button {
+    width: 100%;
+  }
+}
