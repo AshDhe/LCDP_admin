@@ -2171,102 +2171,174 @@
   function elementSuivi(tag,texte,classe){const e=document.createElement(tag);if(texte!==undefined)e.textContent=texte;if(classe)e.className=classe;return e;}
   function baseSuivi(){const base=String(config.workerLaCleDuParcUrl || config.WORKER_LA_CLE_DU_PARC_URL || config.W_LA_CLE_DU_PARC_URL || (typeof config.apiUrl==="function"?config.apiUrl("la-cle-du-parc-api"):"")).replace(/\/+$/,"");if(!base)throw Error("Endpoint Ma clé non configuré dans le config admin.");return base;}
   async function appelSuivi(path,body){const r=await fetch(baseSuivi()+path,{method:body?"POST":"GET",credentials:"include",cache:"no-store",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok || !d.success)throw Error(d.message || "Suivi indisponible.");return d;}
+
   async function initialiserSuivi() {
     const zone = document.querySelector('[data-lcdp-contenu-onglet="suivi"]');
     if (!zone) return;
     zone.replaceChildren();
     const statut = elementSuivi("p", "Chargement des réglages RefreshApp…");
-    statut.setAttribute("role", "status");
-    zone.append(statut);
+    statut.setAttribute("role","status");
+    zone.appendChild(statut);
 
     try {
-      const donnees = await appelSuivi("/admin/monitor?page=0");
+      const [donnees, optionsParcs] = await Promise.all([
+        appelSuivi("/admin/monitor?page=0"),
+        chargerOptions(CONTEXTES.parcs)
+      ]);
+      const options = optionsParcs.map(decomposerOptionParc)
+        .filter(p => p.value && p.departement && p.nom)
+        .sort((a,b) => a.nom.localeCompare(b.nom,"fr",{sensitivity:"base",numeric:true}));
+      const parcsRegles = new Map((donnees.parks || []).map(p => [String(p.idparc),p]));
+      const departements = [...new Set(options.map(p => p.departement))]
+        .sort((a,b) => a.localeCompare(b,"fr",{numeric:true}));
+      const normaliser = v => String(v ?? "").normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr").trim();
       zone.replaceChildren();
-      zone.append(elementSuivi("p",
-        "Renouvellement des couleurs et des images de présence dans l’application mobile."));
+      zone.append(
+        elementSuivi("p","Actualisation des couleurs et des images de présence sur le téléphone."),
+        elementSuivi("h2","Réglages généraux")
+      );
 
-      function formulaireRotation(type, id, valeurs, valeursEffectives) {
-        const formulaire = elementSuivi("form", undefined, "lcdp-cle-suivi__form");
+      function formulaireRotation(type, id, valeurs, valeurGlobale) {
+        const formulaire = elementSuivi("form",undefined,"lcdp-cle-suivi__form");
+        const resultats = elementSuivi("p","");
+        resultats.setAttribute("role","status");
         const champs = [
-          ["bracelet_secondes", "Renouvellement des couleurs (secondes)"],
-          ["image_secondes", "Renouvellement des images (secondes)"]
+          ["bracelet_secondes","Refresh couleurs (secondes)"],
+          ["image_secondes","Refresh images (secondes)"]
         ];
-        const controles = {};
-        for (const [cle, libelle] of champs) {
-          const label = elementSuivi("label", libelle);
-          const input = elementSuivi("input");
-          input.type = "number";
-          input.min = "60";
-          input.max = "86400";
-          input.step = "1";
-          input.required = type === "global";
-          input.value = valeurs?.[cle] ?? "";
-          if (type === "parc" && input.value === "") {
-            input.placeholder = "Valeur globale : " + String(valeursEffectives?.[cle] ?? "");
-          }
-          label.append(input);
-          formulaire.append(label);
-          controles[cle] = input;
+        const inputs = {};
+        for (const [cle,libelle] of champs) {
+          const label = elementSuivi("label",libelle);
+          const champ = elementSuivi("input");
+          champ.type = "number";
+          champ.min = "60";
+          champ.max = "86400";
+          champ.step = "1";
+          champ.required = type === "global";
+          champ.value = valeurs?.[cle] ?? "";
+          if (type === "parc") champ.placeholder =
+            "Général : " + String(valeurGlobale?.[cle] ?? "");
+          inputs[cle] = champ;
+          label.append(champ);
+          formulaire.appendChild(label);
         }
-        const sauvegarder = elementSuivi("button", "Enregistrer", "lcdp-button lcdp-button-orange");
-        sauvegarder.type = "submit";
-        const retour = elementSuivi("p", "");
-        retour.setAttribute("role", "status");
-        formulaire.append(sauvegarder, retour);
-        formulaire.addEventListener("submit", async (event) => {
+        const bouton = elementSuivi("button","Enregistrer","lcdp-button lcdp-button-orange");
+        bouton.type = "submit";
+        formulaire.append(bouton,resultats);
+        formulaire.addEventListener("submit",async event => {
           event.preventDefault();
           if (!formulaire.reportValidity()) return;
-          sauvegarder.disabled = true;
-          retour.textContent = "";
+          bouton.disabled = true;
+          resultats.textContent = "";
           try {
-            // Le Worker attend trois clés ; conserver la fréquence réseau
-            // sans l'exposer ni la modifier dans RefreshApp.
-            const valeursEnvoyees = {
-              bracelet_secondes: controles.bracelet_secondes.value === ""
-                ? null : Number(controles.bracelet_secondes.value),
-              image_secondes: controles.image_secondes.value === ""
-                ? null : Number(controles.image_secondes.value),
+            // La fréquence de communication du bracelet n'est pas modifiée ici.
+            const valeursNouvelles = {
+              bracelet_secondes: inputs.bracelet_secondes.value === ""
+                ? null : Number(inputs.bracelet_secondes.value),
+              image_secondes: inputs.image_secondes.value === ""
+                ? null : Number(inputs.image_secondes.value),
               poll_secondes: valeurs?.poll_secondes ?? null
             };
-            await appelSuivi("/admin/monitor/settings", {
-              type, id, values: valeursEnvoyees
+            await appelSuivi("/admin/monitor/settings",{
+              type,id,values:valeursNouvelles
             });
-            retour.textContent = "Réglages RefreshApp enregistrés.";
-          } catch (error) {
-            retour.textContent = String(error?.message || "Enregistrement impossible.");
+            Object.assign(valeurs,valeursNouvelles);
+            resultats.textContent = "Réglages enregistrés.";
+          } catch(error) {
+            resultats.textContent = String(error?.message || "Enregistrement indisponible.");
           } finally {
-            sauvegarder.disabled = false;
+            bouton.disabled = false;
           }
         });
         return formulaire;
       }
 
-      zone.append(elementSuivi("h2", "Réglages généraux"),
-        formulaireRotation("global", "", donnees.global, donnees.global),
-        elementSuivi("h2", "Réglages par parc"));
+      zone.appendChild(formulaireRotation("global","",donnees.global,donnees.global));
+      zone.appendChild(elementSuivi("h2","Réglages d’un parc"));
 
+      const selecteur = elementSuivi("div",undefined,"lcdp-cle-suivi__choix-parc");
+      const departement = elementSuivi("button","Choisir un département",
+        "lcdp-button lcdp-button-secondary");
+      departement.type = "button";
       const recherche = elementSuivi("input");
       recherche.type = "search";
-      recherche.placeholder = "Rechercher un parc";
-      recherche.setAttribute("aria-label", "Rechercher un parc");
-      zone.append(recherche);
-      const cartes = [];
-      for (const parc of (donnees.parks || [])) {
-        const carte = elementSuivi("section", undefined, "lcdp-cle-suivi__carte");
-        carte.append(elementSuivi("h3", String(parc.nom || "Parc")),
-          formulaireRotation("parc", parc.idparc, parc.overrides, parc.effective));
-        zone.append(carte);
-        cartes.push([carte, String(parc.nom || "").toLocaleLowerCase("fr")]);
+      recherche.autocomplete = "off";
+      recherche.placeholder = "Rechercher un parc par son nom";
+      recherche.setAttribute("aria-label","Recherche alphabétique du parc");
+      recherche.setAttribute("aria-autocomplete","list");
+      recherche.disabled = true;
+      const suggestions = elementSuivi("div",undefined,"lcdp-cle-admin__suggestions");
+      suggestions.setAttribute("role","listbox");
+      suggestions.setAttribute("aria-label","Parcs du département");
+      const carte = elementSuivi("div",undefined,"lcdp-cle-suivi__parc-unique");
+      const note = elementSuivi("p","");
+      note.setAttribute("role","status");
+      selecteur.append(departement,recherche,suggestions,note,carte);
+      zone.appendChild(selecteur);
+      let dptCourant = "";
+      function proposerParcs() {
+        suggestions.replaceChildren();
+        note.textContent = "";
+        if (!dptCourant || !recherche.value.trim()) return;
+        const rechercheTexte = normaliser(recherche.value);
+        const resultats = options.filter(p => p.departement === dptCourant &&
+          normaliser(p.nom).includes(rechercheTexte));
+        for (const p of resultats.slice(0,12)) {
+          const b = elementSuivi("button",p.nom,"lcdp-cle-admin__suggestion");
+          b.type = "button";
+          b.setAttribute("role","option");
+          b.addEventListener("click",() => {
+            const parc = parcsRegles.get(p.value);
+            recherche.value = p.nom;
+            suggestions.replaceChildren();
+            carte.replaceChildren();
+            if (!parc) {
+              note.textContent = "Réglages de ce parc non disponibles dans la réponse du service.";
+              return;
+            }
+            note.textContent = "";
+            const bloc = elementSuivi("section",undefined,"lcdp-cle-suivi__carte");
+            bloc.append(
+              elementSuivi("h3",p.nom + " (" + p.departement + ")"),
+              formulaireRotation("parc",parc.idparc,parc.overrides,parc.effective)
+            );
+            carte.appendChild(bloc);
+          });
+          suggestions.appendChild(b);
+        }
+        if (!resultats.length) note.textContent = "Aucun parc correspondant.";
+        else if(resultats.length>12) note.textContent = "Affinez la recherche.";
       }
-      recherche.addEventListener("input", () => {
-        const valeur = recherche.value.trim().toLocaleLowerCase("fr");
-        for (const [carte, nom] of cartes) carte.hidden = !nom.includes(valeur);
+      departement.addEventListener("click",async() => {
+        departement.disabled = true;
+        try {
+          const dpt = await choisirDepartementCle(departements,"Sélectionner un département");
+          if(dpt) {
+            dptCourant = String(dpt).toUpperCase();
+            departement.textContent = "Dptmt " + dptCourant + " — Changer";
+            recherche.disabled = false;
+            recherche.value = "";
+            suggestions.replaceChildren();
+            carte.replaceChildren();
+            note.textContent = "";
+            recherche.focus();
+          }
+        }catch(error) {
+          note.textContent = String(error?.message || "Sélection du département impossible.");
+        }finally {
+          departement.disabled = false;
+        }
       });
-      if (donnees.parksTruncated) {
-        zone.append(elementSuivi("p", "Affichage limité à 1 000 parcs."));
+      recherche.addEventListener("input",() => {
+        carte.replaceChildren();
+        proposerParcs();
+      });
+      if(donnees.parksTruncated) {
+        zone.append(elementSuivi("p","Le suivi contient plus de 1 000 parcs ; le service ne fournit qu'une partie de leurs réglages."));
       }
-    } catch (error) {
-      statut.textContent = String(error?.message || "Service RefreshApp indisponible.");
+    }catch(error) {
+      statut.textContent = String(error?.message || "RefreshApp indisponible.");
     }
   }
 
