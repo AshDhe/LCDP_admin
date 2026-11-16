@@ -91,7 +91,7 @@
         );
       });
 
-      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css?v=listadmin-20261116-1000"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlAdmin(path) + "?v=20261116-lightbox" +
@@ -360,7 +360,7 @@
 
       async function initialiserListe() {
         await chargerScriptObjetUneFois("/JSBASE/05-wraper-onglets.js");
-        await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_ADMIN/listadmin.js");
+        await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_ADMIN/listadmin.js?v=listadmin-20261116-1000");
         if (typeof window.LCDP_LISTADMIN?.initialiser !== "function") {
           throw new Error("Liste des administrateurs indisponible.");
         }
