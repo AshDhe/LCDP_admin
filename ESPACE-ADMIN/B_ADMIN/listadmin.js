@@ -14,6 +14,7 @@
     const endpoint = String(options.adminSessionUrl || "").replace(/\/+$/, "");
     const auth = options.autorisation?.admin || {};
     const estRoot = auth.type === "root";
+    const endpointLecture = String(options.adminDataUrl || "").replace(/\/+$/, "");
     if (!racine || !status || !endpoint || !window.LCDP_WRAPER_ONGLETS) {
       throw new Error("Composants de la liste admin indisponibles.");
     }
@@ -27,6 +28,7 @@
     const filtres = { admin: "", resparc: "", coach: "" };
     const recherches = { admin: "", resparc: "", coach: "" };
     let occupe = false;
+    let gestionDisponible = false;
 
     const texte = (value) => String(value ?? "").trim();
     const informer = (message, erreur = false) => {
@@ -83,9 +85,34 @@
         throw new Error("Session expirée.");
       }
       if (!response.ok || data?.success !== true) {
-        throw new Error(data?.message || "Le service administrateur n'est pas disponible.");
+        const error = new Error(data?.message || "Le service administrateur n'est pas disponible.");
+        error.status = response.status;
+        throw error;
       }
       return data;
+    }
+
+    async function lireAncienneListe() {
+      if (!endpointLecture) throw new Error("Endpoint de consultation admin absent.");
+      const resultat = [];
+      for (let offset = 0; offset <= 10000; offset += 200) {
+        const url = new URL(endpointLecture + "/read");
+        url.searchParams.set("resource", "admin-list");
+        url.searchParams.set("limit", "200");
+        url.searchParams.set("offset", String(offset));
+        const response = await fetch(url.toString(), {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" }
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || data?.success !== true || !Array.isArray(data.rows)) {
+          throw new Error(data?.message || "Lecture de secours indisponible.");
+        }
+        resultat.push(...data.rows);
+        if (data.rows.length < 200) return resultat;
+      }
+      throw new Error("Trop de comptes administrateurs pour la consultation de secours.");
     }
 
     async function charger() {
@@ -95,10 +122,23 @@
       try {
         const result = await appelerApi("/admin/accounts", "GET");
         comptes = Array.isArray(result.accounts) ? result.accounts : [];
+        gestionDisponible = true;
         rendreTous();
         informer("");
       } catch (error) {
-        informer(error?.message || "Impossible de lire les comptes.", true);
+        gestionDisponible = false;
+        if (error?.status === 401 || error?.status === 403) {
+          informer(error?.message || "Accès non autorisé.", true);
+          return;
+        }
+        try {
+          comptes = await lireAncienneListe();
+          rendreTous();
+          informer("Le Worker de gestion des comptes n'est pas joignable : consultation uniquement. L'ajout et la suppression seront disponibles après son déploiement.", true);
+        } catch (lectureErreur) {
+          rendreTous();
+          informer("Impossible de charger les comptes : " + (lectureErreur?.message || error?.message || "Erreur technique."), true);
+        }
       } finally {
         occupe = false;
       }
@@ -181,7 +221,7 @@
     }
 
     async function supprimerCompte(c) {
-      if (!estRoot || occupe || texte(c.id) === texte(auth.id)) return;
+      if (!estRoot || !gestionDisponible || occupe || !texte(c.id) || texte(c.id) === texte(auth.id)) return;
       const accord = await confirmerSuppression(c);
       if (!accord || occupe) return;
       occupe = true;
@@ -207,6 +247,8 @@
       });
       afficher.setAttribute("aria-expanded", "false");
       afficher.setAttribute("aria-controls", "lcdp-formulaire-nouvel-admin");
+      afficher.disabled = !gestionDisponible;
+      if (!gestionDisponible) afficher.title = "Service de gestion des comptes indisponible.";
       zone.appendChild(afficher);
       const formulaire = document.createElement("form");
       formulaire.id = "lcdp-formulaire-nouvel-admin";
@@ -226,6 +268,7 @@
       type.input.value = "";
       const valider = document.createElement("button");
       valider.type = "submit";
+      valider.disabled = !gestionDisponible;
       valider.className = "lcdp-button lcdp-button-orange";
       valider.textContent = "Envoyer l'invitation";
       const annuler = bouton("Annuler", "lcdp-button lcdp-button-secondary", () => {
@@ -265,7 +308,7 @@
       const tbody = document.createElement("tbody");
       for (const c of elements) {
         const tr = document.createElement("tr");
-        const vals = [c.nomadmin, c.prenomadmin, c.adminemail, c.type, c.actif ? "Actif" : "Invitation en attente"];
+        const vals = [c.nomadmin, c.prenomadmin, c.adminemail, c.type, c.actif === true ? "Actif" : c.actif === false ? "Invitation en attente" : "Non renseigné"];
         for (const val of vals) {
           const td = document.createElement("td");
           td.textContent = texte(val) || "—";
@@ -273,7 +316,7 @@
         }
         if (estRoot) {
           const td = document.createElement("td");
-          if (c.actif === false) {
+          if (gestionDisponible && c.actif === false) {
             td.appendChild(bouton("Renvoyer l'invitation", "lcdp-button lcdp-button-secondary", () => {
               envoyerInvitation({
                 nomadmin: c.nomadmin, prenomadmin: c.prenomadmin,
@@ -282,8 +325,10 @@
             }));
           }
           const estSoiMeme = texte(c.id) === texte(auth.id);
-          td.appendChild(bouton("Supprimer", "lcdp-button lcdp-button-secondary",
-            () => supprimerCompte(c), estSoiMeme));
+          const supprimer = bouton("Supprimer", "lcdp-button lcdp-button-secondary",
+            () => supprimerCompte(c), estSoiMeme || !gestionDisponible || !texte(c.id));
+          if (!gestionDisponible) supprimer.title = "Service de gestion des comptes indisponible.";
+          td.appendChild(supprimer);
           tr.appendChild(td);
         }
         tbody.appendChild(tr);
