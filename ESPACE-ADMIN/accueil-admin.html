@@ -715,10 +715,10 @@
           };
           const positionsLiberees = new Set([12, 30, 31, 35]);
           // Membres : le suivi des paiements conserve son URL et sa permission,
-          // mais s'affiche au slot 9 au lieu du slot 4.
+          // mais s'affiche au slot 10 au lieu du slot 4.
           const positionSource = categorie.id === "parcs"
             ? (originesParc[position] || position)
-            : (categorie.id === "membres" && position === 9 ? 4 : position);
+            : (categorie.id === "membres" && position === 10 ? 4 : position);
           const configuration = (
             (categorie.id === "parcs" && positionsLiberees.has(position)) ||
             (categorie.id === "membres" && position === 4)
