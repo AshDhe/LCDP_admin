@@ -29,7 +29,7 @@
     const cfg = window.SITE_CONFIG || {};
     return String(cfg.workerAffichageLegalUrl ||
       cfg.WORKER_AFFICHAGE_LEGAL_URL ||
-      "https://affichage-legal-api.lacleduparc.fr").replace(/\/+$/, "");
+      "https://w-compteur-page-api.lacleduparc.fr").replace(/\/+$/, "");
   }
   function statut(message, erreur = false) {
     const zone = $("lcdp-afflegal-statut");
