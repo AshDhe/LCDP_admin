@@ -94,7 +94,7 @@
     };
   }
   function remplirResume(zone, cle, stats, periode) {
-    fixerTexte(zone.querySelector('[data-total="'+cle+'"]'),
+    fixerTexte(zone.querySelector('[data-detail="'+cle+'"]'),
       frNombre.format(Number(stats.affichages || 0)));
     fixerTexte(zone.querySelector('[data-membres="'+cle+'"]'),
       frNombre.format(Number(stats.membres_distincts || 0)));
@@ -105,19 +105,12 @@
     fixerTexte(zone.querySelector('[data-dates="'+cle+'"]'),
       dateFrancais(periode.debut) + " au " + dateFrancais(periode.fin));
   }
-  function listeMembres(zone, membres, titre) {
+  function listeMembres(zone, membres, titre, nonIdentifies = 0) {
     const tbody = zone.querySelector('[data-liste-membres]');
     tbody.replaceChildren();
     fixerTexte(zone.querySelector('[data-titre-detail]'), titre);
-    if (!Array.isArray(membres) || !membres.length) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 2;
-      td.textContent = "Aucun membre identifié pour cette période.";
-      tr.appendChild(td); tbody.appendChild(tr);
-      return;
-    }
-    for (const membre of membres) {
+    const liste = Array.isArray(membres) ? membres : [];
+    for (const membre of liste) {
       const tr = document.createElement("tr");
       const nom = document.createElement("td");
       nom.textContent = [membre.nommembre, membre.prenommembre]
@@ -126,11 +119,18 @@
       quantite.textContent = frNombre.format(Number(membre.affichages || 0));
       tr.append(nom, quantite); tbody.appendChild(tr);
     }
+    const ligne = document.createElement("tr");
+    const texte = document.createElement("td");
+    texte.textContent = "Affichages non identifiés";
+    const nombre = document.createElement("td");
+    nombre.textContent = frNombre.format(Number(nonIdentifies || 0));
+    ligne.append(texte, nombre);
+    tbody.appendChild(ligne);
   }
   function resume(cle, titre) {
     return '<section class="lcdp-afflegal-resume" aria-label="' + titre + '">' +
       '<h3>' + titre + '</h3>' +
-      '<output data-total="' + cle + '">—</output>' +
+      '<button type="button" class="lcdp-afflegal-total" data-detail="' + cle + '" aria-label="Afficher le détail des ' + titre + '">—</button>' +
       '<small data-dates="' + cle + '"></small>' +
       '<dl>' +
       '<dt>Membres distincts</dt><dd data-membres="' + cle + '">—</dd>' +
@@ -158,7 +158,7 @@
       '<div class="lcdp-afflegal-resumes">' + resume("libre", "Période sélectionnée") + '</div></div>' +
       '</section>' +
       '<section class="lcdp-afflegal-detail">' +
-      '<h3 data-titre-detail>Membres identifiés, 30 derniers jours</h3>' +
+      '<h3 data-titre-detail>Détail des affichages, 30 derniers jours</h3>' +
       '<div class="lcdp-table-lecture-admin__scroll"><table class="lcdp-table-lecture-admin__table">' +
       '<thead><tr><th scope="col">Nom et prénom</th>' +
       '<th scope="col">Affichages</th></tr></thead>' +
@@ -170,7 +170,17 @@
     form.elements.debut.value = periode30.debut;
     form.elements.fin.value = periode30.fin;
     const erreur = zone.querySelector("[data-erreur]");
-
+    const periode5 = { debut: jourMoins(periode30.fin, 4), fin: periode30.fin };
+    for (const [cle, periode] of [["5", periode5], ["30", periode30]]) {
+      zone.querySelector('[data-detail="' + cle + '"]').addEventListener("click", () => {
+        void chargerListe(code, zone, periode.debut, periode.fin);
+      });
+    }
+    zone.querySelector('[data-detail="libre"]').addEventListener("click", () => {
+      const debut = form.elements.debut.value;
+      const fin = form.elements.fin.value;
+      void chargerListe(code, zone, debut, fin);
+    });
     form.addEventListener("submit", async event => {
       event.preventDefault();
       erreur.textContent = "";
@@ -186,7 +196,8 @@
         fixerTexte(zone.querySelector("[data-periode-description]"),
           "Du " + dateFrancais(debut) + " au " + dateFrancais(fin));
         listeMembres(zone, resultat.membres,
-          "Membres identifiés, du " + dateFrancais(debut) + " au " + dateFrancais(fin));
+          "Détail des affichages, du " + dateFrancais(debut) + " au " + dateFrancais(fin),
+          Number(ligne?.affichages_non_identifies || 0));
       } catch (error) {
         erreur.textContent = error?.message || "Recherche indisponible.";
         erreur.setAttribute("role", "alert");
@@ -205,9 +216,10 @@
   async function chargerListe(code, zone, debut, fin, defaut) {
     try {
       const resultat = await api(debut, fin, code);
+      const stats = resultat.statistiques.find(l => l.page_code === code);
       listeMembres(zone, resultat.membres,
-        defaut ? "Membres identifiés, 30 derniers jours"
-          : "Membres identifiés, du " + dateFrancais(debut) + " au " + dateFrancais(fin));
+        "Détail des affichages, du " + dateFrancais(debut) + " au " + dateFrancais(fin),
+        Number(stats?.affichages_non_identifies || 0));
       zone.querySelector("[data-erreur]").textContent = "";
     } catch (error) {
       const el = zone.querySelector("[data-erreur]");
