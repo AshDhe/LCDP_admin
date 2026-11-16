@@ -25,8 +25,6 @@
       onglets: TYPES.map(({ key, label }) => ({ key, label }))
     });
     let comptes = [];
-    const filtres = { admin: "", resparc: "", coach: "" };
-    const recherches = { admin: "", resparc: "", coach: "" };
     let occupe = false;
     let gestionDisponible = false;
     let categorieActive = "admin";
@@ -415,36 +413,7 @@
     function rendreOnglet(def) {
       const zone = onglets.zones[def.key];
       zone.replaceChildren();
-      const filtre = document.createElement("div");
-      filtre.className = "lcdp-stack-small";
-      const recherche = champ("Rechercher par nom, prénom ou email", "search", "recherche");
-      recherche.input.required = false;
-      recherche.input.value = recherches[def.key];
-      recherche.input.addEventListener("input", () => {
-        recherches[def.key] = recherche.input.value;
-        rendreOnglet(def);
-        const champActif = onglets.zones[def.key].querySelector('input[name="recherche"]');
-        if (champActif) { champActif.focus(); champActif.setSelectionRange(champActif.value.length, champActif.value.length); }
-      });
-      filtre.appendChild(recherche.wrapper);
-      if (def.key === "admin") {
-        const selection = champ("Type", "select", "filtre-type", [
-          ["", "Tous les types"], ["root", "Root"], ["asso", "Asso"]
-        ]);
-        selection.input.required = false;
-        selection.input.value = filtres.admin;
-        selection.input.addEventListener("change", () => {
-          filtres.admin = selection.input.value;
-          rendreOnglet(def);
-        });
-        filtre.appendChild(selection.wrapper);
-      }
-      zone.appendChild(filtre);
-      const rechercheTexte = recherches[def.key].trim().toLocaleLowerCase("fr");
-      const visibles = comptes.filter((c) => def.codes.includes(c.type))
-        .filter((c) => def.key !== "admin" || !filtres.admin || c.type === filtres.admin)
-        .filter((c) => [c.nomadmin, c.prenomadmin, c.adminemail]
-          .some((x) => texte(x).toLocaleLowerCase("fr").includes(rechercheTexte)));
+      const visibles = comptes.filter((c) => def.codes.includes(c.type));
       rendreTable(zone, def.key, visibles);
     }
 
