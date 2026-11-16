@@ -19,6 +19,12 @@
       label: "Membres",
       cat: "Membres",
       fallback: "Membres"
+    }),
+    Object.freeze({
+      id: "coachs",
+      label: "Coachs",
+      cat: "Coachs",
+      fallback: "Coach"
     })
   ]);
 
