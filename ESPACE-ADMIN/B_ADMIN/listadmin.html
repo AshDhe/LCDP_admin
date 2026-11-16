@@ -286,7 +286,16 @@
         await table.initialiser({
           slotId: "lcdp-table-lecture-admin-slot",
           endpoint: endpointAdminData(),
-          resource: "admin-list"
+          resource: "admin-list",
+          filterOptions: {
+            type: [
+              { value: "", label: "Tous les types" },
+              { value: "root", label: "Root" },
+              { value: "asso", label: "Association" },
+              { value: "resparc", label: "Responsable de parc" },
+              { value: "coach", label: "Coach" }
+            ]
+          }
         });
       }
 
