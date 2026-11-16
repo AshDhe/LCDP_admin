@@ -27,9 +27,9 @@
   }
   function endpoint() {
     const cfg = window.SITE_CONFIG || {};
-    return String(cfg.workerAdminComptesUrl ||
-      cfg.WORKER_ADMIN_COMPTES_URL ||
-      window.ADMIN_CONFIG?.API_ADMIN_COMPTES || "").replace(/\/+$/, "");
+    return String(cfg.workerAffichageLegalUrl ||
+      cfg.WORKER_AFFICHAGE_LEGAL_URL ||
+      "https://affichage-legal-api.lacleduparc.fr").replace(/\/+$/, "");
   }
   function statut(message, erreur = false) {
     const zone = $("lcdp-afflegal-statut");
