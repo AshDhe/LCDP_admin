@@ -1,0 +1,32 @@
+.lcdp-page-invitations-mensuelles .lcdp-admin-page-content{min-width:0}
+.lcdp-invitmens__entete{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.lcdp-invitmens__entete h1{margin:0 0 .35rem}
+.lcdp-invitmens__entete p{margin:0;max-width:58rem}
+.lcdp-invitmens__filtres{display:grid;grid-template-columns:minmax(120px,160px) minmax(185px,1fr) minmax(240px,1.4fr);gap:1rem;align-items:start;margin:1rem 0}
+.lcdp-invitmens__annee{display:flex;flex-direction:column;gap:.35rem;font-weight:600}
+.lcdp-invitmens__annee select,.lcdp-invitmens__recherche input{width:100%;min-height:40px;border:1px solid #b5bea9;border-radius:8px;background:#fff;color:#243425;padding:.45rem .6rem}
+.lcdp-invitmens__choix{min-width:0;margin:0;border:1px solid #cad0c2;border-radius:10px;padding:.5rem .75rem .75rem}
+.lcdp-invitmens__choix legend{padding:0 .35rem;font-weight:600}
+.lcdp-invitmens__actions{display:flex;gap:.75rem;margin:.35rem 0 .5rem}
+.lcdp-invitmens__actions button{border:0;background:transparent;padding:.15rem .2rem;color:#37532b;text-decoration:underline;cursor:pointer;font:inherit}
+.lcdp-invitmens__actions button:focus-visible,.lcdp-invitmens__liste input:focus-visible{outline:2px solid #ca7a22;outline-offset:3px}
+.lcdp-invitmens__recherche{display:block;font-size:.9rem}
+.lcdp-invitmens__recherche input{display:block;margin-top:.3rem}
+.lcdp-invitmens__liste{display:flex;gap:.4rem .85rem;flex-wrap:wrap;max-height:170px;overflow:auto;align-content:flex-start}
+.lcdp-invitmens__liste--membres{display:block;max-height:190px}
+.lcdp-invitmens__liste label{display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.9rem;min-width:0}
+.lcdp-invitmens__liste--membres label{padding:.2rem 0}
+.lcdp-invitmens__liste input{accent-color:#527044}
+.lcdp-invitmens__synthese{font-weight:600;margin:.75rem 0}
+.lcdp-invitmens__defilement{overflow-x:auto;max-width:100%}
+.lcdp-invitmens__table{width:100%;min-width:1030px;font-variant-numeric:tabular-nums}
+.lcdp-invitmens__table th,.lcdp-invitmens__table td{text-align:right;white-space:nowrap;padding:.55rem .45rem}
+.lcdp-invitmens__table th:nth-child(-n+3),.lcdp-invitmens__table td:nth-child(-n+3){text-align:left}
+.lcdp-invitmens__table tfoot{font-weight:700;background:#eaf0e5}
+.lcdp-invitmens__table tbody tr:nth-child(even){background:#f7f9f5}
+.lcdp-invitmens__table th:last-child,.lcdp-invitmens__table td:last-child{font-weight:700}
+.lcdp-invitmens__legende{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.lcdp-invitmens__vide,.lcdp-invitmens__note{margin:1rem 0;color:#455344}
+.lcdp-page-invitations-mensuelles [role=alert]{color:#a13321}
+@media(max-width:900px){.lcdp-invitmens__filtres{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.lcdp-invitmens__annee{grid-column:1/-1;max-width:200px}}
+@media(max-width:620px){.lcdp-invitmens__filtres{grid-template-columns:1fr}.lcdp-invitmens__annee{grid-column:auto}.lcdp-invitmens__liste{max-height:150px}}
