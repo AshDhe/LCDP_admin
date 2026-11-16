@@ -250,7 +250,7 @@
 }
 
 .lcdp-page-rubriques-admin .lcdp-table-lecture-admin__table th:first-child {
-  width: 35%;
+  width: 150px;
 }
 
 /* WORKFLOW ADMIN PARCS - NOUVEAUPARC */
