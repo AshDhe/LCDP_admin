@@ -62,7 +62,7 @@ export default {
       // 401 signifie : le Worker membre confirme l'absence de session valable.
       // Toute autre erreur empêche l'enregistrement : une panne ne doit jamais
       // transformer artificiellement des vues identifiées en vues anonymes.
-      const identite = await membreAuthentifie(request);
+      const identite = await membreAuthentifie(request, env);
       if (!identite.ok) {
         return json({ ok: false, message: "Identification momentanément indisponible." }, 503);
       }
@@ -99,11 +99,11 @@ export default {
   }
 };
 
-async function membreAuthentifie(request) {
+async function membreAuthentifie(request, env) {
   const cookie = request.headers.get("Cookie") || "";
   if (!cookie) return { ok: true, idmembre: null };
 
-  const response = await fetch(API_MEMBRE, {
+  const verification = new Request(API_MEMBRE, {
     method: "GET",
     headers: {
       Cookie: cookie,
@@ -114,6 +114,10 @@ async function membreAuthentifie(request) {
     redirect: "manual",
     cache: "no-store"
   });
+  // Service Binding facultatif pour éviter un sous-appel Worker-to-Worker non autorisé.
+  const response = env.MEMBRE_COMPTE_WORKER
+    ? await env.MEMBRE_COMPTE_WORKER.fetch(verification)
+    : await fetch(verification);
   if (response.status === 401) return { ok: true, idmembre: null };
   if (!response.ok) return { ok: false };
   const result = await response.json().catch(() => null);
