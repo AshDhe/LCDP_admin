@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr" data-lcdp-css="c081">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion admin - La Clé du Parc</title>
+  <meta name="description" content="Statistiques des ouvertures de session des comptes administrateurs.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const config = window.SITE_CONFIG || {};
+      const nettoyer = (value) => String(value || "").replace(/\/+$/, "");
+      const construire = (base, path) => nettoyer(base) + "/" + String(path || "").replace(/^\/+/, "");
+      const adminBase = nettoyer(config.adminBaseUrl || config.ADMIN_BASE || config.siteBase || "");
+      const publicBase = nettoyer(config.publicBaseUrl || config.PUBLIC_BASE || "");
+      const objetBase = nettoyer(config.objetBaseUrl || config.OBJET_BASE || construire(publicBase, "/OBJET"));
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+      window.LCDP_urlAdmin = (path) => typeof config.adminUrl === "function" ? config.adminUrl(path) : construire(adminBase, path);
+      window.LCDP_urlPublic = (path) => typeof config.publicUrl === "function" ? config.publicUrl(path) : construire(publicBase, path);
+      window.LCDP_urlObjet = (path) => typeof config.objetUrl === "function" ? config.objetUrl(path) : construire(objetBase, path);
+      [
+        "/CSSBASE/cssbase.css",
+        "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-central-module-05.css"
+      ].forEach(path => document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">'));
+      document.write('<link rel="stylesheet" href="' +
+        window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/css-admin.css") + '">');
+    })();
+  </script>
+  <link rel="stylesheet" href="./ConnexionAdmin.css">
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-connexion-admin">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Statistiques de connexion à l'espace admin">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <div class="lcdp-connexion-admin" data-lcdp-wraper-connexion>
+                <h1>Connexion admin</h1>
+                <p>Ouvertures de session dans l'espace administrateur, hors compte administrateur principal.</p>
+
+                <div class="lcdp-connexion-admin__resumes" aria-label="Connexions par période">
+                  <section class="lcdp-connexion-admin__resume">
+                    <h2>5 derniers jours</h2>
+                    <output id="lcdp-connexion-total-5" aria-label="Connexions des 5 derniers jours">—</output>
+                    <p id="lcdp-connexion-dates-5"></p>
+                  </section>
+                  <section class="lcdp-connexion-admin__resume">
+                    <h2>30 derniers jours</h2>
+                    <output id="lcdp-connexion-total-30" aria-label="Connexions des 30 derniers jours">—</output>
+                    <p id="lcdp-connexion-dates-30"></p>
+                  </section>
+                </div>
+
+                <section class="lcdp-connexion-admin__section" aria-labelledby="lcdp-connexion-titre-detail">
+                  <h2 id="lcdp-connexion-titre-detail">Détail par administrateur</h2>
+                  <div class="lcdp-table-lecture-admin__scroll">
+                    <table class="lcdp-table-lecture-admin__table">
+                      <thead><tr>
+                        <th scope="col">Nom et prénom</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">5 derniers jours</th>
+                        <th scope="col">30 derniers jours</th>
+                      </tr></thead>
+                      <tbody id="lcdp-connexion-detail"></tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="lcdp-connexion-admin__section" aria-labelledby="lcdp-connexion-titre-dates">
+                  <h2 id="lcdp-connexion-titre-dates">Période personnalisée</h2>
+                  <form id="lcdp-connexion-form" class="lcdp-connexion-admin__filtres">
+                    <label for="lcdp-connexion-debut">Du
+                      <input id="lcdp-connexion-debut" type="date" required>
+                    </label>
+                    <label for="lcdp-connexion-fin">Au
+                      <input id="lcdp-connexion-fin" type="date" required>
+                    </label>
+                    <button type="submit" class="lcdp-button lcdp-button-orange">Afficher</button>
+                    <button type="button" id="lcdp-connexion-reinitialiser" class="lcdp-button lcdp-button-secondary">Réinitialiser</button>
+                  </form>
+                  <div id="lcdp-connexion-personnalise" hidden>
+                    <h3 id="lcdp-connexion-titre-periode"></h3>
+                    <p class="lcdp-connexion-admin__total">Total : <strong id="lcdp-connexion-total-personnalise">—</strong></p>
+                    <div class="lcdp-table-lecture-admin__scroll">
+                      <table class="lcdp-table-lecture-admin__table">
+                        <thead><tr><th scope="col">Nom et prénom</th><th scope="col">Type</th><th scope="col">Connexions</th></tr></thead>
+                        <tbody id="lcdp-connexion-detail-personnalise"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+                <p id="lcdp-connexion-statut" class="lcdp-table-lecture-admin__status"
+                  role="status" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./ConnexionAdmin.js"></script>
+</body>
+</html>
