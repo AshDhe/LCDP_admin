@@ -814,6 +814,15 @@
             lien.classList.add("lcdp-button-orange");
           }
 
+          // Parcs : troisième rangée verte, sans dépendre de la feuille CSS en cache.
+          if (categorie.id === "parcs" && position >= 17 && position <= 24) {
+            lien.classList.remove("lcdp-button-orange", "lcdp-button-secondary");
+            lien.classList.add("lcdp-button-primary");
+            lien.style.setProperty("background", "var(--lcdp-color-primary)", "important");
+            lien.style.setProperty("border-color", "var(--lcdp-color-primary)", "important");
+            lien.style.setProperty("color", "#ffffff", "important");
+          }
+
           grid.appendChild(lien);
         }
 
