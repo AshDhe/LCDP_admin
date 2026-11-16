@@ -8,7 +8,7 @@
   const CONTEXTES = Object.freeze({
     parcs: {
       key: "parcs",
-      label: "Parcs",
+      label: "Parc",
       resource: "cle-parcs",
       tableSlotId: "lcdp-cle-parcs-table-slot",
       editionSlotId: "lcdp-cle-parcs-edition-slot",
@@ -25,7 +25,7 @@
     },
     membres: {
       key: "membres",
-      label: "Membres",
+      label: "Membre",
       resource: "cle-membres",
       tableSlotId: "lcdp-cle-membres-table-slot",
       editionSlotId: "lcdp-cle-membres-edition-slot",
@@ -42,7 +42,7 @@
     },
     bluetooth: {
       key: "bluetooth",
-      label: "Clés Bluetooth",
+      label: "Wi-Fi",
       resource: "cles-bluetooth",
       tableSlotId: "lcdp-cle-bluetooth-table-slot",
       editionSlotId: "lcdp-cle-bluetooth-edition-slot",
@@ -262,7 +262,7 @@
       boutons[0],
       panneaux[0],
       "parcs",
-      "Parcs",
+      "Parc",
       true
     );
 
@@ -270,7 +270,7 @@
       boutons[1],
       panneaux[1],
       "membres",
-      "Membres",
+      "Membre",
       false
     );
 
@@ -278,10 +278,10 @@
       boutons[2],
       panneaux[2],
       "bluetooth",
-      "Clés Bluetooth",
+      "Wi-Fi",
       false
     );
-    configurerOnglet(boutons[3],panneaux[3],"suivi","Présence et fréquences",false);
+    configurerOnglet(boutons[3],panneaux[3],"suivi","Paramétrage SNG",false);
   }
 
   function assurerTroisiemeOnglet(racine) {
