@@ -25,6 +25,24 @@
       : path;
   }
 
+  function endpointMembreAdmin() {
+    const configure =
+      config.workerMembreAdminUrl ||
+      config.WORKER_MEMBRE_ADMIN_URL ||
+      window.ADMIN_CONFIG?.API_MEMBRE_ADMIN ||
+      "";
+
+    if (configure) {
+      return String(configure).replace(/\/+$/, "");
+    }
+
+    if (typeof config.apiUrl === "function") {
+      return String(config.apiUrl("membre-admin-api")).replace(/\/+$/, "");
+    }
+
+    return "https://membre-admin-api.lacleduparc.fr";
+  }
+
   function endpointAdminData() {
     return String(
       config.workerAdminDataUrl ||
@@ -306,7 +324,7 @@
       throw new Error("Objet table lecture admin indisponible.");
     }
 
-    await table.initialiser({
+    const charge = await table.initialiser({
       slotId: TABLE_SLOT_ID,
       endpoint: endpointAdminData(),
       resource: RESOURCE_CODE,
@@ -327,6 +345,31 @@
       initialSortDirection: "desc",
       onCellActivate: ({ row }) => ouvrirFicheMembre(row)
     });
+
+    // Le tableau historique reste disponible si la nouvelle ressource
+    // administrateur ne répond pas correctement.
+    if (!charge) {
+      slot.innerHTML = "";
+      slot.appendChild(
+        await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
+        )
+      );
+
+      await table.initialiser({
+        slotId: TABLE_SLOT_ID,
+        endpoint: endpointMembreAdmin(),
+        resource: "membres-inscrits",
+        interactiveColumns: ["nommembre"],
+        interactiveLabel: "Ouvrir la fiche membre",
+        interactiveLabels: {
+          nommembre: "Ouvrir la fiche de"
+        },
+        initialSortKey: "datecreation",
+        initialSortDirection: "desc",
+        onCellActivate: ({ row }) => ouvrirFicheMembre(row)
+      });
+    }
   }
 
   function ouvrirFicheMembre(row) {
