@@ -30,8 +30,16 @@
     let occupe = false;
     let gestionDisponible = false;
     let categorieActive = "admin";
-    let formulaireOuvert = false;
     const ajouter = document.getElementById("lcdp-listadmin-ajouter");
+    const lightbox = document.getElementById("lcdp-listadmin-lightbox");
+    const formInvitation = document.getElementById("lcdp-listadmin-form");
+    const typeInput = document.getElementById("lcdp-listadmin-type");
+    const typeChamp = document.getElementById("lcdp-listadmin-type-champ");
+    const typeFixe = document.getElementById("lcdp-listadmin-type-fixe");
+    const titreForm = document.getElementById("lcdp-listadmin-form-title");
+    const erreurForm = document.getElementById("lcdp-listadmin-erreur");
+    const envoyerForm = document.getElementById("lcdp-listadmin-envoyer");
+    let previousOverflow = "";
 
     const texte = (value) => String(value ?? "").trim();
     const informer = (message, erreur = false) => {
@@ -77,22 +85,46 @@
       ajouter.hidden = !estRoot;
       ajouter.disabled = !gestionDisponible;
       ajouter.title = gestionDisponible ? "" : "Service de gestion des comptes indisponible.";
-      ajouter.setAttribute("aria-expanded", String(formulaireOuvert));
-      ajouter.setAttribute("aria-controls", "lcdp-comptes-admin-panel-" + categorieActive);
-      const categorie = TYPES.find((item) => item.key === categorieActive);
-      ajouter.setAttribute("aria-label", "Ajouter un compte " + (categorie?.label || "Admin"));
+      ajouter.setAttribute("aria-expanded", String(!lightbox.hidden));
+      ajouter.setAttribute("aria-controls", "lcdp-listadmin-lightbox");
+    }
+
+    function fermerLightbox(force = false) {
+      if (lightbox.hidden || (occupe && !force)) return;
+      lightbox.hidden = true;
+      document.body.style.overflow = previousOverflow;
+      formInvitation.reset();
+      erreurForm.textContent = "";
+      erreurForm.hidden = true;
+      mettreAJourBoutonAjouter();
+      ajouter.focus();
+    }
+
+    function ouvrirLightbox() {
+      if (!estRoot || !gestionDisponible || occupe || !lightbox.hidden) return;
+      const def = TYPES.find((item) => item.key === categorieActive);
+      if (!def) return;
+      formInvitation.reset();
+      erreurForm.textContent = "";
+      erreurForm.hidden = true;
+      titreForm.textContent = "Nouvel administrateur — " + def.label;
+      const admin = def.key === "admin";
+      typeChamp.hidden = !admin;
+      typeInput.disabled = !admin;
+      typeInput.required = admin;
+      typeFixe.hidden = admin;
+      typeFixe.textContent = admin ? "" : "Type : " + def.label;
+      previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      lightbox.hidden = false;
+      mettreAJourBoutonAjouter();
+      formInvitation.elements.namedItem("nomadmin").focus();
     }
 
     function synchroniserOngletActif() {
-      const actif = onglets.boutons.find((element) => element.getAttribute("aria-selected") === "true")
-        ?.dataset.lcdpOnglet;
-      if (!actif || actif === categorieActive) return;
-      categorieActive = actif;
-      formulaireOuvert = false;
-      rendreTous();
-      mettreAJourBoutonAjouter();
+      categorieActive = onglets.boutons.find((b) => b.getAttribute("aria-selected") === "true")
+        ?.dataset.lcdpOnglet || "admin";
     }
-
     onglets.boutons.forEach((tab) => {
       tab.addEventListener("click", synchroniserOngletActif);
       tab.addEventListener("keydown", (event) => {
@@ -101,18 +133,41 @@
         }
       });
     });
-
-    if (ajouter) {
-      ajouter.addEventListener("click", () => {
-        if (!estRoot || !gestionDisponible || occupe) return;
-        formulaireOuvert = !formulaireOuvert;
-        rendreOnglet(TYPES.find((item) => item.key === categorieActive));
-        mettreAJourBoutonAjouter();
-        if (formulaireOuvert) {
-          onglets.zones[categorieActive].querySelector('input[name="nomadmin"]')?.focus();
+    ajouter.addEventListener("click", ouvrirLightbox);
+    lightbox.querySelectorAll("[data-lcdp-listadmin-fermer]").forEach((btn) => {
+      btn.addEventListener("click", () => fermerLightbox());
+    });
+    lightbox.addEventListener("click", (event) => {
+      if (event.target === lightbox) fermerLightbox();
+    });
+    lightbox.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        fermerLightbox();
+      } else if (event.key === "Tab") {
+        const elements = Array.from(lightbox.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled)"))
+          .filter((el) => !el.closest("[hidden]"));
+        const first = elements[0], last = elements[elements.length - 1];
+        if (first && event.shiftKey && document.activeElement === first) {
+          event.preventDefault(); last.focus();
+        } else if (last && !event.shiftKey && document.activeElement === last) {
+          event.preventDefault(); first.focus();
         }
-      });
-    }
+      }
+    });
+    formInvitation.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (occupe || !gestionDisponible || !estRoot || !formInvitation.reportValidity()) return;
+      const def = TYPES.find((item) => item.key === categorieActive);
+      const code = def?.key === "admin" ? typeInput.value : def?.codes[0];
+      if (!def || !def.codes.includes(code) || !TYPES_VALIDES.has(code)) return;
+      envoyerInvitation({
+        nomadmin: formInvitation.elements.namedItem("nomadmin").value.trim(),
+        prenomadmin: formInvitation.elements.namedItem("prenomadmin").value.trim(),
+        adminemail: formInvitation.elements.namedItem("adminemail").value.trim().toLowerCase(),
+        type: code
+      }, formInvitation);
+    });
     mettreAJourBoutonAjouter();
 
     async function appelerApi(path, method, body) {
@@ -195,22 +250,25 @@
     async function envoyerInvitation(data, form) {
       if (occupe) return;
       occupe = true;
+      if (form) envoyerForm.disabled = true;
       informer("Enregistrement et envoi de l'invitation…");
       try {
         await appelerApi("/admin/accounts", "POST", data);
-        if (form) {
-          form.reset();
-          formulaireOuvert = false;
-          mettreAJourBoutonAjouter();
-        }
+        if (form) fermerLightbox(true);
         informer("L'invitation a été envoyée. Le compte sera actif après la création du mot de passe.");
         const result = await appelerApi("/admin/accounts", "GET");
         comptes = Array.isArray(result.accounts) ? result.accounts : [];
         rendreTous();
       } catch (error) {
-        informer(error?.message || "Échec de l'invitation.", true);
+        const message = error?.message || "Échec de l'invitation.";
+        informer(message, true);
+        if (form && !lightbox.hidden) {
+          erreurForm.textContent = message;
+          erreurForm.hidden = false;
+        }
       } finally {
         occupe = false;
+        envoyerForm.disabled = !gestionDisponible;
       }
     }
 
@@ -290,64 +348,6 @@
       }
     }
 
-    function creerFormulaireInvitation(zone, def) {
-      if (!estRoot) return;
-      const formulaire = document.createElement("form");
-      formulaire.id = "lcdp-formulaire-nouvel-admin-" + def.key;
-      formulaire.className = "lcdp-box-formulaire lcdp-stack-large lcdp-listadmin__formulaire";
-      const titre = document.createElement("h2");
-      titre.textContent = "Nouvel administrateur — " + def.label;
-      const info = document.createElement("p");
-      info.textContent = "Un email sera envoyé à cette adresse. Le destinataire définira personnellement son mot de passe.";
-      const nom = champ("Nom", "text", "nomadmin");
-      const prenom = champ("Prénom", "text", "prenomadmin");
-      const email = champ("Email", "email", "adminemail");
-      const type = def.key === "admin"
-        ? champ("Type", "select", "type", [
-          ["", "Choisir un type"], ["root", "Root"], ["asso", "Asso"]
-        ])
-        : null;
-      if (type) type.input.value = "";
-      const libelleType = document.createElement("p");
-      libelleType.className = "lcdp-listadmin__type-fixe";
-      libelleType.textContent = "Type : " + def.label;
-      const actions = document.createElement("div");
-      actions.className = "lcdp-listadmin__formulaire-actions";
-      const valider = document.createElement("button");
-      valider.type = "submit";
-      valider.disabled = !gestionDisponible;
-      valider.className = "lcdp-button lcdp-button-orange";
-      valider.textContent = "Envoyer l'invitation";
-      const annuler = bouton("Annuler", "lcdp-button lcdp-button-secondary", () => {
-        formulaireOuvert = false;
-        rendreOnglet(def);
-        mettreAJourBoutonAjouter();
-        ajouter?.focus();
-      });
-      actions.append(valider, annuler);
-      formulaire.append(titre, info, nom.wrapper, prenom.wrapper, email.wrapper);
-      if (type) {
-        formulaire.appendChild(type.wrapper);
-      } else {
-        formulaire.appendChild(libelleType);
-      }
-      formulaire.appendChild(actions);
-      formulaire.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const typeCompte = type ? type.input.value : def.codes[0];
-        if (!formulaire.reportValidity() ||
-            !TYPES_VALIDES.has(typeCompte) ||
-            !def.codes.includes(typeCompte)) return;
-        envoyerInvitation({
-          nomadmin: nom.input.value.trim(),
-          prenomadmin: prenom.input.value.trim(),
-          adminemail: email.input.value.trim().toLowerCase(),
-          type: typeCompte
-        }, formulaire);
-      });
-      zone.appendChild(formulaire);
-    }
-
     function rendreTable(zone, type, elements) {
       const conteneur = document.createElement("div");
       conteneur.className = "lcdp-table-lecture-admin";
@@ -415,10 +415,6 @@
     function rendreOnglet(def) {
       const zone = onglets.zones[def.key];
       zone.replaceChildren();
-      if (formulaireOuvert && def.key === categorieActive) {
-        creerFormulaireInvitation(zone, def);
-        return;
-      }
       const filtre = document.createElement("div");
       filtre.className = "lcdp-stack-small";
       const recherche = champ("Rechercher par nom, prénom ou email", "search", "recherche");
