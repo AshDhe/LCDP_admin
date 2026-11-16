@@ -731,12 +731,16 @@
           // Membres : VT Abo au slot 9, VT Abo € au slot 10,
           // Suivi des paiements au slot 11, sans modifier leurs liens ni permissions.
           const originesMembres = { 9: 8, 10: 9, 11: 4 };
+          // Coachs : permutation des deux boutons des slots 17 et 18.
+          const originesCoachs = { 17: 18, 18: 17 };
           const positionSource = categorie.id === "parcs"
             ? (originesParc[position] || position)
-            : (categorie.id === "membres" ? (originesMembres[position] || position) : position);
+            : (categorie.id === "membres" ? (originesMembres[position] || position)
+              : (categorie.id === "coachs" ? (originesCoachs[position] || position) : position));
           const configuration = (
             (categorie.id === "parcs" && positionsLiberees.has(position)) ||
-            (categorie.id === "membres" && [4, 8].includes(position))
+            (categorie.id === "membres" && [4, 8].includes(position)) ||
+            (categorie.id === "coachs" && position === 7)
               ? null
               : boutonsConfigures.find((bouton) => (
                   bouton.cat === categorie.cat &&
