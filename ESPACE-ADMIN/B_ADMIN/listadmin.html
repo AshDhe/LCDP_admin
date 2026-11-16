@@ -81,12 +81,15 @@
         );
       });
 
-      // Réutilisation des styles existants de l'objet onglets, sans CSS local.
-      document.write(
-        '<link rel="stylesheet" href="' +
-        window.LCDP_urlObjet("/CSSBASE/lcdp-central-module-05.css") +
-        '">'
-      );
+      // Styles centralisés des onglets et du dialogue SUPPRESSION.
+      [
+        "/CSSBASE/lcdp-central-module-05.css",
+        "/CSSBASE/lcdp-lightbox-convergence.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' + window.LCDP_urlObjet(path) + '">'
+        );
+      });
 
       ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
         document.write(
@@ -126,6 +129,33 @@
         </div>
       </section>
     </main>
+
+    <!-- Profil SUPPRESSION du système de dialogue centralisé : aucun CSS local. -->
+    <div class="lcdp-dialogue-ref lcdp-dialogue-ref--suppression"
+      id="lcdp-admin-confirmation-suppression" role="dialog"
+      aria-modal="true" aria-labelledby="lcdp-ref-suppression-titre"
+      aria-describedby="lcdp-ref-suppression-message"
+      data-lcdp-dialogue-reference="suppression" hidden>
+      <div class="lcdp-dialogue-ref__card">
+        <div class="lcdp-dialogue-ref__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <h3 class="lcdp-dialogue-ref__titre" id="lcdp-ref-suppression-titre">
+          Supprimer cet administrateur ?
+        </h3>
+        <p class="lcdp-dialogue-ref__message" id="lcdp-ref-suppression-message"></p>
+        <div class="lcdp-dialogue-ref__actions lcdp-dialogue-ref__actions--choix">
+          <button type="button"
+            class="lcdp-dialogue-ref__bouton lcdp-dialogue-ref__bouton--secondaire"
+            data-lcdp-dialogue-action="conserver">Conserver</button>
+          <button type="button"
+            class="lcdp-dialogue-ref__bouton lcdp-dialogue-ref__bouton--suppression"
+            data-lcdp-dialogue-action="supprimer">Oui, supprimer</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 
