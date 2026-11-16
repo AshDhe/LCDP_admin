@@ -993,8 +993,9 @@
         portion.appendChild(tr);
       }
       corps.replaceChildren(portion);
+      statut.hidden = correspondants.length > 0;
       statut.textContent = correspondants.length
-        ? correspondants.length + " bracelet(s)"
+        ? ""
         : "Aucun bracelet ne correspond aux critères.";
       suite.hidden = correspondants.length <= selection.limite;
     };
@@ -1018,6 +1019,7 @@
         preparerFiltres(); rendre();
       } catch(error) {
         scroll.hidden = true;
+        statut.hidden = false;
         statut.setAttribute("role","alert");
         statut.textContent = String(error?.message || "Lecture des bracelets indisponible.");
       }
