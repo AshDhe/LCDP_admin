@@ -146,9 +146,9 @@
     ));
 
     await chargerScriptUneFois(
-      urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js") + "?v=20261112-ordrecolonnes2",
+      urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"),
       "data-lcdp-script-admin",
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261112-ordrecolonnes2"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
@@ -162,8 +162,11 @@
       endpoint,
       reorderableColumns: true,
       resource: "prixabo",
+      sessionStateKey: "lcdp-admin-session:prixabo",
+      // Clés de colonnes, indépendantes du déplacement de leur position.
+      hiddenSortColumns: ["variables", "nomabo", "typeabo"],
       pageSize: 200,
-      multiSelectFilterColumns: ["typeabo", "nomabo", "variables", "datedebut", "datefin", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise", "datecreation"],
+      multiSelectFilterColumns: ["typeabo", "nomabo", "variables", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise"],
       initialSortKey: "typeabo",
       initialSortDirection: "asc",
       interactiveColumns: ["typeabo", "nomabo", "ria", "typmb"],
