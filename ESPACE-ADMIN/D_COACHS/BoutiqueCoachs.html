@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boutique - La Clé du Parc</title>
+  <meta name="description" content="Accès à la rubrique Boutique depuis l’espace administrateur.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = x => String(x || "").replace(/\/+$/, "");
+      const join = (x,p) => base(x) + "/" + String(p || "").replace(/^\/+/, "");
+      const a=base(c.adminBaseUrl||c.ADMIN_BASE||c.siteBase||"");
+      const p=base(c.publicBaseUrl||c.PUBLIC_BASE||"");
+      const o=base(c.objetBaseUrl||c.OBJET_BASE||join(p,"/OBJET"));
+      window.LCDP_urlAdmin=x=>typeof c.adminUrl==="function"?c.adminUrl(x):join(a,x);
+      window.LCDP_urlPublic=x=>typeof c.publicUrl==="function"?c.publicUrl(x):join(p,x);
+      window.LCDP_urlObjet=x=>typeof c.objetUrl==="function"?c.objetUrl(x):join(o,x);
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css"].forEach(x=>{
+        document.write('<link rel="stylesheet" href="'+window.LCDP_urlObjet(x)+'">');
+      });
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+       "/ESPACE-ADMIN/D_COACHS/CoachsAdmin.css"].forEach(x=>{
+        document.write('<link rel="stylesheet" href="'+window.LCDP_urlAdmin(x)+'">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-coachs-admin">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Boutique">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-coachs-admin__entete">
+                <div>
+                  <h1>Boutique</h1>
+                  <p>Gestion de la Boutique pour l’espace Coach.</p>
+                </div>
+              </header>
+              <p id="lcdp-coachs-page-statut" role="status" aria-live="polite">
+                Le catalogue et les commandes de la Boutique Coach ne disposent pas encore d’une interface de gestion. Aucun chiffre ni achat n’est simulé.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./CoachsPages.js"></script>
+</body>
+</html>
