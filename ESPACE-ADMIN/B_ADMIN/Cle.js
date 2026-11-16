@@ -1322,7 +1322,8 @@
     if(contexte.key==="membres" && modeEdition==="update"){
       const preparer=document.createElement("button");preparer.type="button";preparer.className="lcdp-button lcdp-button-secondary";preparer.textContent="Générer le secret du bracelet Wi-Fi";
       const note=document.createElement("p");note.textContent="Cette action remplace le secret de connexion précédent du bracelet. Elle ne change pas son mot de passe Wi-Fi.";
-      form.append(note,preparer);
+      form.querySelector("[data-lcdp-formulaire-actions]")?.appendChild(preparer);
+      form.appendChild(note);
       preparer.addEventListener("click",async()=>{
         preparer.disabled=true;
         try{
