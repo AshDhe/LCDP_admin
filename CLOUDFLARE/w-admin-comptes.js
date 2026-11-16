@@ -1,6 +1,6 @@
 // La Clé du Parc — gestion des comptes administrateurs.
 // Worker indépendant : authentification déléguée au Worker de session existant.
-// Domaine à associer : ad-admin-comptes-api.lacleduparc.fr
+// Domaine à associer : w-admin-comptes-api.lacleduparc.fr
 
 const ORIGINE_ADMIN = "https://admin.lacleduparc.fr";
 const API_AUTH = "https://ad-log-sess-api.lacleduparc.fr";
