@@ -2230,8 +2230,7 @@
     const tableau = creer("table", "lcdp-table-lecture-admin__table");
     const entete = creer("thead");
     const enteteLigne = creer("tr");
-    for (const titre of ["Choix", "Dptmt", "Parc", "Couleur bracelet (min)",
-      "Combinaison 3 couleurs (min)"]) {
+    for (const titre of ["Choix", "Dptmt", "Parc", "Refresh couleurs (min)"]) {
       const th = creer("th", "", titre);
       th.scope = "col";
       enteteLigne.appendChild(th);
@@ -2247,7 +2246,7 @@
     const note = creer("p", "lcdp-cle-suivi__note");
     note.setAttribute("role", "status");
     zone.replaceChildren(
-      creer("p", "", "Refresh par parc : couleur du bracelet et combinaison des trois couleurs de l’application."),
+      creer("p", "", "Un seul refresh par parc : le serveur renouvelle ensemble les trois couleurs affichées sur les téléphones."),
       barre, actions, edition, cadre, note
     );
 
@@ -2298,8 +2297,7 @@
         ouvrir.addEventListener("click", () => modifier([parc]));
         nom.appendChild(ouvrir);
         tr.append(choix, creer("td", "", String(parc.dptmt || "")),
-          nom, creer("td", "", minutes(parc.effective?.bracelet_secondes)),
-          creer("td", "", minutes(parc.effective?.image_secondes)));
+          nom, creer("td", "", minutes(parc.effective?.image_secondes)));
         fragment.appendChild(tr);
       }
       corps.replaceChildren(fragment);
@@ -2374,8 +2372,7 @@
         ? "Modifier " + cibles.length + " parcs"
         : "Modifier " + cibles[0].nom);
       const champs = [
-        ["bracelet_secondes", "Refresh couleur du bracelet (minutes)"],
-        ["image_secondes", "Refresh des trois couleurs de l’application (minutes)"]
+        ["image_secondes", "Refresh de la combinaison des trois couleurs (minutes)"]
       ];
       const controles = {};
       for (const [cle, libelle] of champs) {
@@ -2407,7 +2404,6 @@
         event.preventDefault();
         if (!formulaire.reportValidity()) return;
         const valeurs = {
-          bracelet_secondes: Math.round(Number(controles.bracelet_secondes.value) * 60),
           image_secondes: Math.round(Number(controles.image_secondes.value) * 60)
         };
         if (Object.values(valeurs).some(v => !Number.isInteger(v) ||
