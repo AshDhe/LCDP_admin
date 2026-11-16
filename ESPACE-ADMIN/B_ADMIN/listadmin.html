@@ -94,7 +94,6 @@
 
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
-  <link rel="stylesheet" href="./listadmin.css">
 </head>
 <body class="lcdp-page-admin-interieure lcdp-page-listadmin">
   <div class="lcdp-site-page">
@@ -109,38 +108,11 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
-              <div class="lcdp-admin-comptes" id="lcdp-admin-comptes" hidden>
-                <div class="lcdp-admin-comptes__toolbar">
-                  <button type="button" class="lcdp-admin-comptes__add" id="lcdp-ajouter-admin"
-                    aria-controls="lcdp-formulaire-ajout-admin" aria-expanded="false">
-                    Ajouter un administrateur
-                  </button>
-                </div>
-                <form id="lcdp-formulaire-ajout-admin" class="lcdp-admin-comptes__form" hidden>
-                  <h2>Nouvel administrateur</h2>
-                  <p class="lcdp-admin-comptes__intro">Un email d'activation lui sera envoyé. Il choisira lui-même son mot de passe.</p>
-                  <div class="lcdp-admin-comptes__fields">
-                    <label>Nom <input name="nomadmin" autocomplete="family-name" maxlength="120" required></label>
-                    <label>Prénom <input name="prenomadmin" autocomplete="given-name" maxlength="120" required></label>
-                    <label>Adresse email <input name="adminemail" type="email" autocomplete="off" maxlength="254" required></label>
-                    <label>Type
-                      <select name="type" required>
-                        <option value="" selected disabled>Choisir un type</option>
-                        <option value="root">Root</option>
-                        <option value="asso">Association</option>
-                        <option value="resparc">Responsable de parc</option>
-                        <option value="coach">Coach</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="lcdp-admin-comptes__actions">
-                    <button type="submit" class="lcdp-admin-comptes__submit">Envoyer l'invitation</button>
-                    <button type="button" class="lcdp-admin-comptes__cancel" id="lcdp-annuler-ajout-admin">Annuler</button>
-                  </div>
-                </form>
-                <p class="lcdp-admin-comptes__message" id="lcdp-admin-comptes-message" role="status" hidden></p>
-              </div>
-              <div id="lcdp-table-lecture-admin-slot"></div>
+              <section class="lcdp-wraper-onglets" data-lcdp-wraper-onglets aria-label="Comptes de l'espace admin">
+                <div class="lcdp-wraper-onglets__navigation" role="tablist" aria-label="Types de comptes" data-lcdp-wraper-onglets-navigation></div>
+                <div class="lcdp-wraper-onglets__contenu"></div>
+              </section>
+              <p id="lcdp-listadmin-statut" class="lcdp-table-lecture-admin__status" role="status" aria-live="polite"></p>
             </div>
 
           </div>
@@ -271,80 +243,43 @@
           config.WORKER_ADMIN_DATA_URL ||
           window.ADMIN_CONFIG?.API_ADMIN_DATA ||
           ""
-        ).replace(/\/+$/, "");
+        ).replace(/\\/+$/, "");
       }
 
-      async function initialiserMenuGauche() {
-        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+      function endpointAdminSession() {
+        return String(
+          config.workerLogSessAdminUrl ||
+          config.WORKER_LOG_SESS_ADMIN_URL ||
+          window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
+          ""
+        ).replace(/\\/+$/, "");
+      }
 
-        if (
-          !moduleMenu ||
-          typeof moduleMenu.initialiser !== "function"
-        ) {
-          throw new Error("Menu gauche admin centralisé indisponible.");
-        }
-
-        await moduleMenu.initialiser({
-          slotId: "lcdp-menu-gauche-admin-slot",
-          categorieActive: "admin"
+      async function chargerScriptObjetUneFois(path) {
+        const src = urlObjet(path);
+        if (document.querySelector('script[data-lcdp-script-objet="' + path + '"]')) return;
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.dataset.lcdpScriptObjet = path;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Composant onglets indisponible."));
+          document.body.appendChild(script);
         });
       }
 
-      async function initialiserTable() {
-        const slot = document.getElementById(
-          "lcdp-table-lecture-admin-slot"
-        );
-
-        if (!slot) {
-          return;
-        }
-
-        const fragment = await chargerFragmentAdmin(
-          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
-        );
-
-        slot.appendChild(fragment);
-
-        await chargerScriptAdminUneFois(
-          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
-        );
-
-        const table = window.LCDP_TABLE_LECTURE_ADMIN;
-
-        if (!table || typeof table.initialiser !== "function") {
-          throw new Error("Objet table lecture admin indisponible.");
-        }
-
-        await table.initialiser({
-          slotId: "lcdp-table-lecture-admin-slot",
-          endpoint: endpointAdminData(),
-          resource: "admin-list",
-          filterOptions: {
-            type: [
-              { value: "", label: "Tous les types" },
-              { value: "root", label: "Root" },
-              { value: "asso", label: "Association" },
-              { value: "resparc", label: "Responsable de parc" },
-              { value: "coach", label: "Coach" }
-            ]
-          }
-        });
-      }
-
-      async function initialiserGestionComptes() {
+      async function initialiserListe() {
+        await chargerScriptObjetUneFois("/JSBASE/05-wraper-onglets.js");
         await chargerScriptAdminUneFois("/ESPACE-ADMIN/B_ADMIN/listadmin.js");
-        if (!window.LCDP_ADMIN_COMPTES || typeof window.LCDP_ADMIN_COMPTES.initialiser !== "function") {
-          throw new Error("Gestion des comptes administrateurs indisponible.");
+        if (typeof window.LCDP_LISTADMIN?.initialiser !== "function") {
+          throw new Error("Liste des administrateurs indisponible.");
         }
-        window.LCDP_ADMIN_COMPTES.initialiser({
-          url: String(
-            config.workerLogSessAdminUrl ||
-            config.WORKER_LOG_SESS_ADMIN_URL ||
-            window.ADMIN_CONFIG?.API_LOG_SESS_AD ||
-            ""
-          ).replace(/\/+$/, ""),
-          autorisation: window.LCDP_ADMIN_AUTORISATION,
-          recharger: () => window.LCDP_TABLE_LECTURE_ADMIN?.recharger("lcdp-table-lecture-admin-slot")
+        await window.LCDP_LISTADMIN.initialiser({
+          racine: document.querySelector("[data-lcdp-wraper-onglets]"),
+          status: document.getElementById("lcdp-listadmin-statut"),
+          adminDataUrl: endpointAdminData(),
+          adminSessionUrl: endpointAdminSession(),
+          autorisation: window.LCDP_ADMIN_AUTORISATION
         });
       }
 
@@ -371,8 +306,7 @@
         await Promise.all([
           initialiserBandeau(),
           initialiserMenuGauche(),
-          initialiserTable(),
-          initialiserGestionComptes()
+          initialiserListe()
         ]);
 
         const main = document.getElementById("lcdp-main-admin");
