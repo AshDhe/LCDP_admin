@@ -81,7 +81,9 @@
         );
       });
 
-      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"].forEach((path) => {
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/B_PARCS/PlanningParc.css"].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
           window.LCDP_urlAdmin(path) +
@@ -95,7 +97,7 @@
   <script src="../A_STRUCTURE/guard-admin.js"></script>
   <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
 </head>
-<body class="lcdp-page-admin-interieure lcdp-page-parcsfrance">
+<body class="lcdp-page-admin-interieure lcdp-page-parcsfrance lcdp-page-planning-parc-admin">
   <div class="lcdp-site-page">
 
     <div id="lcdp-bandeau-slot"></div>
@@ -108,6 +110,7 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
+              <header class="lcdp-planning-parc-admin__entete"><h1 class="lcdp-planning-parc-admin__titre">ParcsFrance</h1></header>
               <div id="lcdp-table-lecture-admin-slot"></div>
             </div>
 
