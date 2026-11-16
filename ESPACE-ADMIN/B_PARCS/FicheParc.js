@@ -95,6 +95,30 @@
     apercu.scrollIntoView({block:"start"});
   }
 
+  function installerPictogrammes(tableSlot) {
+    const tbody = tableSlot.querySelector("[data-lcdp-table-lecture-admin-body]");
+    if (!tbody) return;
+    const namespace = "http://www.w3.org/2000/svg";
+    const dessiner = () => {
+      tbody.querySelectorAll(".lcdp-table-lecture-admin__cell-action").forEach(bouton => {
+        if (bouton.dataset.ficheparcIcone === "oui") return;
+        const nom = bouton.closest("tr")?.cells?.[1]?.textContent?.trim() || "sélectionné";
+        const svg = document.createElementNS(namespace, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        const corps = document.createElementNS(namespace, "path");
+        corps.setAttribute("d", "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8");
+        svg.appendChild(corps);
+        bouton.replaceChildren(svg);
+        bouton.dataset.ficheparcIcone = "oui";
+        bouton.title = "Afficher la fiche du parc " + nom;
+        bouton.setAttribute("aria-label", bouton.title);
+      });
+    };
+    new MutationObserver(dessiner).observe(tbody, {childList:true,subtree:true});
+    dessiner();
+  }
+
   async function initialiserTable() {
     const slot = $(TABLE_ID);
     slot.replaceChildren(await chargerFragment(
@@ -151,6 +175,7 @@
       },
       onCellActivate: ({row}) => afficherFiche(row)
     });
+    installerPictogrammes(slot);
   }
 
   async function demarrer() {
