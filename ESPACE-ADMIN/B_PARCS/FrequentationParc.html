@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Fréquentation parc - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Synthèse mensuelle des réservations et des passages enregistrés par parc.">
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        if (typeof config.adminUrl === "function") {
+          return config.adminUrl(path);
+        }
+
+        return construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        if (typeof config.publicUrl === "function") {
+          return config.publicUrl(path);
+        }
+
+        return construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        if (typeof config.objetUrl === "function") {
+          return config.objetUrl(path);
+        }
+
+        return construireUrl(objetBase, path);
+      };
+
+      ["/CSSBASE/cssbase.css", "/CSSBASE/lcdp-central-mobile-first.css"].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/B_PARCS/PlanningParc.css"].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+
+    })();
+
+    /* Surcharges limitées à cette page : sept colonnes visibles, sans espace vide. */
+  </script>
+  <style>
+    .lcdp-page-frequentation-parc .lcdp-admin-page-content { min-width: 0; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table { width: 100%; min-width: 870px; table-layout: fixed; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table tr > :nth-child(3) { display: none; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table tr > :nth-child(1) { width: 10%; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table tr > :nth-child(2) { width: 35%; text-align: left; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table tr > :is(:nth-child(4),:nth-child(5),:nth-child(6),:nth-child(7)) { width: 12%; text-align: center; font-variant-numeric: tabular-nums; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__table tr > :nth-child(8) { width: 7%; text-align: center; font-variant-numeric: tabular-nums; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__filters input { min-width: 0; width: 100%; box-sizing: border-box; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__sort-actions { display: flex; justify-content: center; gap: 4px; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__sort-button { width: 24px; min-width: 24px; height: 24px; min-height: 24px; padding: 0; }
+    .lcdp-page-frequentation-parc .lcdp-freq-legende { color: #526256; font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
+    .lcdp-page-frequentation-parc .lcdp-table-lecture-admin__scroll { max-width: 100%; overflow-x: auto; }
+  </style>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-frequentation-parc lcdp-page-planning-parc-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Fréquentation parc">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-planning-parc-admin__entete"><h1 class="lcdp-planning-parc-admin__titre">Fréquentation parc</h1></header>
+              
+              <nav class="lcdp-planning-parc-admin__mois-nav" aria-label="Mois de fréquentation">
+                <button type="button" data-freq-mois-prev aria-label="Mois précédent">‹</button>
+                <strong data-freq-mois-label></strong>
+                <button type="button" data-freq-mois-next aria-label="Mois suivant">›</button>
+              </nav>
+              <p class="lcdp-freq-legende">Synthèse des accès du mois sélectionné. « Réservés » correspond au statut de réservation ; « Check-in » indique les passages dont le contrôle est enregistré. Une réservation ne prouve pas une visite effective.</p>
+              <div id="lcdp-table-lecture-admin-slot"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function urlAdmin(path) {
+        return typeof window.LCDP_urlAdmin === "function"
+          ? window.LCDP_urlAdmin(path)
+          : path;
+      }
+
+      function urlPublic(path) {
+        return typeof window.LCDP_urlPublic === "function"
+          ? window.LCDP_urlPublic(path)
+          : path;
+      }
+
+      function urlObjet(path) {
+        return typeof window.LCDP_urlObjet === "function"
+          ? window.LCDP_urlObjet(path)
+          : path;
+      }
+
+      function appliquerRoutes(racine = document) {
+        racine.querySelectorAll("[data-site-href]").forEach((element) => {
+          const path = element.dataset.siteHref || "";
+          const space = element.dataset.space || "public";
+
+          element.setAttribute(
+            "href",
+            space === "admin" ? urlAdmin(path) : urlPublic(path)
+          );
+        });
+
+        racine.querySelectorAll("[data-site-src]").forEach((element) => {
+          const path = String(element.dataset.siteSrc || "")
+            .replace(/^\/?OBJET\/?/, "/");
+
+          element.setAttribute("src", urlObjet(path));
+        });
+      }
+
+      async function chargerFragment(url, libelle) {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(libelle + " introuvable.");
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+
+        return template.content.cloneNode(true);
+      }
+
+      function chargerFragmentAdmin(path) {
+        return chargerFragment(
+          urlAdmin(path),
+          "Fragment ADMIN " + path
+        );
+      }
+
+      function chargerFragmentObjet(path) {
+        return chargerFragment(
+          urlObjet(path),
+          "Fragment OBJET " + path
+        );
+      }
+
+      function chargerScriptAdminUneFois(path) {
+        const src = urlAdmin(path);
+
+        if (
+          document.querySelector(
+            `script[data-lcdp-script-admin="${path}"]`
+          )
+        ) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.defer = true;
+          script.dataset.lcdpScriptAdmin = path;
+          script.onload = resolve;
+          script.onerror = () => reject(
+            new Error("Script ADMIN introuvable : " + path)
+          );
+          document.body.appendChild(script);
+        });
+      }
+
+      async function initialiserBandeau() {
+        const slot = document.getElementById("lcdp-bandeau-slot");
+
+        if (!slot) {
+          return;
+        }
+
+        slot.innerHTML = "";
+
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html"
+        );
+
+        slot.appendChild(fragment);
+        appliquerRoutes(slot);
+      }
+
+      function endpointAdminData() {
+        return String(
+          config.workerAdminDataUrl ||
+          config.WORKER_ADMIN_DATA_URL ||
+          window.ADMIN_CONFIG?.API_ADMIN_DATA ||
+          ""
+        ).replace(/\/+$/, "");
+      }
+
+      async function initialiserMenuGauche() {
+        const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
+
+        if (
+          !moduleMenu ||
+          typeof moduleMenu.initialiser !== "function"
+        ) {
+          throw new Error("Menu gauche admin centralisé indisponible.");
+        }
+
+        await moduleMenu.initialiser({
+          slotId: "lcdp-menu-gauche-admin-slot",
+          categorieActive: "parcs"
+        });
+      }
+
+
+      const moisFrequentation = (() => {
+        const parties = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+        return {
+          annee: Number(parties.find(p => p.type === "year").value),
+          mois: Number(parties.find(p => p.type === "month").value)
+        };
+      })();
+
+      function cleMoisFrequentation() {
+        return String(moisFrequentation.annee) + "-" + String(moisFrequentation.mois).padStart(2, "0");
+      }
+
+      function initialiserNavigationFrequentation() {
+        const precedent = document.querySelector("[data-freq-mois-prev]");
+        const suivant = document.querySelector("[data-freq-mois-next]");
+        const titre = document.querySelector("[data-freq-mois-label]");
+        const actualiser = () => {
+          titre.textContent = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" })
+            .format(new Date(moisFrequentation.annee, moisFrequentation.mois - 1, 1));
+        };
+        let chargement = false;
+        const changer = async delta => {
+          if (chargement) return;
+          chargement = true;
+          precedent.disabled = true;
+          suivant.disabled = true;
+          const date = new Date(moisFrequentation.annee, moisFrequentation.mois - 1 + delta, 1);
+          moisFrequentation.annee = date.getFullYear();
+          moisFrequentation.mois = date.getMonth() + 1;
+          actualiser();
+          try { await initialiserTable(); }
+          finally { chargement = false; precedent.disabled = false; suivant.disabled = false; }
+        };
+        precedent.addEventListener("click", () => changer(-1).catch(console.error));
+        suivant.addEventListener("click", () => changer(1).catch(console.error));
+        actualiser();
+      }
+
+      async function initialiserTable() {
+        const slot = document.getElementById(
+          "lcdp-table-lecture-admin-slot"
+        );
+
+        if (!slot) {
+          return;
+        }
+
+        const fragment = await chargerFragmentAdmin(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"
+        );
+
+        slot.replaceChildren(fragment);
+
+        await chargerScriptAdminUneFois(
+          "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+        );
+
+        const table = window.LCDP_TABLE_LECTURE_ADMIN;
+
+        if (!table || typeof table.initialiser !== "function") {
+          throw new Error("Objet table lecture admin indisponible.");
+        }
+
+        await table.initialiser({
+          slotId: "lcdp-table-lecture-admin-slot",
+          endpoint: endpointAdminData(),
+          resource: "parcs-frequentation",
+          initialFilters: { mois: cleMoisFrequentation() },
+          initialSortKey: "dptmt",
+          pageSize: 100
+        });
+      }
+
+      async function verifierAcces() {
+        const guard = window.LCDP_GUARD_ADMIN;
+
+        if (
+          !guard ||
+          typeof guard.verifierAccesPageAdmin !== "function"
+        ) {
+          throw new Error("Garde admin centralisé indisponible.");
+        }
+
+        return guard.verifierAccesPageAdmin();
+      }
+
+      async function initialiserPage() {
+        const autorise = await verifierAcces();
+
+        if (!autorise) {
+          return;
+        }
+
+        await Promise.all([
+          initialiserBandeau(),
+          initialiserMenuGauche(),
+          initialiserTable()
+        ]);
+
+        initialiserNavigationFrequentation();
+
+        const main = document.getElementById("lcdp-main-admin");
+
+        if (main) {
+          main.hidden = false;
+        }
+      }
+
+      initialiserPage().catch((error) => {
+        console.error(error);
+      });
+    })();
+  </script>
+</body>
+</html>
