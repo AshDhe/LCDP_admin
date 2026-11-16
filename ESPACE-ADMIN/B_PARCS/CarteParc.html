@@ -1368,10 +1368,10 @@
           const requeteCourante = ++numeroRequete;
           statutTexte.textContent = "Chargement des parcs…";
 
+          // Le service CarteParc ne reconnaît pas tous les statuts SQL
+          // du référentiel actuel. On récupère les parcs du périmètre
+          // géographique, puis on filtre les statuts dans cette page.
           const params = new URLSearchParams();
-          if (etat) {
-            params.set("statut", etat);
-          }
           if (codes.length > 0) {
             params.set("dptmt", codes.join("|"));
           }
@@ -1393,11 +1393,18 @@
             throw new Error(data?.message || data?.detail || "Lecture des parcs impossible.");
           }
 
+          const lignes = Array.isArray(data.rows) ? data.rows : [];
+          const parcsFiltres = etat
+            ? lignes.filter((parc) => normaliserEtat(parc?.statut) === etat)
+            : lignes;
+
           dessinerLocalites(
             Array.isArray(data.localites) ? data.localites : []
           );
-          dessinerParcs(Array.isArray(data.rows) ? data.rows : []);
-          statutTexte.textContent = "";
+          dessinerParcs(parcsFiltres);
+          statutTexte.textContent = parcsFiltres.length === 0
+            ? "Aucun parc pour les filtres sélectionnés."
+            : "";
         }
 
         function programmerActualisation() {
