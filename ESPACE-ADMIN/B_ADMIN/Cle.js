@@ -1686,29 +1686,14 @@
         step: 1
       },
       {
-        name: "geoloc_frq",
-        label: "Contrôles de géolocalisation",
-        type: "select",
-        value: item?.geoloc_frq == null ? "2" : String(item.geoloc_frq),
-        options: [
-          { value: "", label: "Réglage général" },
-          { value: "0", label: "Désactivés" },
-          { value: "2", label: "Entrée et sortie" },
-          ...Array.from({ length: 22 }, (_, i) => ({
-            value: String(i + 3),
-            label: String(i + 1) + " contrôle(s) intermédiaire(s), entrée et sortie"
-          }))
-        ],
-        required: false
-      },
-      {
-        name: "geoloc_interval_minutes",
-        label: "Intervalle entre contrôles GPS (minutes)",
+        name: "gps_intervalle",
+        label: "GPS intermédiaire (minutes, 0 = aucun)",
         type: "number",
-        value: item?.geoloc_interval_minutes ?? "",
-        required: false,
+        value: Number(item?.geoloc_frq ?? 2) <= 2
+          ? 0 : Number(item?.geoloc_interval_minutes ?? 60),
+        required: true,
         validationNative: true,
-        min: 1,
+        min: 0,
         max: 1440,
         step: 1
       },
@@ -1893,10 +1878,12 @@
       poll_secondes: Number(
         form.elements.namedItem("poll_minutes")?.value || 5
       ) * 60,
-      geoloc_frq: form.elements.namedItem("geoloc_frq")?.value === ""
-        ? null : Number(form.elements.namedItem("geoloc_frq")?.value),
-      geoloc_interval_minutes: form.elements.namedItem("geoloc_interval_minutes")?.value === ""
-        ? null : Number(form.elements.namedItem("geoloc_interval_minutes")?.value),
+      // L'entrée et la sortie sont systématiques. L'intervalle active
+      // uniquement les contrôles GPS intermédiaires.
+      geoloc_frq: Number(form.elements.namedItem("gps_intervalle")?.value || 0) === 0
+        ? 2 : 3,
+      geoloc_interval_minutes: Number(form.elements.namedItem("gps_intervalle")?.value || 0) === 0
+        ? null : Number(form.elements.namedItem("gps_intervalle")?.value),
       actif:
         form.elements.namedItem("actif")?.checked === true,
       date: String(
