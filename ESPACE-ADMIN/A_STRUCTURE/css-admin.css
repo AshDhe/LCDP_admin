@@ -618,3 +618,50 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Accueil Coachs : trois rangées vertes (1–24), trois rangées orange (25–48).
+   Les positions et les intitulés des fonctionnalités existantes ne changent pas. */
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"] {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"]
+> .lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-coach-groupe="vert"] {
+  background: var(--lcdp-color-logo-green);
+  border-color: var(--lcdp-color-logo-green);
+  color: #ffffff;
+}
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"]
+> .lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-coach-groupe="vert"]:hover {
+  background: var(--lcdp-color-primary);
+  border-color: var(--lcdp-color-primary);
+  color: #ffffff;
+}
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"]
+> .lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-coach-groupe="orange"] {
+  background: var(--lcdp-color-orange);
+  border-color: var(--lcdp-color-orange);
+  color: var(--lcdp-color-text);
+}
+.lcdp-page-accueil-admin
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"]
+> .lcdp-mini-galerie-menu-centre-admin__button[data-lcdp-coach-groupe="orange"]:hover {
+  background: var(--lcdp-color-orange-hover);
+  border-color: var(--lcdp-color-orange-hover);
+  color: var(--lcdp-color-text);
+}
+@media (max-width: 899px) {
+  .lcdp-page-accueil-admin
+  .lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .lcdp-page-accueil-admin
+  .lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="coachs"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
