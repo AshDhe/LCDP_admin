@@ -56,13 +56,17 @@
 .lcdp-page-suiviabo .lcdp-table-lecture-admin__table {
   min-width: 680px;
 }
+.lcdp-page-suiviabo .lcdp-table-lecture-admin__table th,
+.lcdp-page-suiviabo .lcdp-table-lecture-admin__table td {
+  text-align: center;
+}
 .lcdp-page-suiviabo .lcdp-table-lecture-admin__table caption {
   text-align: left;
   padding: 0 0 10px;
   font-weight: 600;
 }
 .lcdp-page-suiviabo .lcdp-suiviabo__nombre {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .lcdp-page-suiviabo .lcdp-suiviabo__total {
