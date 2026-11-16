@@ -71,29 +71,107 @@
   </script>
 
   <style>
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="1-basebrute"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="2-aqualifier"] {
-      fill: #9a9a93;
-      stroke: #595954;
+    /* Les couleurs indiquent le statut du parc, indépendamment de validcarte. */
+    .lcdp-page-carte-parc [data-statut="1-basebrute"] {
+      --lcdp-carte-statut-couleur: #aaa9a0;
+      --lcdp-carte-statut-contour: #676761;
     }
 
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="2-ademarcher"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-encours"] {
-      fill: #6ea9c9;
-      stroke: #356d8d;
+    .lcdp-page-carte-parc [data-statut="2-aqualifier"] {
+      --lcdp-carte-statut-couleur: #c9b49a;
+      --lcdp-carte-statut-contour: #7a6753;
     }
 
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="prepa"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="enligne"] {
-      fill: #76a966;
-      stroke: #3f6f33;
+    .lcdp-page-carte-parc [data-statut="2-ademarcher"] {
+      --lcdp-carte-statut-couleur: #e5b268;
+      --lcdp-carte-statut-contour: #985f26;
     }
 
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-nonqualifié"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="3-refus"],
-    .lcdp-carte-dynamique__marker.is-validcarte[data-statut="horsligne"] {
-      fill: #d98d8d;
-      stroke: #974d4d;
+    .lcdp-page-carte-parc [data-statut="3-nonqualifié"] {
+      --lcdp-carte-statut-couleur: #bd8a8a;
+      --lcdp-carte-statut-contour: #835555;
+    }
+
+    .lcdp-page-carte-parc [data-statut="3-encours"] {
+      --lcdp-carte-statut-couleur: #d6a144;
+      --lcdp-carte-statut-contour: #895b18;
+    }
+
+    .lcdp-page-carte-parc [data-statut="3-refus"] {
+      --lcdp-carte-statut-couleur: #ae5555;
+      --lcdp-carte-statut-contour: #743333;
+    }
+
+    .lcdp-page-carte-parc [data-statut="prepa"] {
+      --lcdp-carte-statut-couleur: #a5c58a;
+      --lcdp-carte-statut-contour: #5b7d42;
+    }
+
+    .lcdp-page-carte-parc [data-statut="enligne"] {
+      --lcdp-carte-statut-couleur: #63a45b;
+      --lcdp-carte-statut-contour: #366f31;
+    }
+
+    .lcdp-page-carte-parc [data-statut="horsligne"] {
+      --lcdp-carte-statut-couleur: #888d87;
+      --lcdp-carte-statut-contour: #4c514d;
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-dynamique__marker {
+      fill: var(--lcdp-carte-statut-couleur, #aaa9a0);
+      stroke: var(--lcdp-carte-statut-contour, #676761);
+    }
+
+    /* La validation cartographique reste distincte du statut métier. */
+    .lcdp-page-carte-parc .lcdp-carte-dynamique__marker[data-validcarte="false"] {
+      stroke-dasharray: 2 1.5;
+    }
+
+    .lcdp-page-carte-parc select[data-lcdp-carte-etat],
+    .lcdp-page-carte-parc select[data-lcdp-carte-etat] option {
+      background-color: #ffffff;
+      color: #172126;
+    }
+
+    .lcdp-page-carte-parc select[data-lcdp-carte-etat] {
+      cursor: pointer;
+      padding-right: 2rem;
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-parc__legende {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem 0.9rem;
+      margin: 0.6rem 0 0.8rem;
+      color: #363b34;
+      font-size: 0.8rem;
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-parc__legende-titre {
+      font-weight: 700;
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-parc__legende-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-parc__legende-point {
+      display: inline-block;
+      width: 0.75rem;
+      height: 0.75rem;
+      flex: 0 0 auto;
+      border: 1.5px solid var(--lcdp-carte-statut-contour, #676761);
+      border-radius: 50%;
+      background-color: var(--lcdp-carte-statut-couleur, #aaa9a0);
+    }
+
+    .lcdp-page-carte-parc .lcdp-carte-parc__legende-note {
+      color: #60645e;
+      font-size: 0.76rem;
     }
   </style>
 
@@ -449,7 +527,7 @@
 
         const form = slot.querySelector("[data-lcdp-carte-filters]");
         const inputGeo = slot.querySelector("[data-lcdp-carte-geo]");
-        const inputEtat = slot.querySelector("[data-lcdp-carte-etat]");
+        let inputEtat = slot.querySelector("[data-lcdp-carte-etat]");
         const statutTexte = slot.querySelector("[data-lcdp-carte-status]");
         const svg = slot.querySelector("[data-lcdp-carte-svg]");
         const boutonZoomPlus = slot.querySelector("[data-lcdp-carte-zoom-plus]");
@@ -485,19 +563,51 @@
           throw new Error("Structure de l’objet carte dynamique incomplète.");
         }
 
-        // La liste du fragment carte est synchronisée avec les statuts SQL.
-        if (inputEtat.tagName === "SELECT") {
-          const optionTous = inputEtat.querySelector('option[value=""]');
-          const libelleTous = optionTous?.textContent || "Tous";
-          const selectionInitiale = normaliserEtat(inputEtat.value) || "enligne";
-          inputEtat.replaceChildren(
-            new Option(libelleTous, ""),
-            ...Array.from(STATUTS_AUTORISES, (statut) => new Option(statut, statut))
-          );
-          inputEtat.value = STATUTS_AUTORISES.has(selectionInitiale)
-            ? selectionInitiale
-            : "";
+        // Le fragment partagé contient historiquement un champ texte.
+        // La carte admin le remplace localement par une liste de statuts.
+        if (inputEtat.tagName !== "SELECT") {
+          const selectEtat = document.createElement("select");
+          selectEtat.className = inputEtat.className;
+          selectEtat.setAttribute("data-lcdp-carte-etat", "");
+          inputEtat.replaceWith(selectEtat);
+          inputEtat = selectEtat;
         }
+
+        inputEtat.setAttribute("aria-label", "Filtrer les parcs par statut");
+        inputEtat.replaceChildren(
+          new Option("Tous les statuts", ""),
+          ...Array.from(STATUTS_AUTORISES, (statut) => new Option(statut, statut))
+        );
+        inputEtat.value = "enligne";
+
+        // Légende administrative, sans modifier le fragment commun de carte.
+        const legende = document.createElement("div");
+        legende.className = "lcdp-carte-parc__legende";
+        legende.setAttribute("aria-label", "Légende des statuts des parcs");
+
+        const titreLegende = document.createElement("span");
+        titreLegende.className = "lcdp-carte-parc__legende-titre";
+        titreLegende.textContent = "Statuts :";
+        legende.appendChild(titreLegende);
+
+        STATUTS_AUTORISES.forEach((statut) => {
+          const item = document.createElement("span");
+          item.className = "lcdp-carte-parc__legende-item";
+
+          const point = document.createElement("span");
+          point.className = "lcdp-carte-parc__legende-point";
+          point.dataset.statut = statut;
+          point.setAttribute("aria-hidden", "true");
+
+          item.append(point, document.createTextNode(statut));
+          legende.appendChild(item);
+        });
+
+        const noteLegende = document.createElement("span");
+        noteLegende.className = "lcdp-carte-parc__legende-note";
+        noteLegende.textContent = "Contour discontinu : point non validé.";
+        legende.appendChild(noteLegende);
+        form.insertAdjacentElement("afterend", legende);
 
         const featuresParCode = new Map();
         const pathsParCode = new Map();
@@ -1184,10 +1294,19 @@
             marker.classList.toggle("is-validcarte", parcValideCarte);
             marker.dataset.validcarte = parcValideCarte ? "true" : "false";
 
+            const informationMarqueur =
+              String(parc.nom || "Parc") +
+              " · " + String(parc.statut || "statut non renseigné") +
+              " · " + (parcValideCarte ? "point validé" : "point non validé");
+
             marker.setAttribute(
               "aria-label",
-              "Ouvrir la Card Parc de " + String(parc.nom || "Parc")
+              "Ouvrir la Card Parc de " + informationMarqueur
             );
+
+            const titreMarqueur = creerElementSvg("title");
+            titreMarqueur.textContent = informationMarqueur;
+            marker.appendChild(titreMarqueur);
 
             marker.addEventListener("pointerdown", (event) => {
               event.stopPropagation();
