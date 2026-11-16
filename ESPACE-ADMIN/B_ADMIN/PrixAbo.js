@@ -165,6 +165,7 @@
       sessionStateKey: "lcdp-admin-session:prixabo",
       // Clés de colonnes, indépendantes du déplacement de leur position.
       hiddenSortColumns: ["variables", "nomabo", "typeabo"],
+      hiddenFilterColumns: ["variables"],
       pageSize: 200,
       multiSelectFilterColumns: ["typeabo", "nomabo", "variables", "prixabottc", "ria", "typmb", "txtvafr", "ech", "mois1", "mois2", "mois3", "valvrmt", "1xval", "maxduo", "duoplus", "freqduoplus", "famille", "coach", "maxcoach", "remise"],
       initialSortKey: "typeabo",
