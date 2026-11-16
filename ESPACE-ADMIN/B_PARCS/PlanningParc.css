@@ -32,7 +32,7 @@
   border-radius:8px; scrollbar-width:thin;
 }
 .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table {
-  width:100%; min-width:1040px; table-layout:fixed;
+  width:100%; min-width:1220px; table-layout:fixed;
   border-collapse:separate; border-spacing:0;
   font-size:13px; line-height:1.45;
 }
@@ -71,7 +71,6 @@
 @media (max-width:650px) {
   .lcdp-page-planning-parc-admin .lcdp-admin-page-layout { display:block; }
   .lcdp-page-planning-parc-admin .lcdp-admin-page-content { width:100%; }
-  .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table { min-width:1040px; }
 }
 
 .lcdp-planning-parc-admin__outils {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
@@ -81,11 +80,6 @@
 
 /* Répartition unique pour les 11 colonnes du tableau quantitatif.
    Somme : 10 + 20 + 10 + (5 × 7) + 7 + 8 + 10 = 100 %. */
-.lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table {
-  width: 100%;
-  min-width: 1220px;
-  table-layout: fixed;
-}
 .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table th,
 .lcdp-page-planning-parc-admin .lcdp-table-lecture-admin__table td {
   padding: 8px 5px;
