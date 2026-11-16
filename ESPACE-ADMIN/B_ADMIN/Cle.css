@@ -62,10 +62,18 @@
   min-height: 42px;
   box-sizing: border-box;
 }
-.lcdp-page-cle-admin .lcdp-cle-admin__edition [data-lcdp-formulaire-actions] .lcdp-button {
-  width: 160px;
-  min-height: 48px;
+.lcdp-page-cle-admin .lcdp-cle-admin__edition .lcdp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
+  width: 170px;
+  height: 64px;
+  min-height: 64px;
+  padding: 6px 8px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
 }
 .lcdp-page-cle-admin .lcdp-cle-admin__departements .lcdp-table-lecture-admin__multi-resume,
 .lcdp-page-cle-admin .lcdp-cle-admin__parcs-recherche .lcdp-table-lecture-admin__filter-input {
@@ -124,7 +132,7 @@
 }
 @media (max-width: 540px) {
   .lcdp-page-cle-admin .lcdp-cle-admin__barre-actions .lcdp-button,
-  .lcdp-page-cle-admin .lcdp-cle-admin__edition [data-lcdp-formulaire-actions] .lcdp-button {
+  .lcdp-page-cle-admin .lcdp-cle-admin__edition .lcdp-button {
     width: 100%;
   }
 }
