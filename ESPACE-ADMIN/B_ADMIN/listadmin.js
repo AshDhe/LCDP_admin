@@ -29,6 +29,9 @@
     const recherches = { admin: "", resparc: "", coach: "" };
     let occupe = false;
     let gestionDisponible = false;
+    let categorieActive = "admin";
+    let formulaireOuvert = false;
+    const ajouter = document.getElementById("lcdp-listadmin-ajouter");
 
     const texte = (value) => String(value ?? "").trim();
     const informer = (message, erreur = false) => {
@@ -68,6 +71,49 @@
       wrapper.appendChild(input);
       return { wrapper, input };
     };
+
+    function mettreAJourBoutonAjouter() {
+      if (!ajouter) return;
+      ajouter.hidden = !estRoot;
+      ajouter.disabled = !gestionDisponible;
+      ajouter.title = gestionDisponible ? "" : "Service de gestion des comptes indisponible.";
+      ajouter.setAttribute("aria-expanded", String(formulaireOuvert));
+      ajouter.setAttribute("aria-controls", "lcdp-comptes-admin-panel-" + categorieActive);
+      const categorie = TYPES.find((item) => item.key === categorieActive);
+      ajouter.setAttribute("aria-label", "Ajouter un compte " + (categorie?.label || "Admin"));
+    }
+
+    function synchroniserOngletActif() {
+      const actif = onglets.boutons.find((element) => element.getAttribute("aria-selected") === "true")
+        ?.dataset.lcdpOnglet;
+      if (!actif || actif === categorieActive) return;
+      categorieActive = actif;
+      formulaireOuvert = false;
+      rendreTous();
+      mettreAJourBoutonAjouter();
+    }
+
+    onglets.boutons.forEach((tab) => {
+      tab.addEventListener("click", synchroniserOngletActif);
+      tab.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+          synchroniserOngletActif();
+        }
+      });
+    });
+
+    if (ajouter) {
+      ajouter.addEventListener("click", () => {
+        if (!estRoot || !gestionDisponible || occupe) return;
+        formulaireOuvert = !formulaireOuvert;
+        rendreOnglet(TYPES.find((item) => item.key === categorieActive));
+        mettreAJourBoutonAjouter();
+        if (formulaireOuvert) {
+          onglets.zones[categorieActive].querySelector('input[name="nomadmin"]')?.focus();
+        }
+      });
+    }
+    mettreAJourBoutonAjouter();
 
     async function appelerApi(path, method, body) {
       const response = await fetch(endpoint + path, {
@@ -123,10 +169,12 @@
         const result = await appelerApi("/admin/accounts", "GET");
         comptes = Array.isArray(result.accounts) ? result.accounts : [];
         gestionDisponible = true;
+        mettreAJourBoutonAjouter();
         rendreTous();
         informer("");
       } catch (error) {
         gestionDisponible = false;
+        mettreAJourBoutonAjouter();
         if (error?.status === 401 || error?.status === 403) {
           informer(error?.message || "Accès non autorisé.", true);
           return;
@@ -150,7 +198,11 @@
       informer("Enregistrement et envoi de l'invitation…");
       try {
         await appelerApi("/admin/accounts", "POST", data);
-        if (form) form.reset();
+        if (form) {
+          form.reset();
+          formulaireOuvert = false;
+          mettreAJourBoutonAjouter();
+        }
         informer("L'invitation a été envoyée. Le compte sera actif après la création du mot de passe.");
         const result = await appelerApi("/admin/accounts", "GET");
         comptes = Array.isArray(result.accounts) ? result.accounts : [];
@@ -238,52 +290,59 @@
       }
     }
 
-    function creerFormulaireInvitation(zone) {
+    function creerFormulaireInvitation(zone, def) {
       if (!estRoot) return;
-      const afficher = bouton("Ajouter un administrateur", "lcdp-button lcdp-button-orange", () => {
-        formulaire.hidden = !formulaire.hidden;
-        afficher.setAttribute("aria-expanded", String(!formulaire.hidden));
-        if (!formulaire.hidden) nom.input.focus();
-      });
-      afficher.setAttribute("aria-expanded", "false");
-      afficher.setAttribute("aria-controls", "lcdp-formulaire-nouvel-admin");
-      afficher.disabled = !gestionDisponible;
-      if (!gestionDisponible) afficher.title = "Service de gestion des comptes indisponible.";
-      zone.appendChild(afficher);
       const formulaire = document.createElement("form");
-      formulaire.id = "lcdp-formulaire-nouvel-admin";
-      formulaire.className = "lcdp-box-formulaire lcdp-stack-large";
-      formulaire.hidden = true;
+      formulaire.id = "lcdp-formulaire-nouvel-admin-" + def.key;
+      formulaire.className = "lcdp-box-formulaire lcdp-stack-large lcdp-listadmin__formulaire";
       const titre = document.createElement("h2");
-      titre.textContent = "Nouvel administrateur";
+      titre.textContent = "Nouvel administrateur — " + def.label;
       const info = document.createElement("p");
       info.textContent = "Un email sera envoyé à cette adresse. Le destinataire définira personnellement son mot de passe.";
       const nom = champ("Nom", "text", "nomadmin");
       const prenom = champ("Prénom", "text", "prenomadmin");
       const email = champ("Email", "email", "adminemail");
-      const type = champ("Type", "select", "type", [
-        ["", "Choisir un type"], ["root", "Root"], ["asso", "Asso"],
-        ["resparc", "Resparc"], ["coach", "Coach"]
-      ]);
-      type.input.value = "";
+      const type = def.key === "admin"
+        ? champ("Type", "select", "type", [
+          ["", "Choisir un type"], ["root", "Root"], ["asso", "Asso"]
+        ])
+        : null;
+      if (type) type.input.value = "";
+      const libelleType = document.createElement("p");
+      libelleType.className = "lcdp-listadmin__type-fixe";
+      libelleType.textContent = "Type : " + def.label;
+      const actions = document.createElement("div");
+      actions.className = "lcdp-listadmin__formulaire-actions";
       const valider = document.createElement("button");
       valider.type = "submit";
       valider.disabled = !gestionDisponible;
       valider.className = "lcdp-button lcdp-button-orange";
       valider.textContent = "Envoyer l'invitation";
       const annuler = bouton("Annuler", "lcdp-button lcdp-button-secondary", () => {
-        formulaire.hidden = true;
-        afficher.setAttribute("aria-expanded", "false");
+        formulaireOuvert = false;
+        rendreOnglet(def);
+        mettreAJourBoutonAjouter();
+        ajouter?.focus();
       });
-      formulaire.append(titre, info, nom.wrapper, prenom.wrapper, email.wrapper, type.wrapper, valider, annuler);
+      actions.append(valider, annuler);
+      formulaire.append(titre, info, nom.wrapper, prenom.wrapper, email.wrapper);
+      if (type) {
+        formulaire.appendChild(type.wrapper);
+      } else {
+        formulaire.appendChild(libelleType);
+      }
+      formulaire.appendChild(actions);
       formulaire.addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!formulaire.reportValidity() || !TYPES_VALIDES.has(type.input.value)) return;
+        const typeCompte = type ? type.input.value : def.codes[0];
+        if (!formulaire.reportValidity() ||
+            !TYPES_VALIDES.has(typeCompte) ||
+            !def.codes.includes(typeCompte)) return;
         envoyerInvitation({
           nomadmin: nom.input.value.trim(),
           prenomadmin: prenom.input.value.trim(),
           adminemail: email.input.value.trim().toLowerCase(),
-          type: type.input.value
+          type: typeCompte
         }, formulaire);
       });
       zone.appendChild(formulaire);
@@ -316,6 +375,7 @@
         }
         if (estRoot) {
           const td = document.createElement("td");
+          td.className = "lcdp-listadmin__actions";
           if (gestionDisponible && c.actif === false) {
             td.appendChild(bouton("Renvoyer l'invitation", "lcdp-button lcdp-button-secondary", () => {
               envoyerInvitation({
@@ -325,9 +385,16 @@
             }));
           }
           const estSoiMeme = texte(c.id) === texte(auth.id);
-          const supprimer = bouton("Supprimer", "lcdp-button lcdp-button-secondary",
+          const supprimer = bouton("", "lcdp-listadmin__corbeille",
             () => supprimerCompte(c), estSoiMeme || !gestionDisponible || !texte(c.id));
-          if (!gestionDisponible) supprimer.title = "Service de gestion des comptes indisponible.";
+          supprimer.setAttribute("aria-label", "Supprimer le compte de " +
+            ([texte(c.prenomadmin), texte(c.nomadmin)].filter(Boolean).join(" ") || texte(c.adminemail)));
+          supprimer.title = estSoiMeme
+            ? "Vous ne pouvez pas supprimer votre propre compte."
+            : !gestionDisponible
+              ? "Service de gestion des comptes indisponible."
+              : "Supprimer cet administrateur";
+          supprimer.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg>';
           td.appendChild(supprimer);
           tr.appendChild(td);
         }
@@ -348,8 +415,9 @@
     function rendreOnglet(def) {
       const zone = onglets.zones[def.key];
       zone.replaceChildren();
-      if (def.key === "admin") {
-        creerFormulaireInvitation(zone);
+      if (formulaireOuvert && def.key === categorieActive) {
+        creerFormulaireInvitation(zone, def);
+        return;
       }
       const filtre = document.createElement("div");
       filtre.className = "lcdp-stack-small";
