@@ -796,6 +796,236 @@
     await recharger();
   }
 
+
+  // Présence : aucune flèche de tri et uniquement les filtres opérationnels.
+  // Les données sont chargées intégralement par lots, puis filtrées localement.
+  let rechargerTablePresence = null;
+  async function initialiserTablePresence(slot) {
+    const selection = {
+      departements: new Set(),
+      nom: "",
+      prefixe: "",
+      statut: "",
+      limite: 200
+    };
+    let toutes = [];
+    const creer = (tag, classe, txt) => {
+      const node = document.createElement(tag);
+      if (classe) node.className = classe;
+      if (txt !== undefined) node.textContent = txt;
+      return node;
+    };
+    const normaliser = valeur => String(valeur ?? "").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr").trim();
+    const section = creer("section", "lcdp-table-lecture-admin");
+    const scroll = creer("div", "lcdp-table-lecture-admin__scroll");
+    const tableau = creer("table", "lcdp-table-lecture-admin__table");
+    const entete = document.createElement("thead");
+    const noms = document.createElement("tr");
+    const filtres = document.createElement("tr");
+    filtres.className = "lcdp-table-lecture-admin__filters";
+    const corps = document.createElement("tbody");
+    const statut = creer("p", "lcdp-table-lecture-admin__status");
+    statut.setAttribute("role", "status");
+    const suite = creer("button", "lcdp-table-lecture-admin__pagination-button",
+      "Afficher 200 bracelets supplémentaires");
+    suite.type = "button";
+    suite.hidden = true;
+    suite.addEventListener("click", () => { selection.limite += 200; rendre(); });
+    for (const nom of ["Dptmt", "Nom", "Prénom", "Bracelet", "Refresh", "Actif", "Date"]) {
+      const th = creer("th", "", nom);
+      th.scope = "col";
+      noms.appendChild(th);
+    }
+    entete.append(noms, filtres);
+    tableau.append(entete, corps);
+    scroll.appendChild(tableau);
+    section.append(scroll, statut, suite);
+    slot.replaceChildren(section);
+    function cellule(contenu) {
+      const th = document.createElement("th");
+      th.scope = "col";
+      if (contenu) th.appendChild(contenu);
+      filtres.appendChild(th);
+    }
+    let rendre = () => {};
+    function preparerFiltres() {
+      filtres.replaceChildren();
+
+      const deptZone = creer("div", "lcdp-cle-admin__departements");
+      const ajout = creer("button", "lcdp-table-lecture-admin__multi-resume",
+        "Départements");
+      ajout.type = "button";
+      ajout.setAttribute("aria-label", "Ajouter un département avec Diginum");
+      const jetons = creer("div", "lcdp-cle-admin__jetons");
+      function afficherJetons() {
+        jetons.replaceChildren();
+        for (const dpt of [...selection.departements].sort((a,b) => a.localeCompare(b,"fr",{numeric:true}))) {
+          const effacer = creer("button", "lcdp-table-lecture-admin__pagination-button", dpt + " ×");
+          effacer.type = "button";
+          effacer.setAttribute("aria-label", "Retirer le département " + dpt);
+          effacer.addEventListener("click", () => {
+            selection.departements.delete(dpt);
+            selection.limite = 200;
+            afficherJetons();
+            rendre();
+          });
+          jetons.appendChild(effacer);
+        }
+      }
+      ajout.addEventListener("click", async () => {
+        const departements = [...new Set(toutes.map(r => String(r.dptmt || "").trim().toUpperCase()))]
+          .filter(Boolean);
+        ajout.disabled = true;
+        try {
+          const choisi = await choisirDepartementCle(departements, "Filtrer les départements");
+          if (choisi) {
+            selection.departements.add(String(choisi).toUpperCase());
+            afficherJetons(); selection.limite = 200; rendre();
+          }
+        } catch (error) {
+          await afficherAlerte(error?.message || "Sélection du département indisponible.");
+        } finally {
+          ajout.disabled = false;
+        }
+      });
+      deptZone.append(ajout, jetons); afficherJetons(); cellule(deptZone);
+
+      const zoneNom = creer("div", "lcdp-cle-admin__parcs-recherche");
+      const rechercheNom = creer("input", "lcdp-table-lecture-admin__filter-input");
+      rechercheNom.type = "search";
+      rechercheNom.autocomplete = "off";
+      rechercheNom.placeholder = "Rechercher un nom";
+      rechercheNom.value = selection.nom;
+      rechercheNom.setAttribute("aria-label", "Recherche alphabétique progressive par nom");
+      rechercheNom.setAttribute("aria-autocomplete", "list");
+      const propositions = creer("div", "lcdp-cle-admin__suggestions");
+      propositions.setAttribute("role", "listbox");
+      propositions.setAttribute("aria-label", "Noms proposés");
+      function mettreSuggestions() {
+        propositions.replaceChildren();
+        const saisie = normaliser(rechercheNom.value);
+        if (!saisie) return;
+        const correspondances = [...new Set(toutes.filter(r =>
+          !selection.departements.size ||
+          selection.departements.has(String(r.dptmt || "").toUpperCase())
+        ).map(r => String(r.nom || "").trim()).filter(Boolean))]
+          .filter(nom => normaliser(nom).includes(saisie))
+          .sort((a,b) => Number(normaliser(b).startsWith(saisie)) -
+            Number(normaliser(a).startsWith(saisie)) ||
+            a.localeCompare(b,"fr",{sensitivity:"base"}));
+        for (const nom of correspondances.slice(0, 8)) {
+          const choix = creer("button", "lcdp-cle-admin__suggestion", nom);
+          choix.type = "button";
+          choix.setAttribute("role", "option");
+          choix.addEventListener("click", () => {
+            rechercheNom.value = nom;
+            selection.nom = nom;
+            selection.limite = 200;
+            propositions.replaceChildren();
+            rendre();
+          });
+          propositions.appendChild(choix);
+        }
+      }
+      rechercheNom.addEventListener("input", () => {
+        selection.nom = rechercheNom.value;
+        selection.limite = 200;
+        mettreSuggestions(); rendre();
+      });
+      zoneNom.append(rechercheNom, propositions);
+      cellule(zoneNom);
+
+      cellule(null); // Prénom : aucune recherche demandée.
+      const prefixe = creer("input", "lcdp-table-lecture-admin__filter-input");
+      prefixe.type = "search";
+      prefixe.placeholder = "Début du code";
+      prefixe.setAttribute("aria-label", "Bracelets dont le code commence par");
+      prefixe.value = selection.prefixe;
+      prefixe.addEventListener("input", () => {
+        selection.prefixe = prefixe.value;
+        selection.limite = 200;
+        rendre();
+      });
+      cellule(prefixe);
+      cellule(null); // Refresh n'est pas un filtre de recherche.
+      const actif = creer("select", "lcdp-table-lecture-admin__filter-input");
+      actif.setAttribute("aria-label", "Filtrer les bracelets par état");
+      for (const [valeur,texte] of [["","Tous"],["oui","Actifs"],["non","Inactifs"]]) {
+        const option = creer("option","",texte); option.value = valeur;
+        actif.appendChild(option);
+      }
+      actif.value = selection.statut;
+      actif.addEventListener("change", () => {
+        selection.statut = actif.value; selection.limite = 200; rendre();
+      });
+      cellule(actif);
+      cellule(null); // Date : aucun filtre inutile.
+    }
+    rendre = () => {
+      const correspondants = toutes.filter(row => {
+        if (selection.departements.size && !selection.departements.has(
+          String(row.dptmt || "").trim().toUpperCase())) return false;
+        if (selection.nom && !normaliser(row.nom).includes(normaliser(selection.nom))) return false;
+        if (selection.prefixe && !normaliser(row.brac).startsWith(normaliser(selection.prefixe))) return false;
+        const actif = row._actif === true || String(row.actif).toLowerCase() === "oui";
+        if (selection.statut === "oui" && !actif) return false;
+        if (selection.statut === "non" && actif) return false;
+        return true;
+      });
+      const portion = document.createDocumentFragment();
+      for (const row of correspondants.slice(0, selection.limite)) {
+        const tr = document.createElement("tr");
+        for (const col of ["dptmt","nom","prenom","brac","refresh","actif","date"]) {
+          const td = document.createElement("td");
+          if (col === "brac") {
+            const bouton = creer("button", "lcdp-table-lecture-admin__cell-action",
+              String(row.brac || "—"));
+            bouton.type = "button";
+            bouton.setAttribute("aria-label", "Modifier le bracelet " + String(row.brac || ""));
+            bouton.addEventListener("click", () => {
+              Promise.resolve(ouvrirEdition(CONTEXTES.membres, row)).catch(gererErreurPage);
+            });
+            td.appendChild(bouton);
+          } else td.textContent = String(row[col] ?? "").trim() || "—";
+          tr.appendChild(td);
+        }
+        portion.appendChild(tr);
+      }
+      corps.replaceChildren(portion);
+      statut.textContent = correspondants.length
+        ? correspondants.length + " bracelet(s)"
+        : "Aucun bracelet ne correspond aux critères.";
+      suite.hidden = correspondants.length <= selection.limite;
+    };
+    async function recharger() {
+      try {
+        const rows = [];
+        for (let offset=0; offset < 20000; offset+=200) {
+          const donnees = await appelerCle("/read?resource=cle-membres&limit=200&offset=" + offset);
+          if (!Array.isArray(donnees.rows)) throw new Error("Réponse Présence invalide.");
+          rows.push(...donnees.rows);
+          if (donnees.rows.length < 200 || rows.length >= Number(donnees.total || 0)) break;
+        }
+        if (rows.length >= 20000) throw new Error("Trop de bracelets pour cet affichage.");
+        toutes = rows;
+        const departements = new Set(rows.map(x => String(x.dptmt || "").toUpperCase()));
+        for (const dpt of [...selection.departements]) {
+          if (!departements.has(dpt)) selection.departements.delete(dpt);
+        }
+        scroll.hidden = false;
+        statut.setAttribute("role", "status");
+        preparerFiltres(); rendre();
+      } catch(error) {
+        scroll.hidden = true;
+        statut.setAttribute("role","alert");
+        statut.textContent = String(error?.message || "Lecture des bracelets indisponible.");
+      }
+    }
+    rechargerTablePresence = recharger;
+    await recharger();
+  }
+
   async function initialiserTables() {
     await chargerScriptAdminUneFois(
       "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
@@ -818,6 +1048,10 @@
 
       if (contexte.key === "parcs") {
         await initialiserTableParcs(slot);
+        continue;
+      }
+      if (contexte.key === "membres") {
+        await initialiserTablePresence(slot);
         continue;
       }
 
@@ -1777,6 +2011,8 @@
     if (recharger) {
       if (contexte.key === "parcs" && rechargerTableParcs) {
         await rechargerTableParcs();
+      } else if (contexte.key === "membres" && rechargerTablePresence) {
+        await rechargerTablePresence();
       } else {
         await window.LCDP_TABLE_LECTURE_ADMIN
           ?.recharger(contexte.tableSlotId);
