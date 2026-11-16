@@ -443,6 +443,331 @@
     });
   }
 
+
+  // Tableau spécialisé de l'onglet Parc : filtres multisélection exhaustifs.
+  // Les valeurs sont chargées par lots via /read ; aucun Worker n'est modifié.
+  let rechargerTableParcs = null;
+
+  async function initialiserTableParcs(slot) {
+    const selection = {
+      departements: new Set(),
+      parcs: new Set(),
+      active: "",
+      cle: "",
+      instal: "",
+      ordre: "",
+      nombreVisible: 200
+    };
+    let toutesLesCles = [];
+    const element = (tag, classe, contenu) => {
+      const node = document.createElement(tag);
+      if (classe) node.className = classe;
+      if (contenu !== undefined) node.textContent = contenu;
+      return node;
+    };
+
+    const cadre = element("section", "lcdp-table-lecture-admin");
+    const defilement = element("div", "lcdp-table-lecture-admin__scroll");
+    const tableau = element("table", "lcdp-table-lecture-admin__table");
+    const thead = document.createElement("thead");
+    const titres = document.createElement("tr");
+    const tris = document.createElement("tr");
+    tris.className = "lcdp-table-lecture-admin__sorts";
+    const filtres = document.createElement("tr");
+    filtres.className = "lcdp-table-lecture-admin__filters";
+    const corps = document.createElement("tbody");
+    const statut = element("p", "lcdp-table-lecture-admin__status");
+    statut.setAttribute("role", "status");
+    const afficherPlus = element("button", "lcdp-table-lecture-admin__pagination-button", "Afficher 200 clés supplémentaires");
+    afficherPlus.type = "button";
+    afficherPlus.hidden = true;
+    afficherPlus.addEventListener("click", () => {
+      selection.nombreVisible += 200;
+      rendreLignes();
+    });
+
+    for (const titre of ["Dptmt", "Parc", "Clé", "Active", "Instal"]) {
+      const th = element("th", "", titre);
+      th.scope = "col";
+      titres.appendChild(th);
+      const sort = document.createElement("th");
+      sort.scope = "col";
+      tris.appendChild(sort);
+    }
+    const triInstal = tris.lastElementChild;
+    const actionsTri = element("div", "lcdp-table-lecture-admin__sort-actions");
+    for (const [ordre, sens] of [["asc", "↑"], ["desc", "↓"]]) {
+      const bouton = element("button", "lcdp-table-lecture-admin__sort-button", sens);
+      bouton.type = "button";
+      bouton.title = ordre === "asc" ? "Classer Instal par ordre croissant" : "Classer Instal par ordre décroissant";
+      bouton.setAttribute("aria-label", bouton.title);
+      bouton.setAttribute("aria-pressed", "false");
+      bouton.addEventListener("click", () => {
+        selection.ordre = ordre;
+        selection.nombreVisible = 200;
+        for (const b of actionsTri.querySelectorAll("button")) {
+          b.setAttribute("aria-pressed", String(b === bouton));
+        }
+        rendreLignes();
+      });
+      actionsTri.appendChild(bouton);
+    }
+    triInstal.appendChild(actionsTri);
+    thead.append(titres, tris, filtres);
+    tableau.append(thead, corps);
+    defilement.appendChild(tableau);
+    cadre.append(defilement, statut, afficherPlus);
+    slot.replaceChildren(cadre);
+
+    function nomParc(ligne) {
+      return String(ligne?.nom || "").trim();
+    }
+    function idParc(ligne) {
+      return String(ligne?.idparc || "").trim() ||
+        String(ligne?.dptmt || "") + "|" + nomParc(ligne);
+    }
+    function estActive(ligne) {
+      return ligne?._active === true ||
+        /^(oui|true|1)$/i.test(String(ligne?.active || "").trim());
+    }
+    function dateInstallation(ligne) {
+      const iso = String(ligne?._instal || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+      const match = String(ligne?.instal || "").match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+      if (!match) return "";
+      const annee = match[3].length === 2 ? "20" + match[3] : match[3];
+      return annee + "-" + match[2] + "-" + match[1];
+    }
+    function comparer(a, b) {
+      return String(a ?? "").localeCompare(String(b ?? ""), "fr", {
+        numeric: true, sensitivity: "base"
+      });
+    }
+
+    function filtreMultiple(intitule, choisis, listeOptions, apresChangement) {
+      const details = element("details", "lcdp-table-lecture-admin__multi");
+      const resume = element("summary", "lcdp-table-lecture-admin__multi-resume");
+      resume.setAttribute("aria-label", "Filtrer par " + intitule);
+      const panneau = element("div", "lcdp-table-lecture-admin__multi-panel");
+      const recherche = element("input", "lcdp-table-lecture-admin__filter-input");
+      recherche.type = "search";
+      recherche.placeholder = "Rechercher";
+      recherche.setAttribute("aria-label", "Rechercher : " + intitule);
+      const cases = element("div", "lcdp-table-lecture-admin__multi-options");
+      const effacer = element("button", "lcdp-table-lecture-admin__multi-clear", "Tout afficher");
+      effacer.type = "button";
+      panneau.append(recherche, cases, effacer);
+      details.append(resume, panneau);
+
+      const actualiser = () => {
+        const count = choisis.size;
+        resume.textContent = count
+          ? count + " sélectionné" + (count > 1 ? "s" : "")
+          : intitule;
+        const options = listeOptions();
+        resume.title = count
+          ? options.filter(x => choisis.has(x.value)).map(x => x.label).join(", ")
+          : "Tous les " + intitule;
+        cases.replaceChildren();
+        const cherche = recherche.value.trim().toLocaleLowerCase("fr");
+        for (const option of options) {
+          if (cherche && !option.label.toLocaleLowerCase("fr").includes(cherche)) continue;
+          const ligne = element("label", "lcdp-table-lecture-admin__multi-choice");
+          const coche = document.createElement("input");
+          coche.type = "checkbox";
+          coche.checked = choisis.has(option.value);
+          coche.addEventListener("change", () => {
+            if (coche.checked) choisis.add(option.value);
+            else choisis.delete(option.value);
+            selection.nombreVisible = 200;
+            actualiser();
+            apresChangement();
+          });
+          ligne.append(coche, document.createTextNode(" " + option.label));
+          cases.appendChild(ligne);
+        }
+        effacer.disabled = count === 0;
+      };
+      recherche.addEventListener("input", actualiser);
+      effacer.addEventListener("click", () => {
+        choisis.clear();
+        selection.nombreVisible = 200;
+        actualiser();
+        apresChangement();
+      });
+      actualiser();
+      return { details, actualiser };
+    }
+
+    function rendreFiltres() {
+      filtres.replaceChildren();
+
+      const tousDepartements = [...new Set(toutesLesCles.map(x => String(x.dptmt || "").trim()))]
+        .filter(Boolean).sort(comparer).map(value => ({ value, label: value }));
+      const parcsParId = new Map();
+      for (const cle of toutesLesCles) {
+        const id = idParc(cle);
+        if (!parcsParId.has(id)) {
+          parcsParId.set(id, {
+            value: id,
+            dptmt: String(cle.dptmt || "").trim(),
+            label: nomParc(cle) + " (" + String(cle.dptmt || "").trim() + ")"
+          });
+        }
+      }
+      const tousParcs = [...parcsParId.values()].sort((a, b) => comparer(a.label, b.label));
+      let filtreParcs;
+      const filtreDepartements = filtreMultiple(
+        "Départements", selection.departements,
+        () => tousDepartements,
+        () => {
+          filtreParcs?.actualiser();
+          rendreLignes();
+        }
+      );
+      filtreParcs = filtreMultiple(
+        "Parcs", selection.parcs,
+        () => tousParcs.filter(x => !selection.departements.size ||
+          selection.departements.has(x.dptmt) || selection.parcs.has(x.value)),
+        rendreLignes
+      );
+
+      function ajouterCellule(contenu) {
+        const cellule = document.createElement("th");
+        cellule.scope = "col";
+        cellule.appendChild(contenu);
+        filtres.appendChild(cellule);
+      }
+      ajouterCellule(filtreDepartements.details);
+      ajouterCellule(filtreParcs.details);
+
+      const filtreCle = element("input", "lcdp-table-lecture-admin__filter-input");
+      filtreCle.type = "search";
+      filtreCle.placeholder = "Filtrer";
+      filtreCle.setAttribute("aria-label", "Filtrer par Clé");
+      filtreCle.value = selection.cle;
+      filtreCle.addEventListener("input", () => {
+        selection.cle = filtreCle.value;
+        selection.nombreVisible = 200;
+        rendreLignes();
+      });
+      ajouterCellule(filtreCle);
+
+      const filtreActif = element("select", "lcdp-table-lecture-admin__filter-input");
+      filtreActif.setAttribute("aria-label", "Filtrer les clés actives ou inactives");
+      for (const [valeur, nom] of [["", "Toutes"], ["oui", "Actives"], ["non", "Inactives"]]) {
+        const option = element("option", "", nom);
+        option.value = valeur;
+        filtreActif.appendChild(option);
+      }
+      filtreActif.value = selection.active;
+      filtreActif.addEventListener("change", () => {
+        selection.active = filtreActif.value;
+        selection.nombreVisible = 200;
+        rendreLignes();
+      });
+      ajouterCellule(filtreActif);
+
+      const filtreDate = element("input", "lcdp-table-lecture-admin__filter-input");
+      filtreDate.type = "search";
+      filtreDate.placeholder = "Filtrer";
+      filtreDate.setAttribute("aria-label", "Filtrer par date d'installation");
+      filtreDate.value = selection.instal;
+      filtreDate.addEventListener("input", () => {
+        selection.instal = filtreDate.value;
+        selection.nombreVisible = 200;
+        rendreLignes();
+      });
+      ajouterCellule(filtreDate);
+    }
+
+    function rendreLignes() {
+      const motsCle = selection.cle.toLocaleLowerCase("fr").trim();
+      const motsDate = selection.instal.toLocaleLowerCase("fr").trim();
+      const lignes = toutesLesCles.filter(cle => {
+        const dpt = String(cle.dptmt || "").trim();
+        if (selection.departements.size && !selection.departements.has(dpt)) return false;
+        if (selection.parcs.size && !selection.parcs.has(idParc(cle))) return false;
+        if (selection.active === "oui" && !estActive(cle)) return false;
+        if (selection.active === "non" && estActive(cle)) return false;
+        if (motsCle && !String(cle.cle || "").toLocaleLowerCase("fr").includes(motsCle)) return false;
+        if (motsDate && !String(cle.instal || "").toLocaleLowerCase("fr").includes(motsDate) &&
+          !dateInstallation(cle).includes(motsDate)) return false;
+        return true;
+      });
+      if (selection.ordre) {
+        lignes.sort((a, b) => {
+          const premiere = dateInstallation(a);
+          const seconde = dateInstallation(b);
+          if (!premiere && !seconde) return 0;
+          if (!premiere) return 1;
+          if (!seconde) return -1;
+          const resultat = comparer(premiere, seconde);
+          return selection.ordre === "desc" ? -resultat : resultat;
+        });
+      } else {
+        lignes.sort((a, b) => comparer(a.dptmt, b.dptmt) || comparer(a.nom, b.nom));
+      }
+      const fragment = document.createDocumentFragment();
+      for (const ligne of lignes.slice(0, selection.nombreVisible)) {
+        const tr = document.createElement("tr");
+        const valeurs = [
+          ligne.dptmt, ligne.nom, ligne.cle,
+          estActive(ligne) ? "oui" : "non", ligne.instal
+        ];
+        valeurs.forEach((valeur, i) => {
+          const td = document.createElement("td");
+          if (i === 2) {
+            const bouton = element("button", "lcdp-table-lecture-admin__cell-action", String(valeur || "—"));
+            bouton.type = "button";
+            bouton.title = "Modifier ou supprimer la clé " + String(valeur || "");
+            bouton.setAttribute("aria-label", bouton.title);
+            bouton.addEventListener("click", () => {
+              Promise.resolve(ouvrirEdition(CONTEXTES.parcs, ligne)).catch(gererErreurPage);
+            });
+            td.appendChild(bouton);
+          } else {
+            td.textContent = String(valeur ?? "") || "—";
+          }
+          tr.appendChild(td);
+        });
+        fragment.appendChild(tr);
+      }
+      corps.replaceChildren(fragment);
+      statut.textContent = lignes.length ? "" : "Aucune clé ne correspond aux filtres.";
+      afficherPlus.hidden = lignes.length <= selection.nombreVisible;
+    }
+
+    async function recharger() {
+      statut.textContent = "";
+      afficherPlus.hidden = true;
+      try {
+        const tous = [];
+        for (let offset = 0; offset < 50000; offset += 200) {
+          const data = await appelerCle(
+            "/read?resource=cle-parcs&limit=200&offset=" + String(offset)
+          );
+          if (!Array.isArray(data.rows)) throw new Error("Réponse du tableau des clés invalide.");
+          tous.push(...data.rows);
+          if (tous.length >= 50000) throw new Error("Inventaire des clés trop volumineux.");
+          if (data.rows.length < 200 || tous.length >= Number(data.total || 0)) break;
+        }
+        toutesLesCles = tous;
+        const ids = new Set(tous.map(idParc));
+        for (const id of [...selection.parcs]) if (!ids.has(id)) selection.parcs.delete(id);
+        rendreFiltres();
+        rendreLignes();
+      } catch (error) {
+        defilement.hidden = true;
+        statut.setAttribute("role", "alert");
+        statut.textContent = error?.message || "Impossible de charger les clés de parc.";
+      }
+    }
+
+    rechargerTableParcs = recharger;
+    await recharger();
+  }
+
   async function initialiserTables() {
     await chargerScriptAdminUneFois(
       "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
@@ -461,6 +786,11 @@
         throw new Error(
           "Slot de table introuvable : " + contexte.tableSlotId
         );
+      }
+
+      if (contexte.key === "parcs") {
+        await initialiserTableParcs(slot);
+        continue;
       }
 
       slot.innerHTML = "";
@@ -1164,8 +1494,12 @@
     modeEdition = "";
 
     if (recharger) {
-      await window.LCDP_TABLE_LECTURE_ADMIN
-        ?.recharger(contexte.tableSlotId);
+      if (contexte.key === "parcs" && rechargerTableParcs) {
+        await rechargerTableParcs();
+      } else {
+        await window.LCDP_TABLE_LECTURE_ADMIN
+          ?.recharger(contexte.tableSlotId);
+      }
     }
 
     tableSlot.scrollIntoView({
