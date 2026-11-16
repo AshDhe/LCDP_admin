@@ -243,8 +243,16 @@
           );
         }
 
+        const columnLabels = options.columnLabels &&
+          typeof options.columnLabels === "object"
+            ? options.columnLabels
+            : {};
         const columnsSource = Array.isArray(data.columns)
-          ? data.columns
+          ? data.columns.map((column) => (
+              Object.prototype.hasOwnProperty.call(columnLabels, column.key)
+                ? { ...column, label: String(columnLabels[column.key]) }
+                : column
+            ))
           : [];
         const columns = ordreStockage
           ? [...columnsSource].sort((a, b) => {
