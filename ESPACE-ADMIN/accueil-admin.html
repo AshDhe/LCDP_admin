@@ -152,38 +152,14 @@
       const CHEMIN_BOX_UPLOAD_IMG =
         "/OBJET/HTMLBASE/04-dialogue-upload-img.html";
 
-      const moduleMenu = window.LCDP_MENU_GAUCHE_ADMIN;
-
-      const categoriesAdmin =
-        moduleMenu &&
-        typeof moduleMenu.getCategories === "function"
-          ? moduleMenu.getCategories()
-          : [
-              {
-                id: "admin",
-                label: "Admin",
-                cat: "Admin",
-                fallback: "Admin"
-              },
-              {
-                id: "parcs",
-                label: "Parcs",
-                cat: "Parcs",
-                fallback: "Parc"
-              },
-              {
-                id: "membres",
-                label: "Membres",
-                cat: "Membres",
-                fallback: "Membres"
-              },
-              {
-                id: "coachs",
-                label: "Coachs",
-                cat: "Coachs",
-                fallback: "Coach"
-              }
-            ];
+      // L'accueil utilise sa liste locale : un script de menu resté en cache
+      // ne doit pas supprimer la catégorie Coachs de la navigation.
+      const categoriesAdmin = [
+        { id: "admin", label: "Admin", cat: "Admin", fallback: "Admin" },
+        { id: "parcs", label: "Parcs", cat: "Parcs", fallback: "Parc" },
+        { id: "membres", label: "Membres", cat: "Membres", fallback: "Membres" },
+        { id: "coachs", label: "Coachs", cat: "Coachs", fallback: "Coach" }
+      ];
 
       let boutonsConfigures = [];
       let localisationEnCours = false;
