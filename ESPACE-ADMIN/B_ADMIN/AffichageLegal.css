@@ -1,0 +1,88 @@
+/* Affichage légal — slot 3, dans le wrapper central des onglets. */
+.lcdp-page-affichage-legal .lcdp-admin-page-content {
+  display: grid;
+  gap: var(--lcdp-space-3, 16px);
+}
+.lcdp-afflegal-intro { margin: 0; }
+.lcdp-afflegal-section {
+  display: grid;
+  gap: var(--lcdp-space-3, 16px);
+  padding: var(--lcdp-space-3, 16px) 0;
+  min-width: 0;
+}
+.lcdp-afflegal-resumes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lcdp-space-3, 16px);
+}
+.lcdp-afflegal-resume,
+.lcdp-afflegal-detail,
+.lcdp-afflegal-recherche {
+  min-width: 0;
+  display: grid;
+  gap: var(--lcdp-space-2, 10px);
+  padding: var(--lcdp-space-3, 16px);
+  background: var(--lcdp-color-surface, white);
+  border: 1px solid var(--lcdp-color-border, #d1d5db);
+  border-radius: var(--lcdp-radius-medium, 9px);
+}
+.lcdp-afflegal-resume h3,
+.lcdp-afflegal-detail h3,
+.lcdp-afflegal-recherche h3 { margin: 0; font-size: 1.1rem; }
+.lcdp-afflegal-resume p,
+.lcdp-afflegal-detail p,
+.lcdp-afflegal-recherche p { margin: 0; }
+.lcdp-afflegal-resume output {
+  display: block;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lcdp-afflegal-resume dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 12px;
+  margin: 0;
+  font-size: .94rem;
+}
+.lcdp-afflegal-resume dt,
+.lcdp-afflegal-resume dd { margin: 0; }
+.lcdp-afflegal-resume dd { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }
+.lcdp-afflegal-resume small { opacity: .85; }
+.lcdp-afflegal-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--lcdp-space-2, 10px);
+}
+.lcdp-afflegal-filtres label {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+  font-weight: 600;
+}
+.lcdp-afflegal-filtres input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--lcdp-color-border, #d1d5db);
+  background: var(--lcdp-color-surface, white);
+  border-radius: var(--lcdp-radius-small, 6px);
+  font: inherit;
+  color: inherit;
+  color-scheme: light;
+}
+.lcdp-afflegal-filtres button { min-height: 40px; }
+.lcdp-afflegal-detail .lcdp-table-lecture-admin__scroll { min-width: 0; }
+.lcdp-afflegal-detail .lcdp-table-lecture-admin__table { width: 100%; }
+.lcdp-afflegal-detail .lcdp-table-lecture-admin__table th:last-child,
+.lcdp-afflegal-detail .lcdp-table-lecture-admin__table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lcdp-page-affichage-legal [hidden] { display: none !important; }
+@media (max-width: 660px) {
+  .lcdp-afflegal-resumes { grid-template-columns: 1fr; }
+  .lcdp-afflegal-filtres label { flex: 1 1 100%; }
+  .lcdp-afflegal-filtres button { flex: 1 1 auto; }
+}
