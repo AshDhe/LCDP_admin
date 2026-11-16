@@ -1,0 +1,7 @@
+/* Slot Membres n°22 : Affichage CLE, wrapper commun des onglets. */
+.lcdp-page-affichage-cle .lcdp-wraper-onglets__navigation {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.lcdp-page-affichage-cle .lcdp-wraper-onglets__tab {
+  padding-inline: 8px;
+}
