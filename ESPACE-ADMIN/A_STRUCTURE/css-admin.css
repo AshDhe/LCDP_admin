@@ -130,16 +130,16 @@
   cursor: default;
 }
 
-/* Conserver le comportement historique des catégories Admin et Parcs.
-   La catégorie Membres utilise exclusivement les groupes définis en JS. */
-.lcdp-mini-galerie-menu-centre-admin__grid:not([data-lcdp-categorie="membres"])
+/* Admin conserve la rangée orange 17 à 24.
+   Parcs utilise 1 à 24 verts, puis 25 à 48 orange ; Membres est indépendant. */
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="admin"]
   > .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24) {
   background: var(--lcdp-color-orange);
   border-color: var(--lcdp-color-orange);
   color: var(--lcdp-color-text);
 }
 
-.lcdp-mini-galerie-menu-centre-admin__grid:not([data-lcdp-categorie="membres"])
+.lcdp-mini-galerie-menu-centre-admin__grid[data-lcdp-categorie="admin"]
   > .lcdp-mini-galerie-menu-centre-admin__button:nth-child(n+17):nth-child(-n+24):hover {
   background: var(--lcdp-color-orange-hover);
   border-color: var(--lcdp-color-orange-hover);
