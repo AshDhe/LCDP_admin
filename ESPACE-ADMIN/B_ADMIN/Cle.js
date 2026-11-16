@@ -1215,7 +1215,6 @@
       return {
         idmembre: "",
         brac: "",
-        brightd: 58,
         poll_secondes: 300,
         geoloc_frq: 2,
         geoloc_interval_minutes: null,
@@ -1891,8 +1890,6 @@
       brac: String(
         form.elements.namedItem("brac")?.value || ""
       ).trim(),
-      // Compatibilité du Worker : valeur interne conservée, sans champ BRIGHT-A.
-      brightd: Number(ligneEdition?.brightd ?? 58),
       poll_secondes: Number(
         form.elements.namedItem("poll_minutes")?.value || 5
       ) * 60,
