@@ -251,7 +251,7 @@ async function invitationsMensuelles(request, env, session) {
   const anneeEnCours = Number(new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Paris", year: "numeric"
   }).format(new Date()));
-  if (!/^\\d{4}$/.test(valeur) || !Number.isInteger(annee) ||
+  if (!/^[0-9]{4}$/.test(valeur) || !Number.isInteger(annee) ||
       annee < 2020 || annee > anneeEnCours) {
     return json(request, {
       success: false, message: "Année non valide."
