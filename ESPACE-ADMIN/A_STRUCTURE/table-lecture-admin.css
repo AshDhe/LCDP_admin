@@ -13,6 +13,42 @@
   overflow-x: auto;
 }
 
+/* Barre horizontale du tableau : uniquement au-dessus des en-têtes. */
+.lcdp-table-lecture-admin__scroll-top {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 18px;
+  margin-bottom: var(--lcdp-space-1, 4px);
+  overflow-x: scroll;
+  overflow-y: hidden;
+  scrollbar-width: auto;
+}
+
+.lcdp-table-lecture-admin__scroll-top[hidden] {
+  display: none !important;
+}
+
+.lcdp-table-lecture-admin__scroll-spacer {
+  height: 1px;
+}
+
+.lcdp-table-lecture-admin__scroll-top:focus-visible {
+  outline: 2px solid var(--lcdp-color-primary);
+  outline-offset: 1px;
+}
+
+/* Le conteneur reste défilable, même sans barre visible en bas. */
+.lcdp-table-lecture-admin__scroll--haut {
+  scrollbar-width: none;
+}
+
+.lcdp-table-lecture-admin__scroll--haut::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .lcdp-table-lecture-admin__table {
   width: 100%;
   min-width: 620px;
