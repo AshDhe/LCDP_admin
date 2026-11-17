@@ -3,6 +3,7 @@
   const cfg=window.SITE_CONFIG||{};
   const api=String(cfg.workerEditingAdminUrl||cfg.WORKER_EDITING_ADMIN_URL||window.ADMIN_CONFIG?.API_EDITING_ADMIN||'').replace(/\/+$/,'');
   const $=s=>document.querySelector(s), liste=$('[data-carrousels-liste]'), commandes=$('[data-carrousels-commandes]'), editeur=$('[data-carrousels-editeur]');
+  const saveZone=$('[data-carrousels-save-zone]'),saveHome=$('[data-carrousels-save-home]'),saveButton=$('[data-carrousels-enregistrer]');
   let carrousels=[], version='', revision='', selected=null, previewIndex=0, dirty=false, busy=false;
   const fichiers=new Map(), originaux=new Map(), preuves=new Map(), charges=new Map();
   let enregistre=[], generation=0;
@@ -10,7 +11,7 @@
   const normalise=v=>v.map(c=>({id:c.id,nom:c.nom.trim(),dossier:c.dossier,titre:c.titre.trim(),images:c.images.map(im=>({id:im.id,titre:im.titre.trim(),legende:im.legende.trim(),alt:im.alt.trim()}))}));
   const chemin=(c,i)=>'OBJET'+path(c,i);
   const element=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-  const status=(text,etat='')=>{const p=$('[data-carrousels-status]');p.textContent=text;p.dataset.state=etat;const q=$('[data-carrousels-resultat]');q.textContent=text;q.dataset.state=etat;q.hidden=!text;};
+  const status=(text,etat='')=>{const p=$('[data-carrousels-status]');p.textContent=text;p.dataset.state=etat;const q=$('[data-carrousels-resultat]');q.textContent=text;q.dataset.state=etat;q.hidden=!text;p.hidden=!commandes.disabled||!!text&&!!carrousels.length;};
   const modifier=()=>{dirty=true;status('Modifications non enregistrées.','dirty');};
   const id=()=>crypto.randomUUID();
   const path=(c,i)=>'/IMAG/CARROUSEL/'+c.dossier+'/IMAG_'+(i+1)+'.webp';
@@ -39,33 +40,106 @@
     previewIndex=0;dirty=false;
   }
   function actualiserDirty(){dirty=fichiers.size>0||JSON.stringify(normalise(carrousels))!==JSON.stringify(enregistre);}
-  async function chargerImage(id){
-    const sha=preuves.get(id);if(!sha||originaux.get(id)?.sha===sha)return;
-    const key=id+':'+sha;if(charges.has(key))return charges.get(key);
-    const task=(async()=>{
-      const r=await fetch(api+'/admin/carrousels/image/'+encodeURIComponent(id),{credentials:'include',cache:'no-store'});
-      if(!r.ok)throw Error('Image indisponible (HTTP '+r.status+').');
-      const file=await r.blob();if(await shaBlob(file)!==sha)throw Error('Intégrité de l’image non confirmée.');
-      if(preuves.get(id)===sha)memoriser(id,sha,file);
-    })();
-    charges.set(key,task);try{await task;}finally{charges.delete(key);}
+  // Images publiques déjà vérifiées, cache privé du navigateur par empreinte.
+  // Aucune URL HTTP du site n’est versionnée et aucun cache ne remplace le manifeste.
+  const nomCache='lcdp-carrousels-images-verifiees';
+  const cleCache=sha=>new Request(new URL('/__lcdp-cache/carrousels/'+sha,window.location.origin));
+  let cachePromise=null,batchDisponible=true;
+  const cacheLocal=()=>cachePromise||(cachePromise=Promise.resolve().then(()=>window.caches?.open(nomCache)).catch(()=>null));
+  async function lireCache(sha){
+    try{
+      const cache=await cacheLocal();if(!cache)return null;
+      const key=cleCache(sha),r=await cache.match(key);if(!r)return null;
+      const file=await r.blob();
+      if(await shaBlob(file)===sha)return file;
+      await cache.delete(key);return null;
+    }catch(_){return null;}
   }
-  async function chargerVignettes(){
-    const c=selectedCarrousel(),run=++generation;
-    if(!c)return;
-    const ids=c.images.filter(im=>!fichiers.has(im.id)).map(im=>im.id);
-    let i=0;
-    await Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
-      while(run===generation&&i<ids.length){
-        const id=ids[i++];
-        let erreur=false;try{await chargerImage(id);}catch(e){erreur=true;console.warn(e);}
-        if(run!==generation)continue;
-        const row=[...editeur.querySelectorAll('[data-carrousel-image-id]')].find(el=>el.dataset.carrouselImageId===id);
-        const img=row?.querySelector('img'),label=row?.querySelector('[data-image-message]'),im=c.images.find(x=>x.id===id);
-        if(img&&im&&urlImage(im)){img.src=urlImage(im);img.hidden=false;if(label)label.hidden=true;}
-        else if(label&&erreur){label.textContent='Image non chargée';}
+  let ecrituresCache=Promise.resolve();
+  function garderCache(sha,file){
+    ecrituresCache=ecrituresCache.then(async()=>{
+      const cache=await cacheLocal();if(!cache)return;
+      await cache.put(cleCache(sha),new Response(file,{headers:{'Content-Type':'image/webp'}}));
+      const keys=await cache.keys();
+      for(const key of keys.slice(0,Math.max(0,keys.length-60)))await cache.delete(key);
+    }).catch(()=>{});
+  }
+  async function installerImage(id,sha,file){
+    if(await shaBlob(file)!==sha)throw Error('Intégrité de l’image non confirmée.');
+    if(preuves.get(id)===sha){memoriser(id,sha,file);garderCache(sha,file);}
+  }
+  async function imageIndividuelle(id,sha){
+    const r=await fetch(api+'/admin/carrousels/image/'+encodeURIComponent(id),{credentials:'include',cache:'no-store'});
+    if(!r.ok)throw Error('Image indisponible (HTTP '+r.status+').');
+    await installerImage(id,sha,await r.blob());
+  }
+  async function demanderLot(items){
+    if(!items.length)return;
+    let data=null;
+    if(batchDisponible){
+      try{
+        const r=await fetch(api+'/admin/carrousels/images',{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:items.map(x=>x.id)})});
+        if(r.status===404||r.status===405)batchDisponible=false;
+        else if(r.status===401||r.status===403)throw Error('Session admin non autorisée.');
+        else if(r.ok){const d=await r.json();if(d.success&&Array.isArray(d.images))data=d.images;}
+      }catch(e){if(e.message==='Session admin non autorisée.')throw e;console.warn(e);}
+    }
+    const index=new Map((data||[]).map(im=>[im.id,im]));
+    // Les lots trop volumineux et les anciens workers gardent la route individuelle.
+    let i=0;const erreurs=new Map();
+    await Promise.all(Array.from({length:Math.min(4,items.length)},async()=>{
+      while(i<items.length){
+        const {id,sha}=items[i++],im=index.get(id);
+        try{
+          if(im?.sha===sha&&typeof im.contenu==='string'){
+            const raw=atob(im.contenu),bytes=new Uint8Array(raw.length);
+            for(let j=0;j<raw.length;j++)bytes[j]=raw.charCodeAt(j);
+            await installerImage(id,sha,new Blob([bytes],{type:'image/webp'}));
+          }else if(im?.error)throw Error(im.error);
+          else await imageIndividuelle(id,sha);
+        }catch(e){erreurs.set(id,e);}
       }
     }));
+    return erreurs;
+  }
+  function afficherImageChargee(id,run,erreur=false){
+    if(run!==generation)return;
+    const c=selectedCarrousel(),im=c?.images.find(x=>x.id===id);
+    const row=[...editeur.querySelectorAll('[data-carrousel-image-id]')].find(el=>el.dataset.carrouselImageId===id);
+    const img=row?.querySelector('img'),label=row?.querySelector('[data-image-message]');
+    if(img&&im&&urlImage(im)){const src=urlImage(im);if(img.getAttribute('src')!==src)img.src=src;img.hidden=false;if(label)label.hidden=true;}
+    else if(label&&erreur){label.textContent='Image non chargée';}
+    if(c?.images[previewIndex]?.id===id)actualiserPreview();
+  }
+  async function chargerVignettes(){
+    const c=selectedCarrousel(),run=++generation;if(!c)return;
+    const items=c.images.filter(im=>!fichiers.has(im.id)&&preuves.has(im.id)).map(im=>({id:im.id,sha:preuves.get(im.id)}));
+    const aCharger=[];
+    await Promise.all(items.map(async item=>{
+      const {id,sha}=item;
+      if(originaux.get(id)?.sha===sha){afficherImageChargee(id,run);return;}
+      const file=await lireCache(sha);
+      if(file&&preuves.get(id)===sha){memoriser(id,sha,file);afficherImageChargee(id,run);return;}
+      if(run===generation)aCharger.push(item);
+    }));
+    if(run!==generation)return;
+    const attentes=[],nouveaux=[];
+    for(const item of aCharger){
+      const key=item.id+':'+item.sha;
+      if(charges.has(key))attentes.push(charges.get(key).then(()=>afficherImageChargee(item.id,run,!urlImage({id:item.id}))));
+      else nouveaux.push(item);
+    }
+    // Afficher le premier groupe dès sa réception, sans attendre les autres.
+    for(let i=0;i<nouveaux.length;i+=6){
+      const groupe=nouveaux.slice(i,i+6);
+      const lot=demanderLot(groupe).catch(e=>{console.warn(e);return new Map(groupe.map(x=>[x.id,e]));});
+      for(const item of groupe){
+        const key=item.id+':'+item.sha;
+        const task=lot.then(errors=>{afficherImageChargee(item.id,run,!!errors?.has(item.id));}).finally(()=>charges.delete(key));
+        charges.set(key,task);attentes.push(task);
+      }
+    }
+    await Promise.all(attentes);
     if(run===generation)actualiserPreview();
   }
   async function appel(form){
@@ -218,7 +292,7 @@
       if(!correspond(d,next,attendus))throw Error(e.message+' Enregistrement non confirmé : les fichiers restent en attente.');
     }
     appliquer(d);
-    for(const [id,f] of uploads){memoriser(id,f.sha,f.file);if(fichiers.get(id)===f)clearFile(id);}
+    for(const [id,f] of uploads){memoriser(id,f.sha,f.file);garderCache(f.sha,f.file);if(fichiers.get(id)===f)clearFile(id);}
     return err?'Enregistrement retrouvé et vérifié dans GitHub.':'Enregistrement vérifié dans GitHub.';
   }
   async function uploadIndividuel(c,im){
@@ -285,7 +359,7 @@
     prev.dataset.previewPrev='';next.dataset.previewNext='';nav.append(prev,next);box.append(general,titre,img,legende,nav);return box;
   }
   function rendreEditeur(){
-    const c=selectedCarrousel();editeur.replaceChildren();editeur.hidden=!c;if(!c)return;
+    const c=selectedCarrousel();saveHome.append(saveZone);editeur.replaceChildren();editeur.hidden=!c;saveHome.hidden=!!c;if(!c){generation++;return;}
     editeur.append(element('h2','Modifier le carrousel','lcdp-carrousel-nom'));
     editeur.append(champ('Nom du carrousel',c.nom,160,v=>{c.nom=v;rendreListe();},true),champ('Nom du dossier GitHub (majuscules, chiffres, _ ou -)',c.dossier,64,v=>{c.dossier=v;rendreListe();},true),champ('Titre général du carrousel',c.titre,160,v=>c.titre=v));
     editeur.append(element('p','Images WebP : 1672 × 941 pixels. Noms attribués automatiquement à l’enregistrement.','lcdp-editeur-contenu__aide'));
@@ -300,7 +374,8 @@
       if(fichiers.has(im.id))actions.append(bouton('Réessayer l’upload',()=>retenter(c,im),{primary:true}));
       infos.append(actions);box.append(visuel,infos);images.append(box);
     });
-    editeur.append(bouton('Ajouter une image',()=>choisirFichier(c,null),{disabled:c.images.length>=40,primary:true}),bouton('Enregistrer le carrousel',()=>enregistrerTout(),{primary:true}),images,construirePreview(),bouton('Fermer l’éditeur',()=>{selected=null;rendre();}));
+    const outils=element('div',undefined,'lcdp-carrousel-outils');outils.append(bouton('Ajouter une image',()=>choisirFichier(c,null),{disabled:c.images.length>=40,primary:false}),saveZone);
+    editeur.append(outils,images,construirePreview(),bouton('Fermer l’éditeur',()=>{selected=null;rendre();}));
     actualiserPreview();chargerVignettes();
   }
   function rendre(){rendreListe();rendreEditeur();$('[data-carrousels-ajouter]').disabled=carrousels.length>=40;}
@@ -310,26 +385,37 @@
   };
   async function enregistrerTout(){
     if(busy)return;
-    busy=true;commandes.disabled=true;
+    busy=true;commandes.disabled=true;saveButton.textContent='Enregistrement…';
     try{
-      status('Enregistrement des carrousels…');
-      await persister(carrousels,new Map(fichiers));
-      carrousels=copie(enregistre);actualiserDirty();rendre();
-      status('Carrousels enregistrés et vérifiés dans GitHub.','success');
-    }catch(e){status(e.message,'error');}
-    finally{busy=false;commandes.disabled=false;}
+      actualiserDirty();
+      status(dirty?'Enregistrement des carrousels…':'Vérification des carrousels…');
+      if(dirty){
+        await persister(carrousels,new Map(fichiers));
+        carrousels=copie(enregistre);actualiserDirty();rendre();
+        status('Carrousel enregistré et vérifié dans GitHub.','success');
+      }else{
+        const d=await appel();
+        if(!correspond(d,normalise(carrousels),preuves)){
+          hydrate(d);rendre();throw Error('GitHub contient des modifications plus récentes. Liste actualisée.');
+        }
+        appliquer(d);status('Aucune modification : le carrousel est déjà enregistré dans GitHub.','success');
+      }
+    }catch(e){status(e.message||'Enregistrement non confirmé.','error');}
+    finally{busy=false;commandes.disabled=false;saveButton.textContent='Enregistrer';}
   }
-  $('[data-carrousels-enregistrer]').onclick=enregistrerTout;
+  saveButton.onclick=enregistrerTout;
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
   async function init(){
     if(!await window.LCDP_GUARD_ADMIN.verifierAccesPageAdmin())return;
+    const inventaire=appel();
     await Promise.all([
+      inventaire,
       fragment(window.LCDP_urlAdmin('/ESPACE-ADMIN/A_STRUCTURE/box-bandeau-nav-admin.html')).then(f=>{const slot=document.getElementById('lcdp-bandeau-slot');slot.replaceChildren(f);slot.querySelectorAll('[data-site-href]').forEach(e=>e.href=e.dataset.space==='admin'?window.LCDP_urlAdmin(e.dataset.siteHref):window.LCDP_urlPublic(e.dataset.siteHref));slot.querySelectorAll('[data-site-src]').forEach(e=>{const chemin=String(e.dataset.siteSrc||'').replace(/^\/?OBJET\/?/,'/');e.setAttribute('src',window.LCDP_urlObjet(chemin));});}),
       window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:'lcdp-menu-gauche-admin-slot',categorieActive:'admin'})
     ]);
 
     document.getElementById('lcdp-main-admin').hidden=false;
-    const d=await appel();hydrate(d);rendre();commandes.disabled=false;status('');
+    const d=await inventaire;hydrate(d);rendre();commandes.disabled=false;status('');
   }
   init().catch(e=>{document.getElementById('lcdp-main-admin').hidden=false;status(e.message,'error');});
 })();

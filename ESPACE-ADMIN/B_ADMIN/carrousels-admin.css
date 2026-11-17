@@ -21,3 +21,9 @@
 .lcdp-carrousel-resultat,.lcdp-carrousel-upload-etat { margin:6px 0; font-size:.875rem; }
 .lcdp-carrousel-upload-etat[data-state="success"],.lcdp-carrousel-resultat[data-state="success"] { color:#395c39; }
 .lcdp-carrousel-upload-etat[data-state="error"],.lcdp-carrousel-resultat[data-state="error"] { color:#8b4a10; }
+
+.lcdp-carrousel-outils { display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px; }
+.lcdp-carrousel-save { min-width:0; flex:1 1 12rem; display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.lcdp-carrousel-save [data-carrousels-enregistrer] { width:auto; }
+.lcdp-carrousel-save .lcdp-carrousel-resultat { margin:0; overflow-wrap:anywhere; font-weight:600; }
+.lcdp-carrousel-save [data-carrousels-enregistrer]:disabled { opacity:.55; cursor:wait; }
