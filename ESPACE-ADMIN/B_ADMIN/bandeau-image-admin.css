@@ -27,3 +27,12 @@ fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer
 
 .lcdp-bandeau-admin-image.lcdp-bandeau-admin-sans-image { grid-template-columns:minmax(0,1fr); }
 .lcdp-bandeau-admin-info strong { overflow-wrap:anywhere; }
+
+/* Prévisualisation : largeur explicite au format paysage, indépendamment des règles img communes. */
+.lcdp-page-bandeau-image-admin [data-bandeau-preview] img.lcdp-bandeau-image__image {
+  flex:0 0 calc(var(--lcdp-bandeau-taille, 116px) * 1672 / 941);
+  width:calc(var(--lcdp-bandeau-taille, 116px) * 1672 / 941);
+  min-width:calc(var(--lcdp-bandeau-taille, 116px) * 1672 / 941);
+  max-width:none; height:var(--lcdp-bandeau-taille, 116px);
+  aspect-ratio:1672 / 941; object-fit:contain;
+}

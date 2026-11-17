@@ -269,9 +269,18 @@
     if(aria)b.setAttribute('aria-label',aria);
     b.onclick=()=>{if(!busy)Promise.resolve(action()).catch(e=>status(e.message,'error'));};return b;
   }
-  function modifierOrdre(i,delta){
-    const k=i+delta;if(k<0||k>=ordre.length)return;
-    [ordre[i],ordre[k]]=[ordre[k],ordre[i]];rendre();status(ordreModifie()?'Ordre modifié. Enregistre le bandeau.':'Ordre enregistré.');
+  function modifierOrdre(id,delta){
+    const i=ordre.indexOf(id),k=i+delta;
+    if(busy||!confirmed||i<0||k<0||k>=ordre.length)return;
+    [ordre[i],ordre[k]]=[ordre[k],ordre[i]];
+    rendre();
+    const row=[...liste.children].find(el=>el.dataset.imageId===id);
+    const direction=delta<0?'monter':'descendre';
+    const action=row?.querySelector('[data-bandeau-ordre="'+direction+'"]');
+    const autre=row?.querySelector('[data-bandeau-ordre="'+(delta<0?'descendre':'monter')+'"]');
+    (action&&!action.disabled?action:autre)?.focus({preventScroll:true});
+    row?.scrollIntoView({block:'nearest',inline:'nearest'});
+    status(ordreModifie()?'Image déplacée en position '+(k+1)+'. Enregistre le bandeau.':'Ordre enregistré.');
   }
   saveBandeau.onclick=()=>operation(async()=>{
     const next=listeOrdonnee().map(im=>({...im,alt:(brouillons.get(im.id)??im.alt).trim()}));
@@ -299,7 +308,10 @@
       label.append(el('span','Texte alternatif (facultatif)','lcdp-editeur-contenu__label'),input);
       const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
       input.oninput=()=>{brouillons.set(im.id,input.value);saveBandeau.disabled=!ordreModifie()&&!texteModifie();status('Modifications non enregistrées.');};
-      actions.append(bouton('↑',()=>modifierOrdre(i,-1),i===0,'Monter l’image'),bouton('↓',()=>modifierOrdre(i,1),i===images.length-1,'Descendre l’image'),bouton('Remplacer',()=>{replaceId=im.id;remplacement.value='';remplacement.click();}),bouton('Supprimer',()=>supprimer(im,i)));
+      const monter=bouton('↑ Monter',()=>modifierOrdre(im.id,-1),i===0,'Monter l’image');
+      const descendre=bouton('↓ Descendre',()=>modifierOrdre(im.id,1),i===ordre.length-1,'Descendre l’image');
+      monter.dataset.bandeauOrdre='monter';descendre.dataset.bandeauOrdre='descendre';
+      actions.append(monter,descendre,bouton('Remplacer',()=>{replaceId=im.id;remplacement.value='';remplacement.click();}),bouton('Supprimer',()=>supprimer(im,i)));
       info.append(label,actions);box.append(visuel,info);liste.append(box);actualiserMiniature(im.id);
     });
     afficherAttente();actualiserPreview();chargerVignettes();
