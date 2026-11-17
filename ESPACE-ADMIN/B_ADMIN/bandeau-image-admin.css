@@ -1,0 +1,10 @@
+/* Éditeur du bandeau image : wrapper et mini-éditeur communs. */
+.lcdp-page-bandeau-image-admin .lcdp-editeur-contenu { min-width:0; border:0; padding:0; }
+.lcdp-page-bandeau-image-admin [hidden] { display:none !important; }
+.lcdp-bandeau-admin-image { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; gap:var(--lcdp-space-3); }
+.lcdp-bandeau-admin-miniature { display:block; width:min(100%,180px); height:auto; aspect-ratio:1; object-fit:cover; }
+.lcdp-bandeau-admin-info { display:flex; flex-direction:column; min-width:0; gap:var(--lcdp-space-2); }
+.lcdp-bandeau-admin-nom { margin:0; font:inherit; font-weight:700; }
+.lcdp-bandeau-preview-secours { display:flex; overflow-x:auto; gap:8px; }
+.lcdp-bandeau-preview-secours img { width:100px; aspect-ratio:1; object-fit:cover; flex:none; }
+@media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns: minmax(0,150px) minmax(0,1fr);}}
