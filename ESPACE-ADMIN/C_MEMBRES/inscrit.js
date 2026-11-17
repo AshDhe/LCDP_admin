@@ -316,7 +316,7 @@
     );
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js"
+      "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261117-liste-attente-scroll-haut-v2"
     );
 
     const table = window.LCDP_TABLE_LECTURE_ADMIN;
@@ -379,7 +379,7 @@
     const slot = document.getElementById(ATTENTE_SLOT_ID);
     if (!slot) return;
     slot.replaceChildren(await chargerFragmentAdmin("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"));
-    await chargerScriptAdminUneFois("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js");
+    await chargerScriptAdminUneFois("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js?v=20261117-liste-attente-scroll-haut-v2");
     await window.LCDP_TABLE_LECTURE_ADMIN.initialiser({
       slotId: ATTENTE_SLOT_ID,
       endpoint: endpointAdminData(),
