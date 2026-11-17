@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Témoignages - Administration - La Clé du Parc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      const config = window.SITE_CONFIG;
+      window.LCDP_urlAdmin = path => config.adminUrl(path);
+      window.LCDP_urlPublic = path => config.publicUrl(path);
+      window.LCDP_urlObjet = path => config.objetUrl(path);
+      for (const url of [
+        config.objetUrl("/CSSBASE/cssbase.css"),
+        config.objetUrl("/CSSBASE/lcdp-central-mobile-first.css"),
+        config.adminUrl("/ESPACE-ADMIN/A_STRUCTURE/css-admin.css"),
+        config.adminUrl("/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css")
+      ]) document.write('<link rel="stylesheet" href="' + url + '">');
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Éditeur des témoignages">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <h1>Témoignages</h1>
+              <p id="temoignages-status" role="status" aria-live="polite">Chargement…</p>
+              <form id="temoignages-form" class="lcdp-editeur-contenu" hidden>
+                <div class="lcdp-editeur-contenu__blocs" id="temoignages-liste"></div>
+                <div class="lcdp-editeur-contenu__ordre">
+                  <button type="button" class="lcdp-button lcdp-button-primary" id="temoignages-ajouter">Ajouter un témoignage</button>
+                  <button type="submit" class="lcdp-button lcdp-button-orange" id="temoignages-enregistrer">Enregistrer</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./temoignages-admin.js"></script>
+</body>
+</html>
