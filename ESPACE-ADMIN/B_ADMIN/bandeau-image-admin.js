@@ -284,7 +284,7 @@
   }
   saveBandeau.onclick=()=>operation(async()=>{
     const next=listeOrdonnee().map(im=>({...im,alt:(brouillons.get(im.id)??im.alt).trim()}));
-    status('Enregistrement du bandeau…');await enregistrer(next);ordre=images.map(im=>im.id);brouillons.clear();status('Bandeau enregistré et vérifié.','success');
+    status('Enregistrement du bandeau…');await enregistrer(next);ordre=images.map(im=>im.id);brouillons.clear();status('Bandeau enregistré et vérifié dans GitHub.','success');
   });
   function supprimer(im,i){
     return operation(async()=>{
@@ -294,7 +294,7 @@
     });
   }
   function rendre(){
-    saveBandeau.disabled=busy||!confirmed||(!ordreModifie()&&!texteModifie());
+    saveBandeau.disabled=busy||!confirmed;
     liste.replaceChildren();$('[data-bandeau-compteur]').textContent=images.length+' image'+(images.length===1?'':'s')+' enregistrée'+(images.length===1?'':'s')+(images.length<8?' · bandeau public masqué':' · bandeau public actif');
     if(!images.length)liste.append(el('p','Aucune image enregistrée. Utilise le bouton Ajouter des images.','lcdp-editeur-contenu__aide'));
     listeOrdonnee().forEach((im,i)=>{
@@ -307,7 +307,7 @@
       const label=el('label',undefined,'lcdp-editeur-contenu__titre-zone'),input=el('input',undefined,'lcdp-editeur-contenu__titre');input.type='text';input.value=brouillons.get(im.id)??im.alt;
       label.append(el('span','Texte alternatif (facultatif)','lcdp-editeur-contenu__label'),input);
       const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
-      input.oninput=()=>{brouillons.set(im.id,input.value);saveBandeau.disabled=!ordreModifie()&&!texteModifie();status('Modifications non enregistrées.');};
+      input.oninput=()=>{brouillons.set(im.id,input.value);saveBandeau.disabled=busy||!confirmed;status('Modifications non enregistrées.');};
       const monter=bouton('↑ Monter',()=>modifierOrdre(im.id,-1),i===0,'Monter l’image');
       const descendre=bouton('↓ Descendre',()=>modifierOrdre(im.id,1),i===ordre.length-1,'Descendre l’image');
       monter.dataset.bandeauOrdre='monter';descendre.dataset.bandeauOrdre='descendre';
