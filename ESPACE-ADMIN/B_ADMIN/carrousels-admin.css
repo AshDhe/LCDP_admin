@@ -1,0 +1,16 @@
+/* Carrousels : extension du mini-éditeur de contenu LCDP */
+.lcdp-page-carrousels-admin .lcdp-editeur-contenu { min-width:0; border:0; padding:0; }
+.lcdp-page-carrousels-admin [hidden] { display:none !important; }
+.lcdp-carrousel-entete { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--lcdp-space-2); }
+.lcdp-carrousel-infos { min-width:0; overflow-wrap:anywhere; flex:1 1 14rem; }
+.lcdp-carrousel-nom { margin:0; font:inherit; font-weight:700; }
+.lcdp-carrousel-selected { border-color:var(--lcdp-color-primary); }
+.lcdp-carrousel-image { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; gap:var(--lcdp-space-3); }
+.lcdp-carrousel-thumbnail,.lcdp-carrousel-preview img { display:block; width:100%; height:auto; aspect-ratio:1672/941; object-fit:contain; border-radius:var(--lcdp-radius-small); }
+.lcdp-carrousel-champs { display:flex; flex-direction:column; min-width:0; gap:var(--lcdp-space-2); }
+.lcdp-carrousel-preview { display:flex; flex-direction:column; gap:var(--lcdp-space-2); background:var(--lcdp-color-surface); border:1px solid var(--lcdp-color-border); border-radius:var(--lcdp-radius-medium); padding:var(--lcdp-space-3); text-align:center; }
+.lcdp-carrousel-preview h3,.lcdp-carrousel-preview h4,.lcdp-carrousel-preview p { margin:0; }
+.lcdp-carrousel-preview h3:empty,.lcdp-carrousel-preview h4:empty,.lcdp-carrousel-preview p:empty { display:none; }
+.lcdp-carrousel-preview .lcdp-editeur-contenu__ordre { justify-content:center; }
+.lcdp-carrousel-preview .lcdp-editeur-contenu__label { text-align:left; }
+@media(min-width:800px){ .lcdp-carrousel-image { grid-template-columns:minmax(0,2fr) minmax(0,3fr); } }
