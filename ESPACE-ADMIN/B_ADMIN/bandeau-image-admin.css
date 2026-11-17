@@ -1,10 +1,26 @@
-/* Éditeur du bandeau image : wrapper et mini-éditeur communs. */
+/* Bandeau image : éditeur dans le wrapper admin et les composants communs. */
 .lcdp-page-bandeau-image-admin .lcdp-editeur-contenu { min-width:0; border:0; padding:0; }
 .lcdp-page-bandeau-image-admin [hidden] { display:none !important; }
-.lcdp-bandeau-admin-image { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; gap:var(--lcdp-space-3); }
-.lcdp-bandeau-admin-miniature { display:block; width:min(100%,180px); height:auto; aspect-ratio:1; object-fit:cover; }
-.lcdp-bandeau-admin-info { display:flex; flex-direction:column; min-width:0; gap:var(--lcdp-space-2); }
+.lcdp-bandeau-admin-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:12px 0 16px; }
+.lcdp-bandeau-admin-picker { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; text-align:center; }
+.lcdp-bandeau-admin-file { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.lcdp-bandeau-admin-toolbar:focus-within .lcdp-bandeau-admin-picker { outline:2px solid currentColor; outline-offset:3px; }
+fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer-events:none; }
+.lcdp-bandeau-admin-preview { min-width:0; margin-bottom:16px; }
+.lcdp-bandeau-admin-liste { display:flex; flex-direction:column; gap:10px; }
+.lcdp-bandeau-admin-image { display:grid; grid-template-columns:92px minmax(0,1fr); align-items:start; gap:12px; min-width:0; }
+.lcdp-bandeau-admin-visuel { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; background:#f2f3ef; overflow:hidden; border-radius:6px; }
+.lcdp-bandeau-admin-miniature { display:block; width:100%; height:auto; aspect-ratio:1; object-fit:cover; border-radius:6px; }
+.lcdp-bandeau-admin-placeholder { padding:5px; font-size:.75rem; text-align:center; }
+.lcdp-bandeau-admin-info { display:flex; flex-direction:column; min-width:0; gap:8px; }
+.lcdp-bandeau-admin-entete-image { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; }
 .lcdp-bandeau-admin-nom { margin:0; font:inherit; font-weight:700; }
+.lcdp-bandeau-admin-confirme { color:#395c39; font-size:.75rem; }
+.lcdp-bandeau-admin-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.lcdp-bandeau-admin-actions .lcdp-bandeau-admin-bouton { flex:0 0 auto; width:auto; min-width:32px; max-width:100%; padding:5px 10px; font-size:.8rem; }
+.lcdp-bandeau-admin-actions button:disabled { opacity:.4; cursor:default; }
+.lcdp-bandeau-admin-erreur { margin:0; color:#8b4a10; overflow-wrap:anywhere; font-size:.85rem; }
 .lcdp-bandeau-preview-secours { display:flex; overflow-x:auto; gap:8px; }
 .lcdp-bandeau-preview-secours img { width:100px; aspect-ratio:1; object-fit:cover; flex:none; }
-@media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns: minmax(0,150px) minmax(0,1fr);}}
+@media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns:140px minmax(0,1fr);gap:16px;}}
+@media(max-width:420px){.lcdp-bandeau-admin-image{grid-template-columns:1fr;}.lcdp-bandeau-admin-visuel,.lcdp-bandeau-admin-image>.lcdp-bandeau-admin-miniature{max-width:150px;}}

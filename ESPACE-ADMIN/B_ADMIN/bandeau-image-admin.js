@@ -3,29 +3,166 @@
   const cfg=window.SITE_CONFIG||{};
   const api=String(cfg.workerEditingAdminUrl||cfg.WORKER_EDITING_ADMIN_URL||window.ADMIN_CONFIG?.API_EDITING_ADMIN||'').replace(/\/+$/,'');
   const $=s=>document.querySelector(s),liste=$('[data-bandeau-liste]'),commandes=$('[data-bandeau-commandes]');
+  const ajout=$('[data-bandeau-ajouter]'),remplacement=$('[data-bandeau-remplacer]'),attente=$('[data-bandeau-attente]');
   const preview=$('[data-bandeau-preview]'),previewWrap=$('[data-bandeau-preview-wrap]');
-  let images=[],revision='',dirty=false,busy=false;
-  const fichiers=new Map(),originaux=new Map();
-  const element=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-  const status=(text,etat='')=>{const p=$('[data-bandeau-status]');p.textContent=text;p.dataset.state=etat;};
-  const modifier=()=>{dirty=true;status('Modifications non enregistrées.','dirty');};
-  const urlImage=im=>fichiers.get(im.id)?.url||originaux.get(im.id)||'';
-  function clearFile(id){const f=fichiers.get(id);if(f)URL.revokeObjectURL(f.url);fichiers.delete(id);}
-  async function hydrate(d){
-    for(const id of fichiers.keys())clearFile(id);
-    originaux.clear();images=d.images;revision=d.revision;
-    images.forEach((im,i)=>originaux.set(im.id,window.LCDP_urlObjet('/IMAG/BANDEAU-IMAGE/IMAG_'+(i+1)+'.webp')));
-    dirty=false;
+  let images=[],revision='',busy=false,replaceId=null,confirmed=false;
+  const preuves=new Map(),vignettes=new Map(),chargements=new Map(),brouillons=new Map(),pending=[];
+  const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
+  const status=(msg,etat='')=>{const p=$('[data-bandeau-status]');p.textContent=msg;p.dataset.state=etat;};
+  const chemin=i=>'OBJET/IMAG/BANDEAU-IMAGE/IMAG_'+(i+1)+'.webp';
+  const shaValide=s=>typeof s==='string'&&/^[a-f0-9]{40}$/.test(s);
+  async function shaBlob(file){
+    const buffer=await file.arrayBuffer(),prefix=new TextEncoder().encode('blob '+buffer.byteLength+'\0');
+    const bytes=new Uint8Array(prefix.length+buffer.byteLength);bytes.set(prefix);bytes.set(new Uint8Array(buffer),prefix.length);
+    return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-1',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
   }
   async function appel(form){
     if(!api)throw Error('Service d’édition non configuré.');
     const r=await fetch(api+'/admin/bandeau-image',{method:form?'POST':'GET',credentials:'include',cache:'no-store',headers:{Accept:'application/json'},body:form||undefined});
     const d=await r.json().catch(()=>null);
-    if(!r.ok||!d?.success){
-      if(r.status===404)throw Error('Le worker w-editing-admin doit être mis à jour pour activer le bandeau image.');
-      throw Error(d?.message||'Service du bandeau image indisponible.');
-    }
+    if(!r.ok||!d?.success)throw Error(d?.message||'Service du bandeau image indisponible (HTTP '+r.status+').');
+    if(!Array.isArray(d.images)||!d.revision||!Array.isArray(d.verification))throw Error('Le worker doit être remplacé par la version de vérification du bandeau image.');
+    if(d.verification.length!==d.images.length||d.images.some((im,i)=>d.verification[i]?.id!==im.id||d.verification[i]?.chemin!==chemin(i)||!shaValide(d.verification[i]?.sha)))throw Error('Les preuves GitHub sont incomplètes.');
     return d;
+  }
+  function appliquer(d){
+    images=d.images;revision=d.revision;confirmed=true;
+    preuves.clear();d.verification.forEach(p=>preuves.set(p.id,p.sha));
+    for(const [id,v] of vignettes)if(preuves.get(id)!==v.sha){URL.revokeObjectURL(v.url);vignettes.delete(id);}
+    for(const id of brouillons.keys())if(!preuves.has(id))brouillons.delete(id);
+  }
+  function imageUrl(id){const v=vignettes.get(id);return v?.sha===preuves.get(id)?v.url:'';}
+  function setVignette(id,sha,blob){
+    const previous=vignettes.get(id);
+    if(previous)URL.revokeObjectURL(previous.url);
+    vignettes.set(id,{sha,url:URL.createObjectURL(blob)});
+  }
+  async function chargerVignette(id){
+    const sha=preuves.get(id);if(!sha||imageUrl(id))return;
+    const key=id+':'+sha;if(chargements.has(key))return chargements.get(key);
+    const charge=(async()=>{
+      const r=await fetch(api+'/admin/bandeau-image/image/'+encodeURIComponent(id),{credentials:'include',cache:'no-store'});
+      if(!r.ok)throw Error('Vignette indisponible (HTTP '+r.status+').');
+      const blob=await r.blob();
+      if(await shaBlob(blob)!==sha)throw Error('Le contenu de la vignette a changé.');
+      if(preuves.get(id)===sha)setVignette(id,sha,blob);
+    })();
+    chargements.set(key,charge);try{await charge;}finally{chargements.delete(key);}
+  }
+  let cycle=0;
+  async function chargerVignettes(){
+    const run=++cycle,ids=images.map(im=>im.id);let cursor=0,failures=new Set();
+    await Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
+      while(run===cycle&&cursor<ids.length){
+        const id=ids[cursor++];
+        try{await chargerVignette(id);}catch(e){failures.add(id);console.warn(e);}
+        if(run===cycle)actualiserMiniature(id,failures.has(id));
+      }
+    }));
+    if(run===cycle)actualiserPreview();
+  }
+  function actualiserMiniature(id,failed=false){
+    const row=[...liste.children].find(e=>e.dataset.imageId===id);if(!row)return;
+    const img=row.querySelector('img'),message=row.querySelector('[data-vignette-message]'),source=imageUrl(id);
+    if(source){if(img.src!==source)img.src=source;img.hidden=false;message.hidden=true;}
+    else{img.hidden=true;message.hidden=false;message.textContent=failed?'Vignette indisponible':'Chargement…';}
+  }
+  function actualiserPreview(){
+    const source=images.map(im=>({src:imageUrl(im.id),alt:im.alt})).filter(im=>im.src);
+    previewWrap.hidden=!source.length;
+    if(window.LCDP_BANDEAU_IMAGE){preview.classList.remove('lcdp-bandeau-preview-secours');window.LCDP_BANDEAU_IMAGE.rendre(preview,source);}
+    else{preview.replaceChildren();preview.hidden=!source.length;preview.classList.add('lcdp-bandeau-preview-secours');for(const im of source){const img=el('img');img.src=im.src;img.alt=im.alt;preview.append(img);}}
+  }
+  function correspond(d,next,shaAttendus){
+    return d.images.length===next.length&&next.every((im,i)=>d.images[i]?.id===im.id&&d.images[i]?.alt===im.alt.trim()&&d.verification[i]?.sha===shaAttendus.get(im.id)&&d.verification[i]?.chemin===chemin(i));
+  }
+  async function enregistrer(next,item=null){
+    next=next.map(im=>({id:im.id,alt:im.alt.trim()}));
+    const attendus=new Map(next.map(im=>[im.id,preuves.get(im.id)]));
+    if(item)attendus.set(item.id,item.sha);
+    const form=new FormData();form.set('inventaire',JSON.stringify({revision,images:next}));
+    if(item)form.set('image:'+item.id,item.file,item.file.name||'image.webp');
+    let result=null,erreur=null;
+    try{
+      const d=await appel(form);
+      if(!correspond(d,next,attendus))throw Error('Le contenu retourné ne correspond pas à l’enregistrement demandé.');
+      result=await appel();
+      if(!correspond(result,next,attendus))throw Error('La relecture GitHub ne correspond pas à l’enregistrement demandé.');
+    }catch(e){
+      erreur=e;
+      // Une réponse perdue après le commit ne doit pas entraîner un doublon.
+      try{result=await appel();}catch(_){confirmed=false;throw Error(e.message+' État GitHub non confirmé : recharge la page avant toute autre modification.');}
+      if(!correspond(result,next,attendus)){
+        appliquer(result);rendre();throw Error(e.message);
+      }
+    }
+    appliquer(result);
+    if(item)setVignette(item.id,item.sha,item.file);
+    return erreur?'Enregistrement retrouvé et vérifié dans GitHub.':'Enregistrement vérifié dans GitHub.';
+  }
+  async function preparer(file,id){
+    if(!file.size||file.size>15*1024*1024)throw Error('Le fichier est vide ou dépasse 15 Mo.');
+    if(file.type!=='image/webp'&&!/\.webp$/i.test(file.name))throw Error('Choisis une image WebP.');
+    const original=file;
+    if(file.type!=='image/webp')file=new File([file],file.name,{type:'image/webp'});
+    const url=URL.createObjectURL(file);
+    try{
+      const img=new Image();img.src=url;await img.decode();
+      if(!img.naturalWidth||img.naturalWidth!==img.naturalHeight)throw Error('L’image doit être carrée.');
+      return {id,file,sha:await shaBlob(file),url,nom:original.name,error:'',replace:images.some(im=>im.id===id)};
+    }catch(e){URL.revokeObjectURL(url);throw e;}
+  }
+  function afficherAttente(){
+    attente.hidden=!pending.length;attente.replaceChildren();
+    if(!pending.length)return;
+    attente.append(el('h2','Images à traiter','lcdp-editeur-contenu__label'));
+    for(const item of pending){
+      const row=el('section',undefined,'lcdp-editeur-contenu__bloc lcdp-bandeau-admin-image');
+      if(item.url){const img=el('img',undefined,'lcdp-bandeau-admin-miniature');img.src=item.url;img.alt='';row.append(img);}
+      const info=el('div',undefined,'lcdp-bandeau-admin-info');info.append(el('strong',item.nom),el('p',item.error||'En attente d’enregistrement…','lcdp-bandeau-admin-erreur'));
+      const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
+      if(item.sha)actions.append(bouton('Réessayer',()=>traiter([item]),false));
+      actions.append(bouton('Retirer',()=>{retirerAttente(item);afficherAttente();},false));
+      info.append(actions);row.append(info);attente.append(row);
+    }
+  }
+  function retirerAttente(item){const i=pending.indexOf(item);if(i>=0)pending.splice(i,1);if(item.url)URL.revokeObjectURL(item.url);}
+  async function operation(fn){
+    if(busy||!confirmed)return;
+    busy=true;commandes.disabled=true;
+    try{await fn();}catch(e){status(e.message,'error');}
+    finally{busy=false;commandes.disabled=!confirmed;rendre();}
+  }
+  async function traiter(items){
+    await operation(async()=>{
+      let ok=0,fail=0;
+      for(const item of items){
+        if(!confirmed)break;
+        if(!item.sha){fail++;continue;}
+        try{
+          item.error='';afficherAttente();status('Enregistrement de '+item.nom+'…');
+          if(item.replace&&!images.some(im=>im.id===item.id))throw Error('L’image à remplacer n’existe plus.');
+          const next=item.replace?images:[...images,{id:item.id,alt:''}];
+          await enregistrer(next,item);retirerAttente(item);ok++;rendre();
+        }catch(e){item.error=e.message;fail++;afficherAttente();}
+      }
+      if(!confirmed){status('État GitHub non confirmé. Recharge la page avant toute autre modification.','error');return;}
+      status(ok+' image'+(ok===1?'':'s')+' enregistrée'+(ok===1?'':'s')+' et vérifiée'+(ok===1?'':'s')+(fail?' · '+fail+' échec(s), voir le détail ci-dessous.':'.'),fail?'error':'success');
+    });
+  }
+  async function selection(files,id=null){
+    if(busy||!confirmed||!files.length)return;
+    const items=[];
+    // La validation et la préparation se font fichier par fichier : un rejet ne bloque pas les autres.
+    busy=true;commandes.disabled=true;
+    try{
+      for(const file of files){
+        try{const item=await preparer(file,id||crypto.randomUUID());pending.push(item);items.push(item);}
+        catch(e){const rejet={nom:file.name,error:e.message};pending.push(rejet);items.push(rejet);}
+        afficherAttente();
+      }
+    }finally{busy=false;commandes.disabled=!confirmed;}
+    await traiter(items);
   }
   async function fragment(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-cache'});if(!r.ok)throw Error('Composant admin indisponible.');const t=document.createElement('template');t.innerHTML=await r.text();return t.content;}
   async function confirmerSuppression(titre){
@@ -51,7 +188,7 @@
       const oui=slot.querySelector('[data-lcdp-dialogue-action="supprimer"]');
       if(!box||!heading||!texte||!non||!oui)throw Error('Confirmation indisponible. Aucune image supprimée.');
       heading.textContent='Supprimer cette image ?';
-      texte.textContent='Supprimer « '+titre+' » ? La suppression dans GitHub prend effet à l’enregistrement.';
+      texte.textContent='Supprimer « '+titre+' » ? Cette image est supprimée du bandeau GitHub après confirmation.';
       non.textContent='Non';oui.textContent='Oui';
       return await new Promise(resolve=>{
         let termine=false;
@@ -83,87 +220,56 @@
     }
   }
 
-  function bouton(label,action,disabled=false,aria=''){
-    const b=element('button',label,'lcdp-button lcdp-button-secondary lcdp-editeur-contenu__petit-bouton');
-    b.type='button';b.disabled=disabled;if(aria)b.setAttribute('aria-label',aria);
+
+  function bouton(texte,action,disabled=false,aria='',primary=false){
+    const b=el('button',texte,'lcdp-button '+(primary?'lcdp-button-orange':'lcdp-button-secondary')+' lcdp-bandeau-admin-bouton');b.type='button';b.disabled=disabled;
+    if(aria)b.setAttribute('aria-label',aria);
     b.onclick=()=>{if(!busy)Promise.resolve(action()).catch(e=>status(e.message,'error'));};return b;
   }
-  function move(i,delta){
+  function modifierOrdre(i,delta){
     const k=i+delta;if(k<0||k>=images.length)return;
-    [images[i],images[k]]=[images[k],images[i]];modifier();rendre();
+    return operation(async()=>{
+      const next=[...images];[next[i],next[k]]=[next[k],next[i]];
+      status('Enregistrement de l’ordre…');status(await enregistrer(next),'success');
+    });
   }
-  async function supprimer(im,i){
-    busy=true;commandes.disabled=true;
-    try{if(await confirmerSuppression('IMAG_'+(i+1)+'.webp')){clearFile(im.id);images=images.filter(x=>x.id!==im.id);modifier();rendre();}}
-    finally{busy=false;commandes.disabled=false;}
+  function supprimer(im,i){
+    return operation(async()=>{
+      if(await confirmerSuppression('IMAG_'+(i+1)+'.webp')){
+        status('Suppression de l’image…');status(await enregistrer(images.filter(x=>x.id!==im.id)),'success');brouillons.delete(im.id);
+      }
+    });
   }
-  async function verifierFichier(file){
-    if(file.type!=='image/webp'||!file.size||file.size>15*1024*1024)throw Error(file.name+' : choisir une image WebP de 15 Mo maximum.');
-    const url=URL.createObjectURL(file);
-    try{
-      const img=new Image();img.src=url;await img.decode();
-      if(!img.naturalWidth||img.naturalWidth!==img.naturalHeight)throw Error(file.name+' : l’image doit être carrée.');
-      return {file,url};
-    }catch(e){URL.revokeObjectURL(url);throw e;}
-  }
-  function choisir(im=null){
-    const input=element('input');input.type='file';input.accept='image/webp,.webp';input.multiple=!im;input.hidden=true;document.body.append(input);
-    input.addEventListener('cancel',()=>input.remove(),{once:true});
-    input.addEventListener('change',async()=>{
-      const chosen=[...(input.files||[])];input.remove();if(!chosen.length||busy)return;
-      busy=true;commandes.disabled=true;const stage=[];
-      try{
-        for(const file of chosen)stage.push(await verifierFichier(file));
-        const total=[...fichiers.entries()].filter(([id])=>id!==im?.id).reduce((s,[,f])=>s+f.file.size,0)+stage.reduce((s,f)=>s+f.file.size,0);
-        if(total>30*1024*1024)throw Error('Maximum 30 Mo par enregistrement. Enregistre les images en plusieurs fois.');
-        for(const f of stage){const item=im||{id:crypto.randomUUID(),alt:''};if(!im)images.push(item);clearFile(item.id);fichiers.set(item.id,f);}
-        stage.length=0;modifier();rendre();
-      }catch(e){for(const f of stage)URL.revokeObjectURL(f.url);status(e.message,'error');}
-      finally{busy=false;commandes.disabled=false;}
-    },{once:true});input.click();
-  }
-  function actualiserPreview(){
-    previewWrap.hidden=!images.length;
-    if(window.LCDP_BANDEAU_IMAGE)window.LCDP_BANDEAU_IMAGE.rendre(preview,images.map(im=>({src:urlImage(im),alt:im.alt})));
-    else{
-      preview.replaceChildren();preview.hidden=!images.length;preview.classList.add('lcdp-bandeau-preview-secours');
-      for(const im of images){const img=element('img');img.src=urlImage(im);img.alt=im.alt;preview.append(img);}
-    }
+  function sauverTexte(im){
+    const alt=brouillons.get(im.id)??im.alt;
+    return operation(async()=>{
+      status('Enregistrement du texte alternatif…');status(await enregistrer(images.map(x=>x.id===im.id?{...x,alt}:x)),'success');brouillons.delete(im.id);
+    });
   }
   function rendre(){
-    liste.replaceChildren();
-    if(!images.length)liste.append(element('p','Aucune image enregistrée.','lcdp-editeur-contenu__aide'));
+    liste.replaceChildren();$('[data-bandeau-compteur]').textContent=images.length+' image'+(images.length===1?'':'s')+' enregistrée'+(images.length===1?'':'s')+(images.length<8?' · bandeau public masqué':' · bandeau public actif');
+    if(!images.length)liste.append(el('p','Aucune image enregistrée. Utilise le bouton Ajouter des images.','lcdp-editeur-contenu__aide'));
     images.forEach((im,i)=>{
-      const box=element('section',undefined,'lcdp-editeur-contenu__bloc lcdp-bandeau-admin-image');
-      const img=element('img',undefined,'lcdp-bandeau-admin-miniature');img.src=urlImage(im);img.alt=im.alt;
-      const info=element('div',undefined,'lcdp-bandeau-admin-info');
-      info.append(element('h2','IMAG_'+(i+1)+'.webp','lcdp-bandeau-admin-nom'));
-      const label=element('label',undefined,'lcdp-editeur-contenu__titre-zone'),input=element('input',undefined,'lcdp-editeur-contenu__titre');
-      label.append(element('span','Texte alternatif (facultatif)','lcdp-editeur-contenu__label'),input);input.type='text';input.value=im.alt;
-      input.oninput=()=>{im.alt=input.value;img.alt=input.value;modifier();};input.onchange=actualiserPreview;
-      const actions=element('div',undefined,'lcdp-editeur-contenu__ordre');
-      actions.append(bouton('↑',()=>move(i,-1),i===0,'Monter l’image'),bouton('↓',()=>move(i,1),i===images.length-1,'Descendre l’image'),bouton('Remplacer',()=>choisir(im)),bouton('Supprimer',()=>supprimer(im,i)));
-      info.append(label,actions);box.append(img,info);liste.append(box);
+      const box=el('section',undefined,'lcdp-editeur-contenu__bloc lcdp-bandeau-admin-image');box.dataset.imageId=im.id;
+      const visuel=el('div',undefined,'lcdp-bandeau-admin-visuel'),img=el('img',undefined,'lcdp-bandeau-admin-miniature');img.alt=im.alt;img.hidden=true;
+      const placeholder=el('span','Chargement…','lcdp-bandeau-admin-placeholder');placeholder.dataset.vignetteMessage='';visuel.append(img,placeholder);
+      const info=el('div',undefined,'lcdp-bandeau-admin-info');
+      const titre=el('div',undefined,'lcdp-bandeau-admin-entete-image');
+      titre.append(el('h2','IMAG_'+(i+1)+'.webp','lcdp-bandeau-admin-nom'),el('span','Enregistrée ✓','lcdp-bandeau-admin-confirme'));info.append(titre);
+      const label=el('label',undefined,'lcdp-editeur-contenu__titre-zone'),input=el('input',undefined,'lcdp-editeur-contenu__titre');input.type='text';input.value=brouillons.get(im.id)??im.alt;
+      label.append(el('span','Texte alternatif (facultatif)','lcdp-editeur-contenu__label'),input);
+      const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
+      const save=bouton('Enregistrer',()=>sauverTexte(im),input.value===im.alt,'Enregistrer cette image',true);
+      input.oninput=()=>{brouillons.set(im.id,input.value);save.disabled=input.value===im.alt;};
+      actions.append(bouton('↑',()=>modifierOrdre(i,-1),i===0,'Monter l’image'),bouton('↓',()=>modifierOrdre(i,1),i===images.length-1,'Descendre l’image'),bouton('Remplacer',()=>{replaceId=im.id;remplacement.value='';remplacement.click();}),bouton('Supprimer',()=>supprimer(im,i)),save);
+      info.append(label,actions);box.append(visuel,info);liste.append(box);actualiserMiniature(im.id);
     });
-    actualiserPreview();
+    afficherAttente();actualiserPreview();chargerVignettes();
   }
-  $('[data-bandeau-ajouter]').onclick=()=>{if(!busy)choisir();};
-  $('[data-bandeau-enregistrer]').onclick=async()=>{
-    if(busy)return;
-    busy=true;commandes.disabled=true;status('Enregistrement dans GitHub…');
-    try{
-      const form=new FormData();form.set('inventaire',JSON.stringify({revision,images}));
-      for(const [id,f] of fichiers)form.append('image:'+id,f.file,f.file.name);
-      const d=await appel(form);await hydrate(d);rendre();status(d.message+' La diffusion dépend de la publication GitHub Pages.');
-    }catch(e){status(e.message,'error');}finally{busy=false;commandes.disabled=false;}
-  };
-  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-  function chargerPreview(){
-    return new Promise(resolve=>{
-      const script=element('script');script.src=window.LCDP_urlObjet('/JSBASE/bandeau-image.js');
-      script.onload=script.onerror=()=>resolve();document.head.append(script);
-    });
-  }
+  ajout.addEventListener('change',()=>{const files=[...ajout.files];ajout.value='';selection(files).catch(e=>status(e.message,'error'));});
+  remplacement.addEventListener('change',()=>{const id=replaceId,files=[...remplacement.files].slice(0,1);remplacement.value='';replaceId=null;if(id)selection(files,id).catch(e=>status(e.message,'error'));});
+  window.addEventListener('beforeunload',e=>{if(busy||pending.length||[...brouillons].some(([id,alt])=>images.find(im=>im.id===id)?.alt!==alt)){e.preventDefault();e.returnValue='';}});
+  function chargerPreview(){return new Promise(resolve=>{const script=el('script');script.src=window.LCDP_urlObjet('/JSBASE/bandeau-image.js');script.onload=script.onerror=()=>resolve();document.head.append(script);});}
   async function init(){
     if(!await window.LCDP_GUARD_ADMIN.verifierAccesPageAdmin())return;
     await Promise.all([
@@ -172,8 +278,9 @@
     ]);
 
     document.getElementById('lcdp-main-admin').hidden=false;
-    const [d]=await Promise.all([appel(),chargerPreview()]);
-    await hydrate(d);rendre();commandes.disabled=false;status(d.actif?'':'Le bandeau reste masqué sur l’accueil public tant qu’il contient moins de huit images.');
+
+    document.getElementById('lcdp-main-admin').hidden=false;
+    const [d]=await Promise.all([appel(),chargerPreview()]);appliquer(d);rendre();commandes.disabled=false;status('');
   }
   init().catch(e=>{document.getElementById('lcdp-main-admin').hidden=false;status(e.message,'error');});
 })();
