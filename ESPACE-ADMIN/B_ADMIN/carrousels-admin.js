@@ -195,7 +195,7 @@
         if(!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(c.dossier)||dossiers.has(c.dossier))throw Error('Nom de dossier invalide ou déjà utilisé : '+c.dossier);
         dossiers.add(c.dossier);
         if(!c.images.length)throw Error('Ajoute au moins une image au carrousel « '+c.nom+' ».');
-        for(const im of c.images){if(im.titre.trim()&&im.titre.trim().split(/\s+/u).length>6)throw Error('Un titre d’image dépasse six mots dans « '+c.nom+' ».');}
+        for(const im of c.images){if(im.titre.trim()&&im.titre.trim().split(/\s+/u).filter(mot=>/[\p{L}\p{N}]/u.test(mot)).length>6)throw Error('Un titre d’image dépasse six mots dans « '+c.nom+' ».');}
       }
       const total=[...fichiers.values()].reduce((s,f)=>s+f.file.size,0);
       if(total>30*1024*1024)throw Error('Maximum 30 Mo de nouvelles images par enregistrement.');
