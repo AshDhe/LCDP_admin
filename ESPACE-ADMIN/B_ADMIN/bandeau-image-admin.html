@@ -120,15 +120,16 @@
             <div class="lcdp-admin-page-content">
               <header class="lcdp-mentions-admin__entete">
                 <h1 class="lcdp-mentions-admin__titre">Bandeau image</h1>
-                <p class="lcdp-mentions-admin__explication">Images carrées WebP. Chaque ajout est enregistré et vérifié dans GitHub. Le bandeau public s’affiche à partir de huit images.</p>
+                <p class="lcdp-mentions-admin__explication">Images carrées : JPG, PNG ou WebP. Import et conversion en WebP.</p>
                 <p role="status" aria-live="polite" data-bandeau-status class="lcdp-mentions-admin__status">Chargement…</p>
               </header>
               <fieldset data-bandeau-commandes class="lcdp-editeur-contenu" disabled>
                 <legend class="lcdp-editeur-contenu__label">Images du bandeau</legend>
                 <div class="lcdp-bandeau-admin-toolbar">
-                  <label for="lcdp-bandeau-ajout" class="lcdp-button lcdp-button-orange lcdp-bandeau-admin-picker">Ajouter des images</label>
-                  <input type="file" id="lcdp-bandeau-ajout" data-bandeau-ajouter accept="image/webp,.webp" multiple class="lcdp-bandeau-admin-file">
-                  <input type="file" data-bandeau-remplacer accept="image/webp,.webp" hidden>
+                  <label for="lcdp-bandeau-ajout" class="lcdp-button lcdp-button-secondary lcdp-bandeau-admin-picker">Ajouter des images</label>
+                  <input type="file" id="lcdp-bandeau-ajout" data-bandeau-ajouter accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple class="lcdp-bandeau-admin-file">
+                  <input type="file" data-bandeau-remplacer accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+                  <button type="button" class="lcdp-button lcdp-button-orange" data-bandeau-save disabled>Enregistrer le bandeau</button>
                   <span data-bandeau-compteur class="lcdp-editeur-contenu__aide"></span>
                 </div>
                 <section class="lcdp-editeur-contenu__bloc lcdp-bandeau-admin-preview" data-bandeau-preview-wrap hidden>

@@ -24,3 +24,6 @@ fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer
 .lcdp-bandeau-preview-secours img { width:100px; aspect-ratio:1; object-fit:cover; flex:none; }
 @media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns:140px minmax(0,1fr);gap:16px;}}
 @media(max-width:420px){.lcdp-bandeau-admin-image{grid-template-columns:1fr;}.lcdp-bandeau-admin-visuel,.lcdp-bandeau-admin-image>.lcdp-bandeau-admin-miniature{max-width:150px;}}
+
+.lcdp-bandeau-admin-image.lcdp-bandeau-admin-sans-image { grid-template-columns:minmax(0,1fr); }
+.lcdp-bandeau-admin-info strong { overflow-wrap:anywhere; }
