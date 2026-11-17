@@ -14,3 +14,10 @@
 .lcdp-carrousel-preview .lcdp-editeur-contenu__ordre { justify-content:center; }
 .lcdp-carrousel-preview .lcdp-editeur-contenu__label { text-align:left; }
 @media(min-width:800px){ .lcdp-carrousel-image { grid-template-columns:minmax(0,2fr) minmax(0,3fr); } }
+
+.lcdp-carrousel-visuel { min-width:0; width:100%; }
+.lcdp-carrousel-visuel img { display:block; width:100%; height:auto; aspect-ratio:1672 / 941; object-fit:contain; }
+.lcdp-page-carrousels-admin [hidden] { display:none !important; }
+.lcdp-carrousel-resultat,.lcdp-carrousel-upload-etat { margin:6px 0; font-size:.875rem; }
+.lcdp-carrousel-upload-etat[data-state="success"],.lcdp-carrousel-resultat[data-state="success"] { color:#395c39; }
+.lcdp-carrousel-upload-etat[data-state="error"],.lcdp-carrousel-resultat[data-state="error"] { color:#8b4a10; }

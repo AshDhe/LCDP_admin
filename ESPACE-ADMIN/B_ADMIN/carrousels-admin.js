@@ -4,22 +4,69 @@
   const api=String(cfg.workerEditingAdminUrl||cfg.WORKER_EDITING_ADMIN_URL||window.ADMIN_CONFIG?.API_EDITING_ADMIN||'').replace(/\/+$/,'');
   const $=s=>document.querySelector(s), liste=$('[data-carrousels-liste]'), commandes=$('[data-carrousels-commandes]'), editeur=$('[data-carrousels-editeur]');
   let carrousels=[], version='', revision='', selected=null, previewIndex=0, dirty=false, busy=false;
-  const fichiers=new Map(), originaux=new Map();
+  const fichiers=new Map(), originaux=new Map(), preuves=new Map(), charges=new Map();
+  let enregistre=[], generation=0;
+  const copie=v=>JSON.parse(JSON.stringify(v));
+  const normalise=v=>v.map(c=>({id:c.id,nom:c.nom.trim(),dossier:c.dossier,titre:c.titre.trim(),images:c.images.map(im=>({id:im.id,titre:im.titre.trim(),legende:im.legende.trim(),alt:im.alt.trim()}))}));
+  const chemin=(c,i)=>'OBJET'+path(c,i);
   const element=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-  const status=(text,etat='')=>{const p=$('[data-carrousels-status]');p.textContent=text;p.dataset.state=etat;};
+  const status=(text,etat='')=>{const p=$('[data-carrousels-status]');p.textContent=text;p.dataset.state=etat;const q=$('[data-carrousels-resultat]');q.textContent=text;q.dataset.state=etat;q.hidden=!text;};
   const modifier=()=>{dirty=true;status('Modifications non enregistrées.','dirty');};
   const id=()=>crypto.randomUUID();
   const path=(c,i)=>'/IMAG/CARROUSEL/'+c.dossier+'/IMAG_'+(i+1)+'.webp';
-  const urlImage=im=>fichiers.get(im.id)?.url||originaux.get(im.id)||'';
+  const urlImage=im=>fichiers.get(im.id)?.url||originaux.get(im.id)?.url||'';
   const selectedCarrousel=()=>carrousels.find(c=>c.id===selected);
   const move=(arr,i,delta)=>{const j=i+delta;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];modifier();rendre();};
   function clearFile(id){const f=fichiers.get(id);if(f)URL.revokeObjectURL(f.url);fichiers.delete(id);}
+  async function shaBlob(file){
+    const buffer=await file.arrayBuffer(),prefix=new TextEncoder().encode('blob '+buffer.byteLength+'\0');
+    const bytes=new Uint8Array(prefix.length+buffer.byteLength);bytes.set(prefix);bytes.set(new Uint8Array(buffer),prefix.length);
+    return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-1',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  function memoriser(id,sha,file){
+    const old=originaux.get(id);if(old)URL.revokeObjectURL(old.url);
+    originaux.set(id,{sha,url:URL.createObjectURL(file)});
+  }
+  function appliquer(d){
+    enregistre=copie(d.carrousels);version=d.version;revision=d.revision;
+    preuves.clear();d.verification.forEach(p=>preuves.set(p.id,p.sha));
+    for(const [id,v] of originaux)if(preuves.get(id)!==v.sha){URL.revokeObjectURL(v.url);originaux.delete(id);}
+  }
   function hydrate(d){
-    for(const k of fichiers.keys())clearFile(k);
-    originaux.clear();carrousels=d.carrousels;version=d.version;revision=d.revision;
-    for(const c of carrousels)c.images.forEach((im,i)=>originaux.set(im.id,window.LCDP_urlObjet(path(c,i))+'?v='+encodeURIComponent(revision)));
+    appliquer(d);carrousels=copie(enregistre);
+    for(const k of [...fichiers.keys()])clearFile(k);
     if(!selectedCarrousel())selected=null;
     previewIndex=0;dirty=false;
+  }
+  function actualiserDirty(){dirty=fichiers.size>0||JSON.stringify(normalise(carrousels))!==JSON.stringify(enregistre);}
+  async function chargerImage(id){
+    const sha=preuves.get(id);if(!sha||originaux.get(id)?.sha===sha)return;
+    const key=id+':'+sha;if(charges.has(key))return charges.get(key);
+    const task=(async()=>{
+      const r=await fetch(api+'/admin/carrousels/image/'+encodeURIComponent(id),{credentials:'include',cache:'no-store'});
+      if(!r.ok)throw Error('Image indisponible (HTTP '+r.status+').');
+      const file=await r.blob();if(await shaBlob(file)!==sha)throw Error('Intégrité de l’image non confirmée.');
+      if(preuves.get(id)===sha)memoriser(id,sha,file);
+    })();
+    charges.set(key,task);try{await task;}finally{charges.delete(key);}
+  }
+  async function chargerVignettes(){
+    const c=selectedCarrousel(),run=++generation;
+    if(!c)return;
+    const ids=c.images.filter(im=>!fichiers.has(im.id)).map(im=>im.id);
+    let i=0;
+    await Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
+      while(run===generation&&i<ids.length){
+        const id=ids[i++];
+        let erreur=false;try{await chargerImage(id);}catch(e){erreur=true;console.warn(e);}
+        if(run!==generation)continue;
+        const row=[...editeur.querySelectorAll('[data-carrousel-image-id]')].find(el=>el.dataset.carrouselImageId===id);
+        const img=row?.querySelector('img'),label=row?.querySelector('[data-image-message]'),im=c.images.find(x=>x.id===id);
+        if(img&&im&&urlImage(im)){img.src=urlImage(im);img.hidden=false;if(label)label.hidden=true;}
+        else if(label&&erreur){label.textContent='Image non chargée';}
+      }
+    }));
+    if(run===generation)actualiserPreview();
   }
   async function appel(form){
     if(!api)throw Error('Service d’édition non configuré.');
@@ -29,6 +76,9 @@
       if(r.status===404)throw Error('Le worker w-editing-admin doit être mis à jour pour activer les carrousels.');
       throw Error((d?.message||'Service carrousels indisponible.')+(d?.detail?' '+d.detail:''));
     }
+    if(!Array.isArray(d.carrousels)||!Array.isArray(d.verification)||!d.revision||!d.version)throw Error('Le worker doit être mis à jour pour vérifier les uploads de carrousels.');
+    const expected=d.carrousels.flatMap(c=>c.images.map((im,i)=>({id:im.id,chemin:chemin(c,i)})));
+    if(expected.length!==d.verification.length||expected.some((e,i)=>d.verification[i]?.id!==e.id||d.verification[i]?.chemin!==e.chemin||!/^[a-f0-9]{40}$/.test(d.verification[i]?.sha||'')))throw Error('Vérification GitHub incomplète.');
     return d;
   }
   async function fragment(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-cache'});if(!r.ok)throw Error('Composant admin indisponible.');const t=document.createElement('template');t.innerHTML=await r.text();return t.content;}
@@ -129,20 +179,89 @@
       const img=new Image();img.src=url;
       await img.decode();
       if(img.naturalWidth!==1672||img.naturalHeight!==941)throw Error('Dimensions requises : 1672 × 941 pixels.');
-      return {file,url};
+      return {file,url,sha:await shaBlob(file)};
     }catch(e){URL.revokeObjectURL(url);throw e;}
   }
+  function valider(next){
+    const dossiers=new Set();
+    for(const c of next){
+      if(!c.nom.trim())throw Error('Le nom de chaque carrousel est obligatoire.');
+      if(!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(c.dossier)||dossiers.has(c.dossier))throw Error('Nom de dossier invalide ou déjà utilisé : '+c.dossier);
+      dossiers.add(c.dossier);
+      if(!c.images.length)throw Error('Ajoute au moins une image au carrousel « '+c.nom+' ».');
+    }
+  }
+  function correspond(d,next,attendus){
+    return JSON.stringify(d.carrousels)===JSON.stringify(next)&&d.verification.length===attendus.size&&d.verification.every(p=>attendus.get(p.id)===p.sha);
+  }
+  async function persister(next,uploads){
+    next=normalise(next);valider(next);
+    const total=[...uploads.values()].reduce((sum,f)=>sum+f.file.size,0);
+    if(total>30*1024*1024)throw Error('Maximum 30 Mo de nouvelles images par enregistrement.');
+    const attendus=new Map();
+    for(const c of next)for(const im of c.images){
+      const sha=uploads.get(im.id)?.sha||preuves.get(im.id);
+      if(!sha)throw Error('Image en attente d’upload : '+im.id);
+      attendus.set(im.id,sha);
+    }
+    const form=new FormData();form.set('inventaire',JSON.stringify({version,revision,carrousels:next}));
+    for(const [key,f] of uploads)form.append('image:'+key,f.file,f.file.name);
+    let d,err;
+    try{
+      d=await appel(form);
+      if(!correspond(d,next,attendus))throw Error('La réponse GitHub ne correspond pas aux fichiers envoyés.');
+      d=await appel();
+      if(!correspond(d,next,attendus))throw Error('Les images relues ne correspondent pas aux fichiers envoyés.');
+    }catch(e){
+      err=e;
+      try{d=await appel();}catch(_){throw Error(e.message+' Enregistrement non confirmé : les fichiers restent en attente.');}
+      if(!correspond(d,next,attendus))throw Error(e.message+' Enregistrement non confirmé : les fichiers restent en attente.');
+    }
+    appliquer(d);
+    for(const [id,f] of uploads){memoriser(id,f.sha,f.file);if(fichiers.get(id)===f)clearFile(id);}
+    return err?'Enregistrement retrouvé et vérifié dans GitHub.':'Enregistrement vérifié dans GitHub.';
+  }
+  async function uploadIndividuel(c,im){
+    const upload=fichiers.get(im.id);if(!upload)return;
+    const next=copie(enregistre);
+    let cible=next.find(x=>x.id===c.id);
+    if(!cible){
+      if(!c.nom.trim()||!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(c.dossier))throw Error('Renseigne le nom et le dossier GitHub avant d’ajouter une image.');
+      cible={id:c.id,nom:c.nom,dossier:c.dossier,titre:c.titre,images:[]};next.push(cible);
+    }
+    if(!cible.images.some(x=>x.id===im.id)){
+      const pos=c.images.findIndex(x=>x.id===im.id);
+      const avant=c.images.slice(0,pos).reverse().find(x=>cible.images.some(y=>y.id===x.id));
+      const apres=c.images.slice(pos+1).find(x=>cible.images.some(y=>y.id===x.id));
+      const index=avant?cible.images.findIndex(x=>x.id===avant.id)+1:apres?cible.images.findIndex(x=>x.id===apres.id):cible.images.length;
+      cible.images.splice(index,0,copie(im));
+    }
+    await persister(next,new Map([[im.id,upload]]));
+    actualiserDirty();
+  }
+  async function retenter(c,im){
+    if(busy||!fichiers.has(im.id))return;
+    busy=true;commandes.disabled=true;status('Upload de l’image…');
+    try{await uploadIndividuel(c,im);status('Image enregistrée et vérifiée dans GitHub.','success');}
+    catch(e){status(e.message,'error');}
+    finally{busy=false;commandes.disabled=false;rendre();}
+  }
   function choisirFichier(c,im){
+    if(!enregistre.some(x=>x.id===c.id)&&(!c.nom.trim()||!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(c.dossier))){status('Renseigne le nom et le dossier GitHub avant d’ajouter une image.','error');return;}
     const i=element('input');i.type='file';i.accept='image/webp,.webp';i.hidden=true;document.body.append(i);
     i.addEventListener('cancel',()=>i.remove(),{once:true});
     i.addEventListener('change',async()=>{
       const file=i.files?.[0];i.remove();if(!file||busy)return;
-      busy=true;commandes.disabled=true;
+      busy=true;commandes.disabled=true;status('Vérification du fichier…');
       try{
         const data=await verifierFichier(file);
         if(!im){im={id:id(),titre:'',legende:'',alt:''};c.images.push(im);}
         clearFile(im.id);fichiers.set(im.id,data);modifier();rendre();
-      }catch(e){status(e.message,'error');}finally{busy=false;commandes.disabled=false;}
+        status('Upload de '+file.name+'…');
+        await uploadIndividuel(c,im);
+        status(file.name+' : image enregistrée et vérifiée dans GitHub.','success');
+      }catch(e){status(e.message,'error');}
+      finally{busy=false;commandes.disabled=false;rendre();}
     },{once:true});i.click();
   }
   function actualiserPreview(){
@@ -153,7 +272,7 @@
     zone.querySelector('[data-preview-general]').textContent=c.titre;
     zone.querySelector('[data-preview-titre]').textContent=im.titre;
     zone.querySelector('[data-preview-legende]').textContent=im.legende;
-    const image=zone.querySelector('img');image.src=src;image.alt=im.alt;
+    const image=zone.querySelector('img');if(src)image.src=src;else image.removeAttribute('src');image.alt=im.alt;
     zone.querySelector('[data-preview-prev]').disabled=previewIndex===0;
     zone.querySelector('[data-preview-next]').disabled=previewIndex===c.images.length-1;
   }
@@ -173,37 +292,34 @@
     const images=element('div',undefined,'lcdp-editeur-contenu__blocs');
     c.images.forEach((im,i)=>{
       const box=element('section',undefined,'lcdp-editeur-contenu__bloc lcdp-carrousel-image'),img=element('img',undefined,'lcdp-carrousel-thumbnail'),infos=element('div',undefined,'lcdp-carrousel-champs');
-      img.src=urlImage(im);img.alt=im.alt;
-      infos.append(element('h3','IMAG_'+(i+1)+'.webp','lcdp-carrousel-nom'),champ('Titre de l’image',im.titre,160,v=>im.titre=v),champ('Légende de l’image',im.legende,250,v=>im.legende=v),champ('Texte alternatif',im.alt,250,v=>{im.alt=v;img.alt=v;}));
+      box.dataset.carrouselImageId=im.id;const src=urlImage(im);if(src)img.src=src;else img.hidden=true;img.alt=im.alt;
+      const visuel=element('div',undefined,'lcdp-carrousel-visuel');const placeholder=element('p','Chargement…','lcdp-editeur-contenu__aide');placeholder.dataset.imageMessage='';placeholder.hidden=!!src;visuel.append(img,placeholder);
+      const etat=element('p',fichiers.has(im.id)?'Upload non confirmé — à réessayer':preuves.has(im.id)?'Image enregistrée dans GitHub':'Image non enregistrée','lcdp-carrousel-upload-etat');etat.dataset.state=fichiers.has(im.id)?'error':'success';
+      infos.append(element('h3','IMAG_'+(i+1)+'.webp','lcdp-carrousel-nom'),etat,champ('Titre de l’image',im.titre,160,v=>im.titre=v),champ('Légende de l’image',im.legende,250,v=>im.legende=v),champ('Texte alternatif',im.alt,250,v=>{im.alt=v;img.alt=v;}));
       const actions=ordre(c.images,i,'l’image '+(i+1));actions.append(bouton('Remplacer',()=>choisirFichier(c,im)),bouton('Supprimer',()=>supprimer('IMAG_'+(i+1)+'.webp','cette image',()=>{clearFile(im.id);c.images=c.images.filter(x=>x.id!==im.id);})));
-      infos.append(actions);box.append(img,infos);images.append(box);
+      if(fichiers.has(im.id))actions.append(bouton('Réessayer l’upload',()=>retenter(c,im),{primary:true}));
+      infos.append(actions);box.append(visuel,infos);images.append(box);
     });
-    editeur.append(images,bouton('Ajouter une image',()=>choisirFichier(c,null),{disabled:c.images.length>=40,primary:true}),construirePreview(),bouton('Fermer l’éditeur',()=>{selected=null;rendre();}));
-    actualiserPreview();
+    editeur.append(bouton('Ajouter une image',()=>choisirFichier(c,null),{disabled:c.images.length>=40,primary:true}),bouton('Enregistrer le carrousel',()=>enregistrerTout(),{primary:true}),images,construirePreview(),bouton('Fermer l’éditeur',()=>{selected=null;rendre();}));
+    actualiserPreview();chargerVignettes();
   }
   function rendre(){rendreListe();rendreEditeur();$('[data-carrousels-ajouter]').disabled=carrousels.length>=40;}
   $('[data-carrousels-ajouter]').onclick=()=>{
     if(busy||carrousels.length>=40)return;
     const c={id:id(),nom:'',dossier:'',titre:'',images:[]};carrousels.push(c);selected=c.id;previewIndex=0;modifier();rendre();editeur.scrollIntoView({block:'start',behavior:'smooth'});editeur.querySelector('input')?.focus();
   };
-  $('[data-carrousels-enregistrer]').onclick=async()=>{
+  async function enregistrerTout(){
     if(busy)return;
+    busy=true;commandes.disabled=true;
     try{
-      const dossiers=new Set();
-      for(const c of carrousels){
-        if(!c.nom.trim())throw Error('Le nom de chaque carrousel est obligatoire.');
-        if(!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(c.dossier)||dossiers.has(c.dossier))throw Error('Nom de dossier invalide ou déjà utilisé : '+c.dossier);
-        dossiers.add(c.dossier);
-        if(!c.images.length)throw Error('Ajoute au moins une image au carrousel « '+c.nom+' ».');
-      }
-      const total=[...fichiers.values()].reduce((s,f)=>s+f.file.size,0);
-      if(total>30*1024*1024)throw Error('Maximum 30 Mo de nouvelles images par enregistrement.');
-      busy=true;commandes.disabled=true;status('Enregistrement dans GitHub…');
-      const form=new FormData();form.set('inventaire',JSON.stringify({version,carrousels}));
-      for(const [key,f] of fichiers)form.append('image:'+key,f.file,f.file.name);
-      const d=await appel(form);hydrate(d);rendre();status(d.message+' La publication sur le site dépend du déploiement GitHub Pages.');
-    }catch(e){status(e.message,'error');}finally{busy=false;commandes.disabled=false;}
-  };
+      status('Enregistrement des carrousels…');
+      await persister(carrousels,new Map(fichiers));
+      carrousels=copie(enregistre);actualiserDirty();rendre();
+      status('Carrousels enregistrés et vérifiés dans GitHub.','success');
+    }catch(e){status(e.message,'error');}
+    finally{busy=false;commandes.disabled=false;}
+  }
+  $('[data-carrousels-enregistrer]').onclick=enregistrerTout;
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
   async function init(){
     if(!await window.LCDP_GUARD_ADMIN.verifierAccesPageAdmin())return;
