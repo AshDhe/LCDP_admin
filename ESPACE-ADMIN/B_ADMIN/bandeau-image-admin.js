@@ -12,20 +12,10 @@
   const urlImage=im=>fichiers.get(im.id)?.url||originaux.get(im.id)||'';
   function clearFile(id){const f=fichiers.get(id);if(f)URL.revokeObjectURL(f.url);fichiers.delete(id);}
   async function hydrate(d){
-    const previous=new Map(originaux);
-    const oldFiles=new Map(fichiers);
+    for(const id of fichiers.keys())clearFile(id);
     originaux.clear();images=d.images;revision=d.revision;
-    await Promise.all(images.map(async(im,i)=>{
-      // Les URL restent non versionnées ; le contenu en cache est revalidé.
-      const url=window.LCDP_urlObjet('/IMAG/BANDEAU-IMAGE/IMAG_'+(i+1)+'.webp');
-      const staged=oldFiles.get(im.id);
-      // Avant le déploiement Pages, conserver la prévisualisation locale de la nouvelle image.
-      const source=staged?.url||previous.get(im.id);
-      originaux.set(im.id,source||url);
-    }));
-    // Les objets URL utilisés après enregistrement restent disponibles durant cette session.
-    for(const [id,f] of oldFiles)if(!images.some(im=>im.id===id))URL.revokeObjectURL(f.url);
-    fichiers.clear();dirty=false;
+    images.forEach((im,i)=>originaux.set(im.id,window.LCDP_urlObjet('/IMAG/BANDEAU-IMAGE/IMAG_'+(i+1)+'.webp')));
+    dirty=false;
   }
   async function appel(form){
     if(!api)throw Error('Service d’édition non configuré.');
@@ -164,7 +154,7 @@
     try{
       const form=new FormData();form.set('inventaire',JSON.stringify({revision,images}));
       for(const [id,f] of fichiers)form.append('image:'+id,f.file,f.file.name);
-      const d=await appel(form);await hydrate(d);rendre();status(d.message);
+      const d=await appel(form);await hydrate(d);rendre();status(d.message+' La diffusion dépend de la publication GitHub Pages.');
     }catch(e){status(e.message,'error');}finally{busy=false;commandes.disabled=false;}
   };
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
