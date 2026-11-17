@@ -36,3 +36,8 @@ fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer
   max-width:none; height:var(--lcdp-bandeau-taille, 116px);
   aspect-ratio:1672 / 941; object-fit:contain;
 }
+
+.lcdp-bandeau-admin-save-result { flex:0 0 100%; margin:0; font-size:.875rem; font-weight:600; }
+.lcdp-bandeau-admin-save-result[data-state="success"] { color:#395c39; }
+.lcdp-bandeau-admin-save-result[data-state="error"] { color:#8b4a10; }
+.lcdp-bandeau-admin-toolbar button[data-bandeau-save]:disabled { opacity:.55; cursor:wait; }

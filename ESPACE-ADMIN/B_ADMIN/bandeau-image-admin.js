@@ -6,7 +6,8 @@
   const ajout=$('[data-bandeau-ajouter]'),remplacement=$('[data-bandeau-remplacer]'),attente=$('[data-bandeau-attente]');
   const preview=$('[data-bandeau-preview]'),previewWrap=$('[data-bandeau-preview-wrap]');
   let images=[],ordre=[],revision='',busy=false,replaceId=null,confirmed=false;
-  const saveBandeau=$('[data-bandeau-save]');
+  const saveBandeau=$('[data-bandeau-save]'),saveResult=$('[data-bandeau-save-result]');
+  function retourBandeau(message,etat=''){saveResult.textContent=message;saveResult.dataset.state=etat;saveResult.hidden=!message;}
   const preuves=new Map(),vignettes=new Map(),chargements=new Map(),brouillons=new Map(),pending=[];
   const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
   const status=(msg,etat='')=>{const p=$('[data-bandeau-status]');p.textContent=msg;p.dataset.state=etat;};
@@ -280,11 +281,38 @@
     const autre=row?.querySelector('[data-bandeau-ordre="'+(delta<0?'descendre':'monter')+'"]');
     (action&&!action.disabled?action:autre)?.focus({preventScroll:true});
     row?.scrollIntoView({block:'nearest',inline:'nearest'});
-    status(ordreModifie()?'Image déplacée en position '+(k+1)+'. Enregistre le bandeau.':'Ordre enregistré.');
+    const message=ordreModifie()?'Image déplacée en position '+(k+1)+'. Enregistre le bandeau.':'Ordre enregistré.';
+    status(message);retourBandeau(message);
   }
-  saveBandeau.onclick=()=>operation(async()=>{
+  saveBandeau.addEventListener('click',async()=>{
+    if(busy||!confirmed)return;
     const next=listeOrdonnee().map(im=>({...im,alt:(brouillons.get(im.id)??im.alt).trim()}));
-    status('Enregistrement du bandeau…');await enregistrer(next);ordre=images.map(im=>im.id);brouillons.clear();status('Bandeau enregistré et vérifié dans GitHub.','success');
+    const modifie=ordreModifie()||texteModifie();
+    busy=true;commandes.disabled=true;saveBandeau.disabled=true;
+    saveBandeau.textContent=modifie?'Enregistrement…':'Vérification…';
+    status(modifie?'Enregistrement du bandeau…':'Vérification du bandeau…');
+    retourBandeau(modifie?'Enregistrement du bandeau…':'Vérification du bandeau…');
+    try{
+      if(modifie){
+        await enregistrer(next);
+      }else{
+        const d=await appel();
+        if(!correspond(d,next,preuves)){
+          appliquer(d);
+          ordre=images.map(im=>im.id);
+          throw Error('Le bandeau a changé dans GitHub. La liste est actualisée.');
+        }
+        appliquer(d);
+      }
+      ordre=images.map(im=>im.id);brouillons.clear();
+      const message=modifie?'Bandeau enregistré et vérifié dans GitHub.':'Aucune modification : le bandeau est déjà enregistré dans GitHub.';
+      retourBandeau(message,'success');status(message,'success');
+    }catch(e){
+      const message=e?.message||'Enregistrement non confirmé.';
+      retourBandeau(message,'error');status(message,'error');
+    }finally{
+      busy=false;commandes.disabled=!confirmed;saveBandeau.textContent='Enregistrer le bandeau';rendre();
+    }
   });
   function supprimer(im,i){
     return operation(async()=>{
@@ -307,7 +335,7 @@
       const label=el('label',undefined,'lcdp-editeur-contenu__titre-zone'),input=el('input',undefined,'lcdp-editeur-contenu__titre');input.type='text';input.value=brouillons.get(im.id)??im.alt;
       label.append(el('span','Texte alternatif (facultatif)','lcdp-editeur-contenu__label'),input);
       const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
-      input.oninput=()=>{brouillons.set(im.id,input.value);saveBandeau.disabled=busy||!confirmed;status('Modifications non enregistrées.');};
+      input.oninput=()=>{brouillons.set(im.id,input.value);saveBandeau.disabled=busy||!confirmed;status('Modifications non enregistrées.');retourBandeau('Modifications non enregistrées.');};
       const monter=bouton('↑ Monter',()=>modifierOrdre(im.id,-1),i===0,'Monter l’image');
       const descendre=bouton('↓ Descendre',()=>modifierOrdre(im.id,1),i===ordre.length-1,'Descendre l’image');
       monter.dataset.bandeauOrdre='monter';descendre.dataset.bandeauOrdre='descendre';
