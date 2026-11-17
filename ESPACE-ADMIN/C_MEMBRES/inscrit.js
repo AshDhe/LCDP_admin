@@ -5,6 +5,8 @@
   const ONGLET_SLOT_ID = "lcdp-inscrit-onglets-slot";
   const TABLE_SLOT_ID = "lcdp-inscrit-table-slot";
   const FICHE_SLOT_ID = "lcdp-inscrit-fiche-slot";
+  const ATTENTE_SLOT_ID = "lcdp-inscrit-attente-slot";
+  const OPTIONS_OUI_NON = [{ value: "", label: "Tous" }, { value: "Oui", label: "Oui" }, { value: "Non", label: "Non" }];
   const RESOURCE_CODE = "membres-inscrits-controles";
 
   function urlAdmin(path) {
@@ -198,7 +200,7 @@
       boutons[1],
       panneaux[1],
       "liste-attente",
-      "Liste attente",
+      "Liste d’attente",
       false
     );
   }
@@ -293,10 +295,9 @@
     zoneMembres.appendChild(ficheSlot);
 
     zoneAttente.innerHTML = "";
-    const attente = document.createElement("p");
-    attente.className = "lcdp-inscrit-admin__attente";
-    attente.textContent =
-      "La lecture de la liste d’attente sera configurée dans une étape ultérieure.";
+    const attente = document.createElement("div");
+    attente.id = ATTENTE_SLOT_ID;
+    attente.className = "lcdp-inscrit-admin__table";
     zoneAttente.appendChild(attente);
   }
 
@@ -333,14 +334,16 @@
       interactiveLabels: {
         nommembre: "Ouvrir la fiche de"
       },
-      filterOptions: Object.fromEntries(
-        ["codea", "coder", "geolocalisation", "bracelet", "selfie", "da", "abonnementencours"]
-          .map((cle) => [cle, [
-            { value: "", label: "Tous" },
-            { value: "Oui", label: "Oui" },
-            { value: "Non", label: "Non" }
-          ]])
-      ),
+      filterOptions: {
+        ...Object.fromEntries(
+          ["email_valide", "codea", "coder", "geolocalisation", "bracelet", "selfie", "da", "abonnementencours"]
+            .map((cle) => [cle, OPTIONS_OUI_NON])
+        ),
+        origine: [
+          { value: "", label: "Tous" },
+          ...["hello", "inscription", "invitation", "liste", "partage"].map(value => ({value, label: value}))
+        ]
+      },
       initialSortKey: "datecreation",
       initialSortDirection: "desc",
       onCellActivate: ({ row }) => ouvrirFicheMembre(row)
@@ -372,6 +375,25 @@
     }
   }
 
+  async function initialiserListeAttente() {
+    const slot = document.getElementById(ATTENTE_SLOT_ID);
+    if (!slot) return;
+    slot.replaceChildren(await chargerFragmentAdmin("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.html"));
+    await chargerScriptAdminUneFois("/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.js");
+    await window.LCDP_TABLE_LECTURE_ADMIN.initialiser({
+      slotId: ATTENTE_SLOT_ID,
+      endpoint: endpointAdminData(),
+      resource: "membres-liste-attente",
+      initialSortKey: "datecreation",
+      initialSortDirection: "desc",
+      filterOptions: {
+        email_valide: OPTIONS_OUI_NON,
+        responsable_parc: OPTIONS_OUI_NON,
+        responsable_activite: OPTIONS_OUI_NON
+      }
+    });
+  }
+
   function ouvrirFicheMembre(row) {
     const tableSlot = document.getElementById(TABLE_SLOT_ID);
     const ficheSlot = document.getElementById(FICHE_SLOT_ID);
@@ -392,6 +414,8 @@
       ["Nom", row?.nommembre],
       ["Prénom", row?.prenommembre],
       ["E-mail", row?.emailmembre],
+      ["Origine", row?.origine ?? row?.emailvalidmode],
+      ["E-mail validé", row?.email_valide ?? (row?.emailvalid === true ? "Oui" : row?.emailvalid === false ? "Non" : null)],
       ["DateInsc", formaterDate(row?.datecreation)],
       ["DatEmailValid", formaterDate(row?.dateemailvalid)],
       ["Code A", row?.codea],
@@ -494,6 +518,11 @@
 
     await initialiserWraperOnglets();
     await initialiserTable();
+    initialiserListeAttente().catch(error => {
+      console.error("Erreur liste d’attente admin :", error);
+      const slot = document.getElementById(ATTENTE_SLOT_ID);
+      if (slot) slot.textContent = "Impossible de charger la liste d’attente."; 
+    });
 
     const main = document.getElementById("lcdp-main-admin");
 
