@@ -5,6 +5,77 @@
   const TAILLE_PAGE_DEFAUT = 100;
   const CONTROLEURS = new Map();
 
+  // Une seule barre horizontale, au-dessus des en-têtes du tableau.
+  // Le tableau conserve son défilement natif (tactile et clavier).
+  function initialiserDefilementHorizontal(scroll) {
+    const haut = document.createElement("div");
+    const espace = document.createElement("div");
+    haut.className = "lcdp-table-lecture-admin__scroll-top";
+    haut.setAttribute("role", "region");
+    haut.setAttribute("aria-label", "Défilement horizontal du tableau");
+    haut.tabIndex = 0;
+    haut.hidden = true;
+    espace.className = "lcdp-table-lecture-admin__scroll-spacer";
+    espace.setAttribute("aria-hidden", "true");
+    haut.appendChild(espace);
+    scroll.before(haut);
+
+    // En cas de CSS ancien ou absent, conserver la barre native.
+    if (window.getComputedStyle(haut).overflowX !== "scroll") {
+      haut.remove();
+      return { actualiser() {}, detruire() {} };
+    }
+
+    scroll.classList.add("lcdp-table-lecture-admin__scroll--haut");
+
+    function actualiser() {
+      const largeurVisible = scroll.clientWidth;
+      const excedent = scroll.scrollWidth - largeurVisible;
+      haut.hidden = scroll.hidden || largeurVisible === 0 || excedent <= 0;
+      if (haut.hidden) return;
+      espace.style.width = (haut.clientWidth + excedent) + "px";
+      if (haut.scrollLeft !== scroll.scrollLeft) haut.scrollLeft = scroll.scrollLeft;
+    }
+
+    function depuisHaut() {
+      if (!haut.hidden && scroll.scrollLeft !== haut.scrollLeft) {
+        scroll.scrollLeft = haut.scrollLeft;
+      }
+    }
+
+    function depuisTableau() {
+      if (!haut.hidden && haut.scrollLeft !== scroll.scrollLeft) {
+        haut.scrollLeft = scroll.scrollLeft;
+      }
+    }
+
+    haut.addEventListener("scroll", depuisHaut, { passive: true });
+    scroll.addEventListener("scroll", depuisTableau, { passive: true });
+    window.addEventListener("resize", actualiser, { passive: true });
+
+    // Surveille notamment les onglets masqués puis réaffichés et les colonnes redimensionnées.
+    const observateur = typeof ResizeObserver === "function"
+      ? new ResizeObserver(actualiser) : null;
+    if (observateur) {
+      observateur.observe(scroll);
+      const table = scroll.querySelector("table");
+      if (table) observateur.observe(table);
+    }
+
+    actualiser();
+    return {
+      actualiser,
+      detruire() {
+        observateur?.disconnect();
+        window.removeEventListener("resize", actualiser);
+        haut.removeEventListener("scroll", depuisHaut);
+        scroll.removeEventListener("scroll", depuisTableau);
+        scroll.classList.remove("lcdp-table-lecture-admin__scroll--haut");
+        haut.remove();
+      }
+    };
+  }
+
   async function initialiser(options = {}) {
     const slotId = String(options.slotId || "");
     const endpoint = nettoyerBaseUrl(options.endpoint);
@@ -165,6 +236,9 @@
     ) {
       throw new Error("Structure de table admin incomplète.");
     }
+
+    CONTROLEURS.get(slotId)?.detruireDefilement?.();
+    const defilement = initialiserDefilementHorizontal(scroll);
 
     const etat = {
       columns: [],
@@ -409,12 +483,14 @@
          * ensemble au worker et combinés avec l'opérateur logique ET.
          */
         scroll.hidden = columns.length === 0;
+        defilement.actualiser();
 
         return true;
       } catch (error) {
         console.error("Erreur table lecture admin :", error);
 
         scroll.hidden = true;
+        defilement.actualiser();
         pagination.hidden = true;
         empty.hidden = true;
         errorBox.textContent = String(
@@ -456,6 +532,7 @@
     });
 
     CONTROLEURS.set(slotId, {
+      detruireDefilement: defilement.detruire,
       recharger: chargerDonnees,
       premierePage: () => { etat.offset = 0; memoriserEtat(); return chargerDonnees(); }
     });
