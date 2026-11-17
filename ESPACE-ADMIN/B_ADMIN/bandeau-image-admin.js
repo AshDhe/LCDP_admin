@@ -107,27 +107,51 @@
     if(item)setVignette(item.id,item.sha,item.file);
     return erreur?'Enregistrement retrouvé et vérifié dans GitHub.':'Enregistrement vérifié dans GitHub.';
   }
-  async function preparer(file,id){
+  const LARGEUR=1672,HAUTEUR=941;
+  function gabarit(w,h){
+    if(!w||!h)throw Error('Dimensions de l’image invalides.');
+    const ratio=LARGEUR/HAUTEUR,compatible=Math.abs(w/h/ratio-1)<=0.002;
+    const sw=Math.min(w,h*ratio),sh=Math.min(h,w/ratio);
+    return {compatible,sw,sh,sx:(w-sw)/2,sy:(h-sh)/2};
+  }
+  async function preparer(file,id,recadrage=false){
     if(!file.size)throw Error('Le fichier est vide.');
     const nom=file.name;
     if(!/\.(jpe?g|png|webp)$/i.test(nom)&&!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choisis une image JPG, PNG ou WebP.');
     const originalUrl=URL.createObjectURL(file);
-    let url='';
+    let url='',garderOriginal=false;
     try{
       const img=new Image();img.src=originalUrl;await img.decode();
-      if(!img.naturalWidth||img.naturalWidth!==img.naturalHeight)throw Error('L’image doit être carrée ('+img.naturalWidth+' × '+img.naturalHeight+' px).');
-      if(file.type!=='image/webp'){
-        const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      const w=img.naturalWidth,h=img.naturalHeight,g=gabarit(w,h);
+      const remplacer=images.some(im=>im.id===id);
+      if(!g.compatible&&!recadrage){
+        garderOriginal=true;
+        return {id,file,nom,url:originalUrl,replace:remplacer,recadrage:true,error:'Format '+w+' × '+h+' px : recadrage centré à 1672 × 941 px à confirmer.'};
+      }
+      if(file.type!=='image/webp'||w!==LARGEUR||h!==HAUTEUR){
+        const canvas=document.createElement('canvas');canvas.width=LARGEUR;canvas.height=HAUTEUR;
         const ctx=canvas.getContext('2d');if(!ctx)throw Error('Conversion indisponible.');
-        ctx.drawImage(img,0,0);
+        ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,g.sx,g.sy,g.sw,g.sh,0,0,LARGEUR,HAUTEUR);
         const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b&&b.type==='image/webp'?resolve(b):reject(Error('Conversion WebP impossible.')),'image/webp',0.9));
         file=new File([blob],nom.replace(/\.[^.]+$/,'')+'.webp',{type:'image/webp'});
       }
       if(file.size>15*1024*1024)throw Error('L’image WebP dépasse la limite technique de 15 Mo.');
       url=URL.createObjectURL(file);
-      return {id,file,sha:await shaBlob(file),url,nom,error:'',replace:images.some(im=>im.id===id)};
+      return {id,file,sha:await shaBlob(file),url,nom,error:'',replace:remplacer};
     }catch(e){if(url)URL.revokeObjectURL(url);throw e;}
-    finally{URL.revokeObjectURL(originalUrl);}
+    finally{if(!garderOriginal)URL.revokeObjectURL(originalUrl);}
+  }
+  async function validerRecadrage(item){
+    if(busy||!confirmed)return;
+    busy=true;commandes.disabled=true;
+    let nouveau;
+    try{
+      nouveau=await preparer(item.file,item.id,true);
+      retirerAttente(item);pending.push(nouveau);
+    }catch(e){item.error=e.message;status(e.message,'error');}
+    finally{busy=false;commandes.disabled=!confirmed;afficherAttente();}
+    if(nouveau)await traiter([nouveau]);
   }
   function afficherAttente(){
     attente.hidden=!pending.length;attente.replaceChildren();
@@ -139,7 +163,8 @@
       if(item.url){const img=el('img',undefined,'lcdp-bandeau-admin-miniature');img.src=item.url;img.alt='';row.append(img);}
       const info=el('div',undefined,'lcdp-bandeau-admin-info');info.append(el('strong',item.nom),el('p',item.error||'En attente d’enregistrement…','lcdp-bandeau-admin-erreur'));
       const actions=el('div',undefined,'lcdp-bandeau-admin-actions');
-      if(item.sha)actions.append(bouton('Réessayer',()=>traiter([item]),false));
+      if(item.recadrage)actions.append(bouton('Recadrer au centre et ajouter',()=>validerRecadrage(item),false));
+      else if(item.sha)actions.append(bouton('Réessayer',()=>traiter([item]),false));
       actions.append(bouton('Retirer',()=>{retirerAttente(item);afficherAttente();},false));
       info.append(actions);row.append(info);attente.append(row);
     }
@@ -153,10 +178,10 @@
   }
   async function traiter(items){
     await operation(async()=>{
-      let ok=0,fail=0;
+      let ok=0,fail=0,aRecadrer=0;
       for(const item of items){
         if(!confirmed)break;
-        if(!item.sha){fail++;continue;}
+        if(!item.sha){if(item.recadrage)aRecadrer++;else fail++;continue;}
         try{
           item.error='';afficherAttente();status('Enregistrement de '+item.nom+'…');
           if(item.replace&&!images.some(im=>im.id===item.id))throw Error('L’image à remplacer n’existe plus.');
@@ -165,7 +190,7 @@
         }catch(e){item.error=e.message;fail++;afficherAttente();}
       }
       if(!confirmed){status('État GitHub non confirmé. Recharge la page avant toute autre modification.','error');return;}
-      status(ok+' image'+(ok===1?'':'s')+' enregistrée'+(ok===1?'':'s')+' et vérifiée'+(ok===1?'':'s')+(fail?' · '+fail+' échec(s), voir le détail ci-dessous.':'.'),fail?'error':'success');
+      status(ok+' image'+(ok===1?'':'s')+' enregistrée'+(ok===1?'':'s')+' et vérifiée'+(ok===1?'':'s')+(aRecadrer?' · '+aRecadrer+' recadrage(s) à confirmer':'')+(fail?' · '+fail+' échec(s), voir le détail ci-dessous.':'.'),fail?'error':aRecadrer?'':'success');
     });
   }
   async function selection(files,id=null){

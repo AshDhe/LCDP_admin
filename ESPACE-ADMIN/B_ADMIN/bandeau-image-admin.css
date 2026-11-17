@@ -8,9 +8,9 @@
 fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer-events:none; }
 .lcdp-bandeau-admin-preview { min-width:0; margin-bottom:16px; }
 .lcdp-bandeau-admin-liste { display:flex; flex-direction:column; gap:10px; }
-.lcdp-bandeau-admin-image { display:grid; grid-template-columns:92px minmax(0,1fr); align-items:start; gap:12px; min-width:0; }
-.lcdp-bandeau-admin-visuel { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; background:#f2f3ef; overflow:hidden; border-radius:6px; }
-.lcdp-bandeau-admin-miniature { display:block; width:100%; height:auto; aspect-ratio:1; object-fit:cover; border-radius:6px; }
+.lcdp-bandeau-admin-image { display:grid; grid-template-columns:120px minmax(0,1fr); align-items:start; gap:12px; min-width:0; }
+.lcdp-bandeau-admin-visuel { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1672 / 941; background:#f2f3ef; overflow:hidden; border-radius:6px; }
+.lcdp-bandeau-admin-miniature { display:block; width:100%; height:auto; aspect-ratio:1672 / 941; object-fit:cover; border-radius:6px; }
 .lcdp-bandeau-admin-placeholder { padding:5px; font-size:.75rem; text-align:center; }
 .lcdp-bandeau-admin-info { display:flex; flex-direction:column; min-width:0; gap:8px; }
 .lcdp-bandeau-admin-entete-image { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; }
@@ -21,8 +21,8 @@ fieldset:disabled .lcdp-bandeau-admin-picker { opacity:.55; cursor:wait; pointer
 .lcdp-bandeau-admin-actions button:disabled { opacity:.4; cursor:default; }
 .lcdp-bandeau-admin-erreur { margin:0; color:#8b4a10; overflow-wrap:anywhere; font-size:.85rem; }
 .lcdp-bandeau-preview-secours { display:flex; overflow-x:auto; gap:8px; }
-.lcdp-bandeau-preview-secours img { width:100px; aspect-ratio:1; object-fit:cover; flex:none; }
-@media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns:140px minmax(0,1fr);gap:16px;}}
+.lcdp-bandeau-preview-secours img { width:100px; aspect-ratio:1672 / 941; object-fit:cover; flex:none; }
+@media(min-width:600px){.lcdp-bandeau-admin-image{grid-template-columns:200px minmax(0,1fr);gap:16px;}}
 @media(max-width:420px){.lcdp-bandeau-admin-image{grid-template-columns:1fr;}.lcdp-bandeau-admin-visuel,.lcdp-bandeau-admin-image>.lcdp-bandeau-admin-miniature{max-width:150px;}}
 
 .lcdp-bandeau-admin-image.lcdp-bandeau-admin-sans-image { grid-template-columns:minmax(0,1fr); }
