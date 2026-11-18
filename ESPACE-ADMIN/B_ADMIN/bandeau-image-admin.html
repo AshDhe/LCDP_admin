@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Bandeau image - Administration - La Clé du Parc</title>
+  <title>Galerie et bandeau - Administration - La Clé du Parc</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta
     name="description"
-    content="Édition du bandeau défilant d’images de l’accueil public."
+    content="Gestion de la galerie et du bandeau défilant de l’accueil public."
   >
 
   <script src="../../config.js"></script>
@@ -110,7 +110,7 @@
     <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
       <section
         class="lcdp-page-section"
-        aria-label="Éditeur du bandeau image"
+        aria-label="Éditeur de la galerie et du bandeau"
       >
         <div class="lcdp-page-container">
           <div class="lcdp-admin-page-layout">
@@ -119,22 +119,22 @@
 
             <div class="lcdp-admin-page-content">
               <header class="lcdp-mentions-admin__entete">
-                <h1 class="lcdp-mentions-admin__titre">Bandeau image</h1>
-                <p class="lcdp-mentions-admin__explication">Images horizontales : 1672 × 941 pixels. Import JPG, PNG ou WebP.</p>
+                <h1 class="lcdp-mentions-admin__titre">Galerie et bandeau</h1>
+                <p class="lcdp-mentions-admin__explication">Images horizontales : 1672 × 941 pixels. Import JPG, PNG ou WebP. Les nouvelles images sont ajoutées en tête de la galerie. Le bandeau affiche les 20 premières images.</p>
                 <p role="status" aria-live="polite" data-bandeau-status class="lcdp-mentions-admin__status">Chargement…</p>
               </header>
               <fieldset data-bandeau-commandes class="lcdp-editeur-contenu" disabled>
-                <legend class="lcdp-editeur-contenu__label">Images du bandeau</legend>
+                <legend class="lcdp-editeur-contenu__label">Images de la galerie</legend>
                 <div class="lcdp-bandeau-admin-toolbar">
                   <label for="lcdp-bandeau-ajout" class="lcdp-button lcdp-button-secondary lcdp-bandeau-admin-picker">Ajouter des images</label>
                   <input type="file" id="lcdp-bandeau-ajout" data-bandeau-ajouter accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple class="lcdp-bandeau-admin-file">
                   <input type="file" data-bandeau-remplacer accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
-                  <button type="button" class="lcdp-button lcdp-button-orange" data-bandeau-save disabled>Enregistrer le bandeau</button>
+                  <button type="button" class="lcdp-button lcdp-button-orange" data-bandeau-save disabled>Enregistrer la galerie</button>
                   <span data-bandeau-compteur class="lcdp-editeur-contenu__aide"></span>
                   <p data-bandeau-save-result class="lcdp-bandeau-admin-save-result" role="status" aria-live="polite" hidden></p>
                 </div>
                 <section class="lcdp-editeur-contenu__bloc lcdp-bandeau-admin-preview" data-bandeau-preview-wrap hidden>
-                  <h2 class="lcdp-editeur-contenu__label">Prévisualisation du défilement</h2>
+                  <h2 class="lcdp-editeur-contenu__label">Prévisualisation du bandeau (20 images maximum)</h2>
                   <div data-bandeau-preview class="lcdp-bandeau-image" hidden></div>
                 </section>
                 <div data-bandeau-liste class="lcdp-editeur-contenu__blocs lcdp-bandeau-admin-liste"></div>
