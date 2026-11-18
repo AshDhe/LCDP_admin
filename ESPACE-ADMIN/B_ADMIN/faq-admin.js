@@ -231,7 +231,7 @@
     if (!Object.prototype.hasOwnProperty.call(ESPACES_FAQ, espace)) throw new Error("Espace FAQ inconnu.");
     const data = await appelerJson(ESPACES_FAQ[espace].route + suffixe, options);
     // Les FAQ membres doivent être un document distinct ; aucun repli vers les FAQ publiques.
-    if (espace === "membre" && (data.espace !== "membre" || !Array.isArray(data.brouillon?.blocs))) {
+    if (espace === "membre" && (data.code !== "faq-membre" || data.espace !== "membre" || !Array.isArray(data.brouillon?.blocs))) {
       throw new Error("Le stockage indépendant des FAQ membres n’est pas confirmé par le Worker. Édition bloquée.");
     }
     return data;
@@ -395,7 +395,7 @@
     }
 
     return {
-      titre: "FAQ",
+      titre: espaceActif === "membre" ? "FAQ membres" : "FAQ",
       blocs: controleurEditeur.lire()
     };
   }
