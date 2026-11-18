@@ -9,6 +9,12 @@
   let documentCharge = null;
   let modificationsLocales = false;
   let requeteEnCours = false;
+  let espaceActif = "public";
+  let observateurLiensFAQ = null;
+  const ESPACES_FAQ = Object.freeze({
+    public: Object.freeze({ route: "/admin/faq", libelle: "FAQ publiques", page: "/ESPACE-PUBLIC/FAQ-public.html" }),
+    membre: Object.freeze({ route: "/admin/faq-membre", libelle: "FAQ membres", page: "/ESPACE-MEMBRE/FAQ-membre.html" })
+  });
 
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
@@ -221,11 +227,21 @@
     return data;
   }
 
-  async function chargerDocument() {
-    return appelerJson("/admin/faq");
+  async function appelerFaq(espace, suffixe = "", options = {}) {
+    if (!Object.prototype.hasOwnProperty.call(ESPACES_FAQ, espace)) throw new Error("Espace FAQ inconnu.");
+    const data = await appelerJson(ESPACES_FAQ[espace].route + suffixe, options);
+    // Les FAQ membres doivent être un document distinct ; aucun repli vers les FAQ publiques.
+    if (espace === "membre" && (data.espace !== "membre" || !Array.isArray(data.brouillon?.blocs))) {
+      throw new Error("Le stockage indépendant des FAQ membres n’est pas confirmé par le Worker. Édition bloquée.");
+    }
+    return data;
   }
 
-  async function initialiserEditeur(data) {
+  async function chargerDocument(espace = espaceActif) {
+    return appelerFaq(espace);
+  }
+
+  async function initialiserEditeur(data, espace = espaceActif) {
     const slot = document.querySelector(
       "[data-lcdp-mentions-editeur-slot]"
     );
@@ -274,7 +290,7 @@
       controleurEditeur.ajouterBloc({ id: "q-" + crypto.randomUUID(), titre: "", html: "<p><br></p>" });
     }, true);
     installerConfirmationSuppressionFAQ(racine);
-    installerLiensFAQ(racine);
+    installerLiensFAQ(racine, espace);
     slot.hidden = false;
   }
 
@@ -311,7 +327,8 @@
     }, true);
   }
 
-  function installerLiensFAQ(racine) {
+  function installerLiensFAQ(racine, espace) {
+    observateurLiensFAQ?.disconnect();
     function ajouterBoutons() {
       racine.querySelectorAll("[data-lcdp-editeur-bloc]").forEach(bloc => {
         if (bloc.querySelector("[data-faq-liens]")) return;
@@ -320,7 +337,7 @@
         zone.setAttribute("data-faq-liens", "");
         const statut = document.createElement("span");
         statut.setAttribute("role", "status");
-        for (const [label, publicComplet] of [["Copier le lien interne", false], ["Copier le lien public", true]]) {
+        for (const [label, lienComplet] of [["Copier le lien interne", false], [espace === "membre" ? "Copier le lien membre" : "Copier le lien public", true]]) {
           const bouton = document.createElement("button");
           bouton.type = "button";
           bouton.className = "lcdp-button lcdp-button-secondary";
@@ -328,10 +345,17 @@
           bouton.title = "Le lien ouvre cette FAQ dans sa version publiée.";
           bouton.addEventListener("click", async () => {
             const ancre = window.LCDP_FAQ.ancre({ id: bloc.dataset.lcdpEditeurBlocId });
-            const path = "/ESPACE-PUBLIC/FAQ-public.html#" + ancre;
-            const config = window.SITE_CONFIG || {};
-            const base = String(config.publicBaseUrl || config.PUBLIC_BASE || "https://lacleduparc.fr").replace(/\/+$/, "");
-            const lien = publicComplet ? (typeof config.publicUrl === "function" ? config.publicUrl(path) : base + path) : "#" + ancre;
+            const path = ESPACES_FAQ[espace].page + "#" + ancre;
+            const base = String(espace === "membre"
+              ? (config.membreBaseUrl || config.MEMBRE_BASE || "")
+              : (config.publicBaseUrl || config.PUBLIC_BASE || "")).replace(/\/+$/, "");
+            const construire = espace === "membre" ? config.membreUrl : config.publicUrl;
+            let lien = "#" + ancre;
+            if (lienComplet) {
+              if (typeof construire === "function") lien = construire.call(config, path);
+              else if (base) lien = base + path;
+              else { statut.textContent = "Adresse de l’espace non configurée."; return; }
+            }
             try {
               if (!navigator.clipboard?.writeText) throw new Error("Copie manuelle");
               await navigator.clipboard.writeText(lien);
@@ -347,8 +371,8 @@
       });
     }
     ajouterBoutons();
-    const observateur = new MutationObserver(ajouterBoutons);
-    observateur.observe(racine.querySelector("[data-lcdp-editeur-blocs]"), { childList: true });
+    observateurLiensFAQ = new MutationObserver(ajouterBoutons);
+    observateurLiensFAQ.observe(racine.querySelector("[data-lcdp-editeur-blocs]"), { childList: true });
   }
 
   function signalerModificationLocale() {
@@ -360,7 +384,7 @@
   }
 
   function lireDocumentLocal() {
-    if (!controleurEditeur) {
+    if (!controleurEditeur || !documentCharge) {
       throw new Error("Éditeur non initialisé.");
     }
 
@@ -420,11 +444,13 @@
 
     document
       .querySelectorAll(
-        "[data-lcdp-mentions-actions] button"
+        "[data-lcdp-mentions-actions] button, [data-faq-espace]"
       )
       .forEach((bouton) => {
         bouton.disabled = requeteEnCours;
       });
+    const editeur = document.querySelector("[data-lcdp-mentions-editeur-slot]");
+    if (editeur) editeur.inert = requeteEnCours;
   }
 
   async function enregistrerBrouillon() {
@@ -446,8 +472,8 @@
     afficherStatus("Enregistrement du brouillon…");
 
     try {
-      const data = await appelerJson(
-        "/admin/faq/brouillon",
+      const data = await appelerFaq(
+        espaceActif, "/brouillon",
         {
           method: "POST",
           body: {
@@ -490,16 +516,16 @@
       return;
     }
 
-    const confirme = await demanderConfirmationPublication();
-
-    if (!confirme) return;
-
     verrouillerActions(true);
-    afficherStatus("Publication en cours…");
-
     try {
-      const data = await appelerJson(
-        "/admin/faq/publier",
+      const confirme = await demanderConfirmationPublication({
+        titre: "Publier les " + ESPACES_FAQ[espaceActif].libelle,
+        texte: "Seule la version publiée des " + ESPACES_FAQ[espaceActif].libelle + " est remplacée par le contenu actuel."
+      });
+      if (!confirme) return;
+      afficherStatus("Publication en cours…");
+      const data = await appelerFaq(
+        espaceActif, "/publier",
         {
           method: "POST",
           body: {
@@ -512,8 +538,8 @@
       documentCharge = data;
       modificationsLocales = false;
       actualiserMeta();
-      afficherStatus("FAQ publiées.");
-      await afficherAlerte("FAQ publiées.");
+      afficherStatus(ESPACES_FAQ[espaceActif].libelle + " publiées.");
+      await afficherAlerte(ESPACES_FAQ[espaceActif].libelle + " publiées.");
     } catch (error) {
       afficherStatus(
         String(error?.message || error || ""),
@@ -773,29 +799,94 @@
     return guard.verifierAccesPageAdmin();
   }
 
+  function actualiserOnglets() {
+    for (const bouton of document.querySelectorAll("[data-faq-espace]")) {
+      bouton.setAttribute("aria-pressed", String(bouton.dataset.faqEspace === espaceActif));
+    }
+    const explication = document.querySelector("[data-faq-explication]");
+    explication.textContent = "Chaque bloc correspond à une question et à sa réponse. Modifie leur ordre, enregistre le brouillon, puis publie les " +
+      ESPACES_FAQ[espaceActif].libelle + ".";
+  }
+
+  async function afficherEspace(espace) {
+    const loading = document.querySelector("[data-lcdp-mentions-loading]");
+    const actions = document.querySelector("[data-lcdp-mentions-actions]");
+    const slot = document.querySelector("[data-lcdp-mentions-editeur-slot]");
+    const preview = document.querySelector("[data-lcdp-mentions-preview]");
+    observateurLiensFAQ?.disconnect();
+    observateurLiensFAQ = null;
+    espaceActif = espace;
+    documentCharge = null;
+    controleurEditeur = null;
+    modificationsLocales = false;
+    actualiserOnglets();
+    document.querySelector("[data-lcdp-mentions-meta]").textContent = "";
+    afficherStatus("");
+    actions.hidden = true;
+    slot.hidden = true;
+    slot.replaceChildren();
+    preview.hidden = true;
+    document.querySelector("[data-lcdp-mentions-preview-content]").replaceChildren();
+    loading.textContent = "Chargement des " + ESPACES_FAQ[espace].libelle + "…";
+    loading.hidden = false;
+    try {
+      const data = await chargerDocument(espace);
+      await initialiserEditeur(data, espace);
+      documentCharge = data;
+      modificationsLocales = false;
+      loading.hidden = true;
+      actions.hidden = false;
+      actualiserMeta();
+      afficherStatus("");
+    } catch (error) {
+      controleurEditeur = null;
+      documentCharge = null;
+      slot.hidden = true;
+      slot.replaceChildren();
+      actions.hidden = true;
+      loading.textContent = espace === "membre"
+        ? "FAQ membres indisponibles. Le stockage indépendant doit être confirmé par le Worker. " + String(error?.message || error)
+        : String(error?.message || error);
+      console.error(error);
+    }
+  }
+
+  async function choisirEspace(espace) {
+    if (requeteEnCours || !Object.prototype.hasOwnProperty.call(ESPACES_FAQ, espace) ||
+        (espace === espaceActif && documentCharge) ||
+        document.getElementById("lcdp-lightbox-slot")?.childElementCount) return;
+    verrouillerActions(true);
+    try {
+      if (modificationsLocales) {
+        const confirme = await demanderConfirmationPublication({
+          titre: "Modifications non enregistrées",
+          texte: "Changer d’onglet sans enregistrer les modifications de cet espace ?",
+          annuler: "Rester",
+          confirmer: "Changer d’onglet"
+        });
+        if (!confirme) return;
+      }
+      await afficherEspace(espace);
+    } catch (error) {
+      afficherStatus(String(error?.message || error), "error");
+    } finally {
+      verrouillerActions(false);
+    }
+  }
+
   async function initialiserPage() {
     const autorise = await verifierAcces();
 
     if (!autorise) return;
 
-    const [data] = await Promise.all([
-      chargerDocument(),
+    await Promise.all([
       initialiserBandeau(),
       initialiserMenuGauche()
     ]);
 
-    documentCharge = data;
-    await initialiserEditeur(data);
-
-    const loading = document.querySelector(
-      "[data-lcdp-mentions-loading]"
-    );
-    const actions = document.querySelector(
-      "[data-lcdp-mentions-actions]"
-    );
-
-    loading.hidden = true;
-    actions.hidden = false;
+    for (const bouton of document.querySelectorAll("[data-faq-espace]")) {
+      bouton.addEventListener("click", () => choisirEspace(bouton.dataset.faqEspace));
+    }
 
     document
       .querySelector("[data-lcdp-mentions-previsualiser]")
@@ -809,9 +900,10 @@
       .querySelector("[data-lcdp-mentions-publier]")
       ?.addEventListener("click", publier);
 
-    actualiserMeta();
-    afficherStatus("");
     document.getElementById("lcdp-main-admin").hidden = false;
+    verrouillerActions(true);
+    try { await afficherEspace("public"); }
+    finally { verrouillerActions(false); }
   }
 
   window.addEventListener("beforeunload", (event) => {
