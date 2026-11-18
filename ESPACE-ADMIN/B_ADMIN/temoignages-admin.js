@@ -5,6 +5,7 @@
   const endpoint = String(config.workerEditingAdminUrl || "").replace(/\/+$/, "");
   const q = id => document.getElementById(id);
   const form = q("temoignages-form"), liste = q("temoignages-liste");
+  const filtre = q("temoignages-filtre");
   const ajouter = q("temoignages-ajouter"), enregistrer = q("temoignages-enregistrer");
   const status = message => { q("temoignages-status").textContent = message; };
   const types = [["membre", "Membre"], ["coach", "Coach"], ["parc", "Parc"]];
@@ -28,8 +29,10 @@
   }
   function rendre() {
     liste.replaceChildren();
-    if (!items.length) liste.append(el("p", "", "Aucun témoignage."));
-    items.forEach((item, i) => {
+    const categorie = filtre.value;
+    const visibles = items.map((item, i) => ({item, i})).filter(({item}) => !categorie || item.auteur === categorie);
+    if (!visibles.length) liste.append(el("p", "", categorie ? "Aucun témoignage dans cette catégorie." : "Aucun témoignage."));
+    visibles.forEach(({item, i}, position) => {
       const bloc = el("div", "lcdp-editeur-contenu__bloc");
       const entete = el("div", "lcdp-editeur-contenu__bloc-entete");
       const champType = el("label", "lcdp-editeur-contenu__titre-zone");
@@ -42,19 +45,23 @@
         const option = el("option", "", libelle); option.value = valeur; select.append(option);
       }
       select.value = item.auteur;
-      select.addEventListener("change", () => { item.auteur = select.value; modifier(); });
+      select.addEventListener("change", () => {
+        item.auteur = select.value; modifier();
+        if (filtre.value && item.auteur !== filtre.value) { rendre(); filtre.focus(); }
+      });
       champType.append(select);
       const ordre = el("div", "lcdp-editeur-contenu__ordre");
       const deplacer = delta => {
-        const autre = i + delta;
-        if (busy || autre < 0 || autre >= items.length) return;
+        const cible = visibles[position + delta];
+        if (busy || !cible) return;
+        const autre = cible.i;
         [items[i], items[autre]] = [items[autre], items[i]];
         modifier(); rendre();
-        liste.children[autre]?.querySelector("textarea")?.focus();
+        liste.children[position + delta]?.querySelector("textarea")?.focus();
       };
       ordre.append(
-        bouton("↑", "Monter le témoignage " + (i+1), () => deplacer(-1), i === 0),
-        bouton("↓", "Descendre le témoignage " + (i+1), () => deplacer(1), i === items.length-1)
+        bouton("↑", "Monter le témoignage " + (i+1), () => deplacer(-1), position === 0),
+        bouton("↓", "Descendre le témoignage " + (i+1), () => deplacer(1), position === visibles.length-1)
       );
       if (item.nouveau) ordre.append(bouton("Annuler", "Annuler ce nouveau témoignage", () => {
         items.splice(i, 1); modifier(); rendre();
@@ -67,6 +74,7 @@
       texte.addEventListener("input", () => { item.texte = texte.value; modifier(); });
       champTexte.append(texte); bloc.append(entete, champTexte); liste.append(bloc);
     });
+    filtre.disabled = busy;
     ajouter.disabled = busy;
     enregistrer.disabled = busy || !dirty;
   }
@@ -87,15 +95,17 @@
     version = data.version; items = data.temoignages.map(t => ({texte:t.texte, auteur:t.auteur}));
     dirty = false;
   }
+  filtre.addEventListener("change", rendre);
   ajouter.addEventListener("click", () => {
     if (busy) return;
-    items.push({texte:"", auteur:"", nouveau:true}); modifier(); rendre();
+    items.push({texte:"", auteur:filtre.value, nouveau:true}); modifier(); rendre();
     liste.lastElementChild.querySelector("textarea").focus();
   });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (busy || !dirty) return;
     if (items.some(t => !t.texte.trim() || !types.some(([code]) => code === t.auteur))) {
+      filtre.value = ""; rendre();
       status("Le texte et l’attribution sont obligatoires."); return;
     }
     busy = true; rendre(); status("Enregistrement…");

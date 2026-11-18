@@ -35,6 +35,17 @@
               <h1>Témoignages</h1>
               <p id="temoignages-status" role="status" aria-live="polite">Chargement…</p>
               <form id="temoignages-form" class="lcdp-editeur-contenu" hidden>
+                <div class="lcdp-editeur-contenu__entete">
+                  <label class="lcdp-editeur-contenu__titre-zone" for="temoignages-filtre">
+                    <span class="lcdp-editeur-contenu__label">Catégorie</span>
+                    <select id="temoignages-filtre" class="lcdp-editeur-contenu__titre" aria-controls="temoignages-liste">
+                      <option value="">Tous</option>
+                      <option value="coach">Coachs</option>
+                      <option value="membre">Membres</option>
+                      <option value="parc">Parcs</option>
+                    </select>
+                  </label>
+                </div>
                 <div class="lcdp-editeur-contenu__blocs" id="temoignages-liste"></div>
                 <div class="lcdp-editeur-contenu__ordre">
                   <button type="button" class="lcdp-button lcdp-button-primary" id="temoignages-ajouter">Ajouter un témoignage</button>
@@ -47,6 +58,6 @@
       </section>
     </main>
   </div>
-  <script src="./temoignages-admin.js"></script>
+  <script src="./temoignages-admin.js?v=20261118-filtre"></script>
 </body>
 </html>
