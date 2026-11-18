@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Upload Image - Administration - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Import et suivi des images dans les dossiers GitHub existants."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/CSSBASE/lcdp-central-mobile-first.css",
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
+        "/ESPACE-ADMIN/B_ADMIN/UploadImage.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-upload-image-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Upload Image"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <h1>Upload Image</h1>
+              <nav class="lcdp-upload-image-tabs" aria-label="Fonction">
+                <button type="button" class="lcdp-button lcdp-button-primary" data-tab="upload" aria-pressed="true">Upload</button>
+                <button type="button" class="lcdp-button lcdp-button-secondary" data-tab="suivi" aria-pressed="false">Suivi image</button>
+              </nav>
+              <p id="upload-status" role="status" aria-live="polite">Chargement…</p>
+              <fieldset id="upload-navigation" class="lcdp-editeur-contenu" disabled>
+                <legend>Destination GitHub</legend>
+                <label for="upload-repo">Dépôt</label>
+                <select id="upload-repo"><option value="">Choisir un dépôt</option></select>
+                <div id="upload-levels"></div>
+                <p class="lcdp-upload-path" id="upload-path" aria-live="polite">Aucun dossier sélectionné.</p>
+                <button type="button" class="lcdp-button lcdp-button-secondary" id="upload-refresh" disabled>Actualiser le dossier</button>
+              </fieldset>
+              <section id="upload-panel">
+                <p>Ajout uniquement dans un dossier existant. Aucun fichier existant n’est écrasé. Les inventaires des galeries et carrousels ne sont pas modifiés.</p>
+                <form id="upload-form" hidden>
+                  <fieldset class="lcdp-editeur-contenu" id="upload-fields">
+                    <legend>Images à importer</legend>
+                    <label for="upload-files">Sélectionner des images (JPG, PNG, WebP, GIF, AVIF ; 15 Mio maximum par fichier)</label>
+                    <input id="upload-files" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.avif" multiple>
+                    <ul id="upload-selection"></ul>
+                    <label class="lcdp-upload-confirm"><input id="upload-confirm" type="checkbox"> Je confirme le dossier affiché ci-dessus.</label>
+                    <button type="submit" class="lcdp-button lcdp-button-orange" id="upload-submit" disabled>Importer les images</button>
+                  </fieldset>
+                </form>
+                <ul id="upload-results" aria-live="polite"></ul>
+              </section>
+              <section id="upload-follow" hidden>
+                <p>Nombre d’images directement présentes dans le dossier sélectionné, hors sous-dossiers.</p>
+                <p class="lcdp-upload-count" id="upload-count">—</p>
+                <div class="lcdp-table-lecture-admin">
+                  <div class="lcdp-table-lecture-admin__scroll">
+                    <table class="lcdp-table-lecture-admin__table">
+                      <thead><tr><th>Nom du fichier</th><th>Taille</th></tr></thead>
+                      <tbody id="upload-inventory"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+  </div>
+
+  <script src="./UploadImage.js"></script>
+</body>
+</html>
