@@ -1,0 +1,24 @@
+/* Upload Image : navigation et formulaires dans le wrapper Admin. */
+.lcdp-page-upload-image-admin .lcdp-upload-image-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.lcdp-page-upload-image-admin .lcdp-upload-image-tabs .lcdp-button { flex:1 1 150px; max-width:240px; margin:0; }
+.lcdp-page-upload-image-admin #upload-navigation,
+.lcdp-page-upload-image-admin #upload-fields { display:grid; gap:10px; margin:12px 0; min-width:0; }
+.lcdp-page-upload-image-admin #upload-navigation label,
+.lcdp-page-upload-image-admin #upload-fields label { font-weight:600; }
+.lcdp-page-upload-image-admin #upload-levels { display:grid; gap:10px; }
+.lcdp-page-upload-image-admin #upload-levels > div { display:grid; gap:6px; }
+.lcdp-page-upload-image-admin select,
+.lcdp-page-upload-image-admin input[type=file] { box-sizing:border-box; width:100%; max-width:100%; min-width:0; padding:10px; font:inherit; border:1px solid var(--lcdp-color-border,#c9cbc6); border-radius:8px; color:inherit; background:var(--lcdp-color-surface,#fff); }
+.lcdp-page-upload-image-admin .lcdp-upload-path { font-weight:600; overflow-wrap:anywhere; margin:4px 0; }
+.lcdp-page-upload-image-admin .lcdp-upload-confirm { display:flex; gap:8px; align-items:center; }
+.lcdp-page-upload-image-admin #upload-selection,
+.lcdp-page-upload-image-admin #upload-results { list-style:none; margin:0; padding:0; }
+.lcdp-page-upload-image-admin #upload-selection li { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:8px 0; border-bottom:1px solid var(--lcdp-color-border,#c9cbc6); overflow-wrap:anywhere; }
+.lcdp-page-upload-image-admin #upload-selection .lcdp-button { width:auto; margin:0; }
+.lcdp-page-upload-image-admin #upload-results li { padding:6px 0; overflow-wrap:anywhere; }
+.lcdp-page-upload-image-admin [data-etat=error],
+.lcdp-page-upload-image-admin #upload-status[role=alert] { color:#9d3229; }
+.lcdp-page-upload-image-admin [data-etat=ok] { color:#496438; }
+.lcdp-page-upload-image-admin .lcdp-upload-count { font-weight:700; font-size:1.5rem; }
+.lcdp-page-upload-image-admin #upload-inventory td:last-child { text-align:right; white-space:nowrap; }
+.lcdp-page-upload-image-admin [hidden] { display:none !important; }
