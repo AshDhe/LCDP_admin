@@ -1,0 +1,46 @@
+/* Module Bénévolat : uniquement les dispositions spécifiques à cette page. */
+.lcdp-page-benevolat .benevolat-form,
+.lcdp-page-benevolat .benevolat-filtres {
+  display: grid;
+  gap: var(--lcdp-space-3);
+  min-width: 0;
+}
+.lcdp-page-benevolat .benevolat-actions,
+.lcdp-page-benevolat .benevolat-departements {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--lcdp-space-1);
+}
+.lcdp-page-benevolat .benevolat-actions > .lcdp-button,
+.lcdp-page-benevolat .benevolat-departements > .lcdp-button {
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: .87rem;
+}
+.lcdp-page-benevolat .benevolat-choix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcdp-space-1);
+  max-height: 240px;
+  overflow: auto;
+  padding: var(--lcdp-space-2);
+  border: 1px solid var(--lcdp-color-border);
+  border-radius: var(--lcdp-radius-small);
+}
+.lcdp-page-benevolat .benevolat-choix label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.lcdp-page-benevolat .benevolat-choix input { flex: 0 0 auto; }
+.lcdp-page-benevolat .benevolat-table { margin-top: var(--lcdp-space-3); }
+.lcdp-page-benevolat .benevolat-form input[type="date"],
+.lcdp-page-benevolat .benevolat-form select { max-width: 300px; }
+@media (min-width: 800px) {
+  .lcdp-page-benevolat .benevolat-filtres { grid-template-columns: 1fr 1fr; }
+}

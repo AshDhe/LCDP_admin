@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr" data-lcdp-css="c081 c082">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bénévolat - La Clé du Parc</title>
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      const config = window.SITE_CONFIG;
+      window.LCDP_urlAdmin = path => config.adminUrl(path);
+      window.LCDP_urlPublic = path => config.publicUrl(path);
+      window.LCDP_urlObjet = path => config.objetUrl(path);
+      for (const path of ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css","/CSSBASE/lcdp-central-module-03.css","/CSSBASE/lcdp-central-module-05.css","/CSSBASE/lcdp-lightbox-convergence.css"])
+        document.write('<link rel="stylesheet" href="' + config.objetUrl(path) + '">');
+      for (const path of ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css","/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css","/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css","/ESPACE-ADMIN/C_MEMBRES/Benevolat.css"])
+        document.write('<link rel="stylesheet" href="' + config.adminUrl(path) + '">');
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-benevolat">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Bénévolat">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <h1>Bénévolat</h1>
+              <p id="benevolat-statut" role="status" aria-live="polite">Chargement…</p>
+              <div id="benevolat-onglets" class="lcdp-wraper-onglets">
+                <div class="lcdp-wraper-onglets__navigation" role="tablist" data-lcdp-wraper-onglets-navigation></div>
+                <div class="lcdp-wraper-onglets__contenu"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./Benevolat.js"></script>
+</body>
+</html>
