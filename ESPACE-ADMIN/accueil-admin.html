@@ -824,6 +824,10 @@
             lien.dataset.lcdpMembreGroupe = orange ? "orange" : "vert";
             lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
             lien.classList.add(orange ? "lcdp-button-orange" : "lcdp-button-primary");
+            // Slots 25 à 32 : vert plein même sans destination ; accès inchangé.
+            if (position >= 25 && position <= 32) {
+              lien.style.setProperty("opacity", "1", "important");
+            }
           } else if (categorie.id === "coachs") {
             // Coachs : trois rangées vertes, suivies de trois rangées orange.
             // Les emplacements non attribués restent désactivés et atténués.
