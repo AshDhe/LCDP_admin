@@ -16,7 +16,7 @@
   const maintenant=()=>Date.now()+offsetHorloge;
   const passe=r=>Date.parse(r.fin)<=maintenant();
   const formatDate=d=>d.split("-").reverse().join("/");
-  const dateParis=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(maintenant()));
+  const dateParis=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(maintenant())).map(x=>[x.type,x.value]));return p.year+"-"+p.month+"-"+p.day;};
   async function fragment(url){const r=await fetch(url,{cache:"no-cache",credentials:"same-origin"});if(!r.ok)throw Error("Composant indisponible.");const t=el("template");t.innerHTML=await r.text();return t.content;}
   function script(url){return new Promise((ok,ko)=>{const s=el("script");s.src=url;s.onload=ok;s.onerror=()=>ko(Error("Composant indisponible."));document.head.append(s);});}
   async function api(body){
@@ -87,7 +87,7 @@
     });
   }
   function resetNouveau(){edition=null;date.value="";date.min=dateParis();plage.value="";zoneTitre.textContent="Nouveau rendez-vous";btnAnnuler.hidden=true;choixNouveau.reset();}
-  function modifier(r){if(busy||!pret||passe(r))return;edition=r;choixNouveau.reset();choixNouveau.depts.add(dep(r));choixNouveau.ids.add(r.idparc);choixNouveau.actualiser();date.min=dateParis();date.value=r.datejour;plage.value=String(r.plage);zoneTitre.textContent="Modifier le rendez-vous";btnAnnuler.hidden=false;onglets.activer("nouveau");date.focus();status("");}
+  function modifier(r){if(busy||!pret||passe(r))return;edition=r;choixNouveau.reset();choixNouveau.depts.add(dep(r));choixNouveau.ids.add(r.idparc);choixNouveau.actualiser();date.min=r.datejour<dateParis()?r.datejour:dateParis();date.value=r.datejour;plage.value=String(r.plage);zoneTitre.textContent="Modifier le rendez-vous";btnAnnuler.hidden=false;onglets.activer("nouveau");date.focus();status("");}
   async function confirmer(r){
     const slot=q("lcdp-lightbox-slot");slot.replaceChildren(await fragment(objet("/HTMLBASE/02-dialogue-reference-suppression.html")));
     const box=slot.querySelector('[data-lcdp-dialogue-reference="suppression"]'),titre=slot.querySelector("[data-lcdp-dialogue-titre]"),texte=slot.querySelector("[data-lcdp-dialogue-message]"),non=slot.querySelector('[data-lcdp-dialogue-action="conserver"]'),oui=slot.querySelector('[data-lcdp-dialogue-action="supprimer"]');
@@ -122,7 +122,7 @@
     const debut=Date.now(),d=await api();
     if(!Array.isArray(d.parcs)||!Array.isArray(d.rows)||!Number.isFinite(Date.parse(d.maintenant)))throw Error("Réponse Bénévolat invalide.");
     parcs=d.parcs;rows=d.rows;offsetHorloge=Date.parse(d.maintenant)-(debut+Date.now())/2;pret=true;
-    choixNouveau.actualiser();rafraichirListes();date.min=dateParis();
+    choixNouveau.actualiser();rafraichirListes();date.min=edition&&edition.datejour<dateParis()?edition.datejour:dateParis();
   }
   async function init(){
     if(!await window.LCDP_GUARD_ADMIN.verifierAccesPageAdmin({path:route}))return;
