@@ -5,6 +5,7 @@
   const $=s=>document.querySelector(s),liste=$('[data-bandeau-liste]'),commandes=$('[data-bandeau-commandes]');
   const ajout=$('[data-bandeau-ajouter]'),remplacement=$('[data-bandeau-remplacer]'),attente=$('[data-bandeau-attente]');
   const preview=$('[data-bandeau-preview]'),previewWrap=$('[data-bandeau-preview-wrap]');
+  const MAX_IMAGES_BANDEAU=20;
   let images=[],ordre=[],revision='',busy=false,replaceId=null,confirmed=false;
   const saveBandeau=$('[data-bandeau-save]'),saveResult=$('[data-bandeau-save-result]');
   function retourBandeau(message,etat=''){saveResult.textContent=message;saveResult.dataset.state=etat;saveResult.hidden=!message;}
@@ -28,9 +29,16 @@
     return d;
   }
   function appliquer(d){
-    const courant=new Set(d.images.map(im=>im.id));
-    ordre=ordre.filter(id=>courant.has(id));
-    for(const im of d.images)if(!ordre.includes(im.id))ordre.push(im.id);
+    const ids=d.images.map(im=>im.id),courant=new Set(ids);
+    const ordreLocalModifie=ordreModifie();
+    if(!ordreLocalModifie){
+      ordre=ids;
+    }else{
+      // Conserver les déplacements manuels non enregistrés et insérer les nouveautés en tête.
+      const conserves=ordre.filter(id=>courant.has(id));
+      const dejaPresent=new Set(conserves);
+      ordre=[...ids.filter(id=>!dejaPresent.has(id)),...conserves];
+    }
     images=d.images;revision=d.revision;confirmed=true;
     preuves.clear();d.verification.forEach(p=>preuves.set(p.id,p.sha));
     for(const [id,v] of vignettes)if(preuves.get(id)!==v.sha){URL.revokeObjectURL(v.url);vignettes.delete(id);}
@@ -76,7 +84,7 @@
     else{img.hidden=true;message.hidden=false;message.textContent=failed?'Vignette indisponible':'Chargement…';}
   }
   function actualiserPreview(){
-    const source=listeOrdonnee().map(im=>({src:imageUrl(im.id),alt:brouillons.get(im.id)??im.alt})).filter(im=>im.src);
+    const source=listeOrdonnee().slice(0,MAX_IMAGES_BANDEAU).map(im=>({src:imageUrl(im.id),alt:brouillons.get(im.id)??im.alt})).filter(im=>im.src);
     previewWrap.hidden=!source.length;
     if(window.LCDP_BANDEAU_IMAGE){preview.classList.remove('lcdp-bandeau-preview-secours');window.LCDP_BANDEAU_IMAGE.rendre(preview,source);}
     else{preview.replaceChildren();preview.hidden=!source.length;preview.classList.add('lcdp-bandeau-preview-secours');for(const im of source){const img=el('img');img.src=im.src;img.alt=im.alt;preview.append(img);}}
@@ -186,7 +194,7 @@
         try{
           item.error='';afficherAttente();status('Enregistrement de '+item.nom+'…');
           if(item.replace&&!images.some(im=>im.id===item.id))throw Error('L’image à remplacer n’existe plus.');
-          const next=item.replace?images:[...images,{id:item.id,alt:''}];
+          const next=item.replace?images:[{id:item.id,alt:''},...images];
           await enregistrer(next,item);retirerAttente(item);ok++;rendre();status(item.nom+' : image enregistrée et vérifiée.','success');
         }catch(e){item.error=e.message;fail++;afficherAttente();}
       }
@@ -281,7 +289,7 @@
     const autre=row?.querySelector('[data-bandeau-ordre="'+(delta<0?'descendre':'monter')+'"]');
     (action&&!action.disabled?action:autre)?.focus({preventScroll:true});
     row?.scrollIntoView({block:'nearest',inline:'nearest'});
-    const message=ordreModifie()?'Image déplacée en position '+(k+1)+'. Enregistre le bandeau.':'Ordre enregistré.';
+    const message=ordreModifie()?'Image déplacée en position '+(k+1)+'. Enregistre la galerie.':'Ordre enregistré.';
     status(message);retourBandeau(message);
   }
   saveBandeau.addEventListener('click',async()=>{
@@ -290,8 +298,8 @@
     const modifie=ordreModifie()||texteModifie();
     busy=true;commandes.disabled=true;saveBandeau.disabled=true;
     saveBandeau.textContent=modifie?'Enregistrement…':'Vérification…';
-    status(modifie?'Enregistrement du bandeau…':'Vérification du bandeau…');
-    retourBandeau(modifie?'Enregistrement du bandeau…':'Vérification du bandeau…');
+    status(modifie?'Enregistrement de la galerie…':'Vérification de la galerie…');
+    retourBandeau(modifie?'Enregistrement de la galerie…':'Vérification de la galerie…');
     try{
       if(modifie){
         await enregistrer(next);
@@ -305,13 +313,13 @@
         appliquer(d);
       }
       ordre=images.map(im=>im.id);brouillons.clear();
-      const message=modifie?'Bandeau enregistré et vérifié dans GitHub.':'Aucune modification : le bandeau est déjà enregistré dans GitHub.';
+      const message=modifie?'Galerie enregistrée et vérifiée dans GitHub.':'Aucune modification : la galerie est déjà enregistrée dans GitHub.';
       retourBandeau(message,'success');status(message,'success');
     }catch(e){
       const message=e?.message||'Enregistrement non confirmé.';
       retourBandeau(message,'error');status(message,'error');
     }finally{
-      busy=false;commandes.disabled=!confirmed;saveBandeau.textContent='Enregistrer le bandeau';rendre();
+      busy=false;commandes.disabled=!confirmed;saveBandeau.textContent='Enregistrer la galerie';rendre();
     }
   });
   function supprimer(im,i){
@@ -323,7 +331,7 @@
   }
   function rendre(){
     saveBandeau.disabled=busy||!confirmed;
-    liste.replaceChildren();$('[data-bandeau-compteur]').textContent=images.length+' image'+(images.length===1?'':'s')+' enregistrée'+(images.length===1?'':'s')+(images.length<8?' · bandeau public masqué':' · bandeau public actif');
+    liste.replaceChildren();$('[data-bandeau-compteur]').textContent=images.length+' image'+(images.length===1?'':'s')+' dans la galerie'+(images.length<8?' · bandeau public masqué (minimum 8 images)':' · '+Math.min(images.length,MAX_IMAGES_BANDEAU)+' dans le bandeau');
     if(!images.length)liste.append(el('p','Aucune image enregistrée. Utilise le bouton Ajouter des images.','lcdp-editeur-contenu__aide'));
     listeOrdonnee().forEach((im,i)=>{
       const box=el('section',undefined,'lcdp-editeur-contenu__bloc lcdp-bandeau-admin-image');box.dataset.imageId=im.id;
