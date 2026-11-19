@@ -237,7 +237,7 @@
     slot.appendChild(fragment);
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js"
+      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-brouillons-locaux"
     );
 
     const moduleEditeur = window.LCDP_EDITEUR_CONTENU;
@@ -256,18 +256,32 @@
     controleurEditeur = moduleEditeur.initialiser({
       root: racine,
       blocs: data?.brouillon?.blocs,
+      brouillon: { code: "mentions-legales", version: data.version },
       onChange: signalerModificationLocale
     });
 
     slot.hidden = false;
   }
 
-  function signalerModificationLocale() {
+  function signalerModificationLocale(sauvegardeLocale) {
     modificationsLocales = true;
     afficherStatus(
-      "Modifications non enregistrées.",
-      "dirty"
+      sauvegardeLocale
+        ? "Brouillon sauvegardé sur ce navigateur — non enregistré sur le serveur."
+        : "Sauvegarde locale impossible — enregistre le brouillon sans attendre.",
+      sauvegardeLocale ? "dirty" : "error"
     );
+  }
+
+  function afficherEtatBrouillonLocal() {
+    if (controleurEditeur?.brouillonRestaure) {
+      modificationsLocales = true;
+      afficherStatus("Brouillon local restauré — enregistre-le sur le serveur.", "dirty");
+    } else if (!controleurEditeur?.protectionDisponible()) {
+      afficherStatus("Stockage local indisponible — enregistre régulièrement le brouillon.", "error");
+    } else {
+      afficherStatus("");
+    }
   }
 
   function lireDocumentLocal() {
@@ -336,6 +350,8 @@
       .forEach((bouton) => {
         bouton.disabled = requeteEnCours;
       });
+    const editeur = document.querySelector("[data-lcdp-mentions-editeur-slot]");
+    if (editeur) editeur.inert = requeteEnCours;
   }
 
   async function enregistrerBrouillon() {
@@ -369,6 +385,7 @@
       );
 
       documentCharge = data;
+      controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
       actualiserMeta();
       afficherStatus("Brouillon enregistré.");
@@ -409,6 +426,7 @@
     afficherStatus("Publication en cours…");
 
     try {
+      documentLocal = lireDocumentLocal();
       const data = await appelerJson(
         "/admin/mentions-legales/publier",
         {
@@ -421,6 +439,7 @@
       );
 
       documentCharge = data;
+      controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
       actualiserMeta();
       afficherStatus("Mentions légales publiées.");
@@ -675,12 +694,12 @@
       ?.addEventListener("click", publier);
 
     actualiserMeta();
-    afficherStatus("");
+    afficherEtatBrouillonLocal();
     document.getElementById("lcdp-main-admin").hidden = false;
   }
 
   window.addEventListener("beforeunload", (event) => {
-    if (!modificationsLocales || requeteEnCours) {
+    if (!modificationsLocales) {
       return;
     }
 

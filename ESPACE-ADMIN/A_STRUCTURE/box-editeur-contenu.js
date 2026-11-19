@@ -22,6 +22,70 @@
   const ATTR_SAUT_LIGNE =
     "data-lcdp-soft-break";
 
+  function creerProtectionBrouillon(configuration, blocsInitiaux, environnement) {
+    if (!configuration?.code) return null;
+    let version = String(configuration.version ?? "");
+    const cle = "lcdp-editeur-brouillon:v1:" + encodeURIComponent(String(environnement.identite || "navigateur")) + ":" + encodeURIComponent(configuration.code);
+    let stockage, dernier = null, restauration = false, disponible = true;
+    let blocs = blocsInitiaux;
+    function lire(valeur) {
+      try {
+        const d = JSON.parse(valeur);
+        if (!d || d.schema !== 1 || typeof d.version !== "string" || !Array.isArray(d.blocs) ||
+            !d.blocs.every(b => b && typeof b.id === "string" && typeof b.titre === "string" && typeof b.html === "string")) return null;
+        return d;
+      } catch (_) { return null; }
+    }
+    try {
+      stockage = environnement.stockage();
+      const brut = stockage.getItem(cle);
+      const d = lire(brut);
+      if (d && (d.version === version || environnement.confirmer(
+        "Un brouillon local existe, mais le document a changé sur le serveur. Restaurer ce brouillon local ? " +
+        "Vérifie les différences avant tout enregistrement ou publication. Si tu refuses, le brouillon reste conservé dans le navigateur."
+      ))) {
+        dernier = brut;
+        blocs = d.blocs;
+        restauration = true;
+      }
+    } catch (_) {
+      disponible = false;
+    }
+    function sauver(instantane) {
+      try {
+        stockage = environnement.stockage();
+        const actuel = stockage.getItem(cle);
+        // Conserver la saisie concurrente d'un autre onglet ou le brouillon dont la restauration a été refusée.
+        if (actuel !== null && actuel !== dernier) {
+          stockage.setItem(cle + ":recuperation:" + environnement.identifiant(), actuel);
+        }
+        const brut = JSON.stringify({schema:1, version, date:environnement.maintenant(), blocs:instantane});
+        stockage.setItem(cle, brut);
+        dernier = brut;
+        disponible = true;
+        return true;
+      } catch (_) {
+        disponible = false;
+        return false;
+      }
+    }
+    function confirmerSauvegarde(nouvelleVersion) {
+      version = String(nouvelleVersion ?? version);
+      try {
+        stockage = environnement.stockage();
+        // Ne supprimer que la copie qui correspond à l'éditeur ayant obtenu la confirmation serveur.
+        if (dernier !== null && stockage.getItem(cle) === dernier) stockage.removeItem(cle);
+        dernier = null;
+        disponible = true;
+        return true;
+      } catch (_) {
+        disponible = false;
+        return false;
+      }
+    }
+    return { blocs, restauration, disponible: () => disponible, sauver, confirmerSauvegarde };
+  }
+
   function initialiser(options = {}) {
     const root = options.root;
 
@@ -43,14 +107,22 @@
       throw new Error("Structure de l’éditeur de contenu incomplète.");
     }
 
+    const admin = window.LCDP_ADMIN_AUTORISATION?.admin;
+    const protection = creerProtectionBrouillon(options.brouillon, options.blocs, {
+      stockage: () => window.localStorage,
+      identite: admin?.idadmin || admin?.id || admin?.idAdmin || admin?.id_admin || admin?.emailadmin || admin?.email || "",
+      confirmer: message => window.confirm(message),
+      identifiant: () => crypto.randomUUID(),
+      maintenant: () => new Date().toISOString()
+    });
     const etat = {
       root,
       conteneur,
       template,
-      onChange:
-        typeof options.onChange === "function"
-          ? options.onChange
-          : () => {},
+      onChange: () => {
+        const sauvegardeLocale = protection ? protection.sauver(lireInstantane(root)) : false;
+        if (typeof options.onChange === "function") options.onChange(sauvegardeLocale);
+      },
       compteur: 0
     };
 
@@ -63,13 +135,17 @@
       }, true);
     });
 
-    definirBlocs(root, options.blocs);
+    definirBlocs(root, protection ? protection.blocs : options.blocs);
 
     return Object.freeze({
       lire: () => lire(root),
       definirBlocs: (blocs) => definirBlocs(root, blocs),
       ajouterBloc: (bloc) => ajouterBloc(root, bloc, true),
-      valider: () => valider(root)
+      valider: () => valider(root),
+      brouillonRestaure: protection?.restauration === true,
+      protectionDisponible: () => protection?.disponible() === true,
+      sauvegarderBrouillon: () => protection?.sauver(lireInstantane(root)) === true,
+      confirmerBrouillon: version => protection?.confirmerSauvegarde(version) === true
     });
   }
 
@@ -658,6 +734,15 @@
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
+  }
+
+  // Instantané non destructif : aucun contrôle de validité ni changement du DOM ou du curseur.
+  function lireInstantane(root) {
+    return obtenirBlocs(root).map((bloc, index) => ({
+      id: normaliserIdentifiant(bloc.dataset.lcdpEditeurBlocId, "bloc-" + (index + 1)),
+      titre: String(bloc.querySelector("[data-lcdp-editeur-titre]")?.value ?? ""),
+      html: String(bloc.querySelector("[data-lcdp-editeur-zone]")?.innerHTML ?? "")
+    }));
   }
 
   function lire(root) {

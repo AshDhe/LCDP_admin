@@ -263,7 +263,7 @@
     slot.appendChild(fragment);
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js"
+      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-brouillons-locaux"
     );
 
     const moduleEditeur = window.LCDP_EDITEUR_CONTENU;
@@ -282,6 +282,7 @@
     controleurEditeur = moduleEditeur.initialiser({
       root: racine,
       blocs: data?.brouillon?.blocs?.length ? data.brouillon.blocs : [{ id: "question-1", titre: "", html: "<p><br></p>" }],
+      brouillon: { code: espace === "membre" ? "faq-membre" : "faq", version: data.version },
       onChange: signalerModificationLocale
     });
 
@@ -375,12 +376,25 @@
     observateurLiensFAQ.observe(racine.querySelector("[data-lcdp-editeur-blocs]"), { childList: true });
   }
 
-  function signalerModificationLocale() {
+  function signalerModificationLocale(sauvegardeLocale) {
     modificationsLocales = true;
     afficherStatus(
-      "Modifications non enregistrées.",
-      "dirty"
+      sauvegardeLocale
+        ? "Brouillon sauvegardé sur ce navigateur — non enregistré sur le serveur."
+        : "Sauvegarde locale impossible — enregistre le brouillon sans attendre.",
+      sauvegardeLocale ? "dirty" : "error"
     );
+  }
+
+  function afficherEtatBrouillonLocal() {
+    if (controleurEditeur?.brouillonRestaure) {
+      modificationsLocales = true;
+      afficherStatus("Brouillon local restauré — enregistre-le sur le serveur.", "dirty");
+    } else if (!controleurEditeur?.protectionDisponible()) {
+      afficherStatus("Stockage local indisponible — enregistre régulièrement le brouillon.", "error");
+    } else {
+      afficherStatus("");
+    }
   }
 
   function lireDocumentLocal() {
@@ -484,6 +498,7 @@
       );
 
       documentCharge = data;
+      controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
       actualiserMeta();
       afficherStatus("Brouillon enregistré.");
@@ -536,6 +551,7 @@
       );
 
       documentCharge = data;
+      controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
       actualiserMeta();
       afficherStatus(ESPACES_FAQ[espaceActif].libelle + " publiées.");
@@ -810,7 +826,7 @@
 
   async function afficherEspace(espace) {
     const loading = document.querySelector("[data-lcdp-mentions-loading]");
-    const actions = document.querySelector("[data-lcdp-mentions-actions]");
+    const actions = document.querySelectorAll("[data-lcdp-mentions-actions]");
     const slot = document.querySelector("[data-lcdp-mentions-editeur-slot]");
     const preview = document.querySelector("[data-lcdp-mentions-preview]");
     observateurLiensFAQ?.disconnect();
@@ -822,7 +838,7 @@
     actualiserOnglets();
     document.querySelector("[data-lcdp-mentions-meta]").textContent = "";
     afficherStatus("");
-    actions.hidden = true;
+    actions.forEach(action => { action.hidden = true; });
     slot.hidden = true;
     slot.replaceChildren();
     preview.hidden = true;
@@ -835,15 +851,15 @@
       documentCharge = data;
       modificationsLocales = false;
       loading.hidden = true;
-      actions.hidden = false;
+      actions.forEach(action => { action.hidden = false; });
       actualiserMeta();
-      afficherStatus("");
+      afficherEtatBrouillonLocal();
     } catch (error) {
       controleurEditeur = null;
       documentCharge = null;
       slot.hidden = true;
       slot.replaceChildren();
-      actions.hidden = true;
+      actions.forEach(action => { action.hidden = true; });
       loading.textContent = espace === "membre"
         ? "FAQ membres indisponibles. Le stockage indépendant doit être confirmé par le Worker. " + String(error?.message || error)
         : String(error?.message || error);
@@ -860,7 +876,9 @@
       if (modificationsLocales) {
         const confirme = await demanderConfirmationPublication({
           titre: "Modifications non enregistrées",
-          texte: "Changer d’onglet sans enregistrer les modifications de cet espace ?",
+          texte: controleurEditeur?.sauvegarderBrouillon()
+            ? "Le brouillon reste sauvegardé dans ce navigateur. Changer d’onglet ?"
+            : "La sauvegarde locale est impossible. Changer d’onglet sans enregistrer les modifications ?",
           annuler: "Rester",
           confirmer: "Changer d’onglet"
         });
@@ -892,9 +910,9 @@
       .querySelector("[data-lcdp-mentions-previsualiser]")
       ?.addEventListener("click", previsualiser);
 
-    document
-      .querySelector("[data-lcdp-mentions-enregistrer]")
-      ?.addEventListener("click", enregistrerBrouillon);
+    document.querySelectorAll("[data-lcdp-mentions-enregistrer]").forEach(bouton => {
+      bouton.addEventListener("click", enregistrerBrouillon);
+    });
 
     document
       .querySelector("[data-lcdp-mentions-publier]")
@@ -907,7 +925,7 @@
   }
 
   window.addEventListener("beforeunload", (event) => {
-    if (!modificationsLocales || requeteEnCours) {
+    if (!modificationsLocales) {
       return;
     }
 
