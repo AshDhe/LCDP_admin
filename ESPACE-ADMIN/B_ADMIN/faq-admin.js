@@ -11,6 +11,22 @@
   let requeteEnCours = false;
   let espaceActif = "public";
   let observateurLiensFAQ = null;
+  const DELAI_AUTO = 900, INTERVALLE_AUTO = 4000;
+  let revisionLocale = 0, sauvegardeEnCours = null, minuteurAuto = null;
+  let conflitVersion = false, prochaineTentative = 0;
+  function annulerMinuteur() {
+    if (minuteurAuto !== null) { clearTimeout(minuteurAuto); minuteurAuto = null; }
+  }
+  function planifierSauvegarde() {
+    annulerMinuteur();
+    if (!modificationsLocales || conflitVersion) return;
+    minuteurAuto = setTimeout(() => { minuteurAuto = null; void tenterSauvegardeAuto(); }, DELAI_AUTO);
+  }
+  function tenterSauvegardeAuto(force = false) {
+    if (!modificationsLocales || requeteEnCours || sauvegardeEnCours ||
+        conflitVersion || (!force && Date.now() < prochaineTentative)) return;
+    return sauvegarderUneFois();
+  }
   const ESPACES_FAQ = Object.freeze({
     public: Object.freeze({ route: "/admin/faq", libelle: "FAQ publiques", page: "/ESPACE-PUBLIC/FAQ-public.html" }),
     membre: Object.freeze({ route: "/admin/faq-membre", libelle: "FAQ membres", page: "/ESPACE-MEMBRE/FAQ-membre.html" })
@@ -205,8 +221,10 @@
     const data = await response.json().catch(() => null);
 
     if (response.status === 401) {
-      redirigerConnexion();
-      throw new Error("Session administrateur expirée.");
+      if (!modificationsLocales && !sauvegardeEnCours) redirigerConnexion();
+      const erreur = new Error("Session administrateur expirée.");
+      erreur.status = 401;
+      throw erreur;
     }
 
     if (response.status === 403) {
@@ -217,11 +235,9 @@
     }
 
     if (!response.ok || !data || data.success !== true) {
-      throw new Error(
-        data?.message ||
-        data?.detail ||
-        "Réponse du worker editing-admin inexploitable."
-      );
+      const erreur = new Error(data?.message || data?.detail || "Réponse du worker editing-admin inexploitable.");
+      erreur.status = response.status;
+      throw erreur;
     }
 
     return data;
@@ -263,7 +279,7 @@
     slot.appendChild(fragment);
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-brouillons-locaux"
+      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-faq-autosave"
     );
 
     const moduleEditeur = window.LCDP_EDITEUR_CONTENU;
@@ -282,7 +298,7 @@
     controleurEditeur = moduleEditeur.initialiser({
       root: racine,
       blocs: data?.brouillon?.blocs?.length ? data.brouillon.blocs : [{ id: "question-1", titre: "", html: "<p><br></p>" }],
-      brouillon: { code: espace === "membre" ? "faq-membre" : "faq", version: data.version },
+      brouillon: { code: espace === "membre" ? "faq-membre" : "faq", version: data.version, sauvegardeAuto: true },
       onChange: signalerModificationLocale
     });
 
@@ -378,23 +394,22 @@
 
   function signalerModificationLocale(sauvegardeLocale) {
     modificationsLocales = true;
+    revisionLocale++;
     afficherStatus(
-      sauvegardeLocale
-        ? "Brouillon sauvegardé sur ce navigateur — non enregistré sur le serveur."
-        : "Sauvegarde locale impossible — enregistre le brouillon sans attendre.",
-      sauvegardeLocale ? "dirty" : "error"
+      conflitVersion ? "Conflit de version : rédaction préservée si la copie locale est disponible. Recharge pour récupérer le brouillon." :
+      sauvegardeLocale ? "Sauvegarde automatique en attente…" : "Copie locale indisponible. Sauvegarde en base en attente.",
+      conflitVersion || !sauvegardeLocale ? "error" : "dirty"
     );
+    planifierSauvegarde();
   }
 
   function afficherEtatBrouillonLocal() {
     if (controleurEditeur?.brouillonRestaure) {
-      modificationsLocales = true;
-      afficherStatus("Brouillon local restauré — enregistre-le sur le serveur.", "dirty");
+      signalerModificationLocale(controleurEditeur.sauvegarderBrouillon());
+      afficherStatus("Brouillon local restauré — sauvegarde automatique en attente.", "dirty");
     } else if (!controleurEditeur?.protectionDisponible()) {
-      afficherStatus("Stockage local indisponible — enregistre régulièrement le brouillon.", "error");
-    } else {
-      afficherStatus("");
-    }
+      afficherStatus("Stockage de secours local indisponible.", "error");
+    } else afficherStatus("Brouillon chargé.");
   }
 
   function lireDocumentLocal() {
@@ -467,89 +482,85 @@
     if (editeur) editeur.inert = requeteEnCours;
   }
 
-  async function enregistrerBrouillon() {
-    if (requeteEnCours) return;
-
-    let documentLocal;
-
-    try {
-      documentLocal = lireDocumentLocal();
-    } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      return;
-    }
-
-    verrouillerActions(true);
-    afficherStatus("Enregistrement du brouillon…");
-
-    try {
-      const data = await appelerFaq(
-        espaceActif, "/brouillon",
-        {
-          method: "POST",
-          body: {
-            version: documentCharge.version,
-            ...documentLocal
-          }
+  function sauvegarderUneFois() {
+    if (sauvegardeEnCours) return sauvegardeEnCours;
+    if (!modificationsLocales) return Promise.resolve(true);
+    if (conflitVersion || !documentCharge || !controleurEditeur) return Promise.resolve(false);
+    annulerMinuteur();
+    const espace = espaceActif, version = Number(documentCharge.version), revision = revisionLocale;
+    const travail = (async () => {
+      try {
+        const documentLocal = {
+          titre: espace === "membre" ? "FAQ membres" : "FAQ",
+          blocs: controleurEditeur.lireBrouillon()
+        };
+        afficherStatus("Sauvegarde automatique en base…", "dirty");
+        const data = await appelerFaq(espace, "/brouillon", {
+          method: "POST", body: { version, ...documentLocal }
+        });
+        if (Number(data.version) !== version + 1 || !Array.isArray(data.brouillon?.blocs) ||
+            JSON.stringify(data.brouillon.blocs.map(b => b.id)) !== JSON.stringify(documentLocal.blocs.map(b => b.id))) {
+          throw Error("Le Worker ne confirme pas la totalité du brouillon.");
         }
-      );
+        documentCharge = data;
+        modificationsLocales = revisionLocale !== revision;
+        const secours = controleurEditeur.confirmerBrouillon(data.version, modificationsLocales);
+        prochaineTentative = 0;
+        actualiserMeta();
+        afficherStatus(modificationsLocales
+          ? (secours ? "Nouvelles modifications en attente…" : "Nouvelles modifications : secours local indisponible.")
+          : "Brouillon enregistré en base.", modificationsLocales ? (secours ? "dirty" : "error") : "");
+        return true;
+      } catch (error) {
+        conflitVersion = error?.status === 409;
+        prochaineTentative = Date.now() + 5000;
+        const secours = controleurEditeur?.sauvegarderBrouillon();
+        afficherStatus("Sauvegarde en base non confirmée : " + String(error?.message || error) +
+          (secours ? " Copie locale conservée." : " ATTENTION : copie locale indisponible."), "error");
+        return false;
+      }
+    })();
+    sauvegardeEnCours = travail.finally(() => {
+      sauvegardeEnCours = null;
+      if (modificationsLocales && !conflitVersion) planifierSauvegarde();
+    });
+    return sauvegardeEnCours;
+  }
 
-      documentCharge = data;
-      controleurEditeur.confirmerBrouillon(data.version);
-      modificationsLocales = false;
-      actualiserMeta();
-      afficherStatus("Brouillon enregistré.");
-      await afficherAlerte("Brouillon enregistré.");
-    } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      await afficherAlerte(
-        String(error?.message || error || "")
-      );
-    } finally {
-      verrouillerActions(false);
+  async function synchroniserBrouillon() {
+    annulerMinuteur();
+    if (sauvegardeEnCours && !await sauvegardeEnCours) return false;
+    while (modificationsLocales) {
+      if (!await sauvegarderUneFois()) return false;
     }
+    return true;
+  }
+
+  async function enregistrerBrouillon() {
+    if (requeteEnCours || !documentCharge) return;
+    verrouillerActions(true);
+    try {
+      if (await synchroniserBrouillon()) afficherStatus("Brouillon enregistré en base.");
+    } catch (error) {
+      afficherStatus(String(error?.message || error), "error");
+    } finally { verrouillerActions(false); }
   }
 
   async function publier() {
-    if (requeteEnCours) return;
-
-    let documentLocal;
-
-    try {
-      documentLocal = lireDocumentLocal();
-    } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      return;
-    }
-
+    if (requeteEnCours || !documentCharge) return;
     verrouillerActions(true);
     try {
+      if (!await synchroniserBrouillon()) return;
+      const documentLocal = lireDocumentLocal();
       const confirme = await demanderConfirmationPublication({
         titre: "Publier les " + ESPACES_FAQ[espaceActif].libelle,
         texte: "Seule la version publiée des " + ESPACES_FAQ[espaceActif].libelle + " est remplacée par le contenu actuel."
       });
       if (!confirme) return;
       afficherStatus("Publication en cours…");
-      const data = await appelerFaq(
-        espaceActif, "/publier",
-        {
-          method: "POST",
-          body: {
-            version: documentCharge.version,
-            ...documentLocal
-          }
-        }
-      );
-
+      const data = await appelerFaq(espaceActif, "/publier", {
+        method: "POST", body: { version: documentCharge.version, ...documentLocal }
+      });
       documentCharge = data;
       controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
@@ -557,16 +568,9 @@
       afficherStatus(ESPACES_FAQ[espaceActif].libelle + " publiées.");
       await afficherAlerte(ESPACES_FAQ[espaceActif].libelle + " publiées.");
     } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      await afficherAlerte(
-        String(error?.message || error || "")
-      );
-    } finally {
-      verrouillerActions(false);
-    }
+      afficherStatus(String(error?.message || error || ""), "error");
+      await afficherAlerte(String(error?.message || error || ""));
+    } finally { verrouillerActions(false); }
   }
 
   function previsualiser() {
@@ -820,8 +824,8 @@
       bouton.setAttribute("aria-pressed", String(bouton.dataset.faqEspace === espaceActif));
     }
     const explication = document.querySelector("[data-faq-explication]");
-    explication.textContent = "Chaque bloc correspond à une question et à sa réponse. Modifie leur ordre, enregistre le brouillon, puis publie les " +
-      ESPACES_FAQ[espaceActif].libelle + ".";
+    explication.textContent = "Chaque bloc correspond à une question et à sa réponse. Le brouillon des " +
+      ESPACES_FAQ[espaceActif].libelle + " est enregistré automatiquement. La publication reste manuelle.";
   }
 
   async function afficherEspace(espace) {
@@ -835,6 +839,10 @@
     documentCharge = null;
     controleurEditeur = null;
     modificationsLocales = false;
+    revisionLocale = 0;
+    conflitVersion = false;
+    prochaineTentative = 0;
+    annulerMinuteur();
     actualiserOnglets();
     document.querySelector("[data-lcdp-mentions-meta]").textContent = "";
     afficherStatus("");
@@ -873,17 +881,7 @@
         document.getElementById("lcdp-lightbox-slot")?.childElementCount) return;
     verrouillerActions(true);
     try {
-      if (modificationsLocales) {
-        const confirme = await demanderConfirmationPublication({
-          titre: "Modifications non enregistrées",
-          texte: controleurEditeur?.sauvegarderBrouillon()
-            ? "Le brouillon reste sauvegardé dans ce navigateur. Changer d’onglet ?"
-            : "La sauvegarde locale est impossible. Changer d’onglet sans enregistrer les modifications ?",
-          annuler: "Rester",
-          confirmer: "Changer d’onglet"
-        });
-        if (!confirme) return;
-      }
+      if (!await synchroniserBrouillon()) return;
       await afficherEspace(espace);
     } catch (error) {
       afficherStatus(String(error?.message || error), "error");
@@ -906,17 +904,44 @@
       bouton.addEventListener("click", () => choisirEspace(bouton.dataset.faqEspace));
     }
 
-    document
-      .querySelector("[data-lcdp-mentions-previsualiser]")
-      ?.addEventListener("click", previsualiser);
+    for (const [attribut, action] of [
+      ["data-lcdp-mentions-previsualiser", previsualiser],
+      ["data-lcdp-mentions-enregistrer", enregistrerBrouillon],
+      ["data-lcdp-mentions-publier", publier]
+    ]) document.querySelectorAll("[" + attribut + "]").forEach(bouton => bouton.addEventListener("click", action));
 
-    document.querySelectorAll("[data-lcdp-mentions-enregistrer]").forEach(bouton => {
-      bouton.addEventListener("click", enregistrerBrouillon);
+    setInterval(() => { void tenterSauvegardeAuto(); }, INTERVALLE_AUTO);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden" && modificationsLocales) {
+        controleurEditeur?.sauvegarderBrouillon();
+        void tenterSauvegardeAuto(true);
+      }
     });
-
-    document
-      .querySelector("[data-lcdp-mentions-publier]")
-      ?.addEventListener("click", publier);
+    window.addEventListener("online", () => { prochaineTentative = 0; void tenterSauvegardeAuto(true); });
+    window.addEventListener("pagehide", () => {
+      if (modificationsLocales) controleurEditeur?.sauvegarderBrouillon();
+    });
+    // Navigation dans l'administration : attendre la confirmation de la base.
+    document.addEventListener("click", async event => {
+      if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const lien = event.target.closest?.("a[href]");
+      if (!lien || (lien.target && lien.target !== "_self") || lien.hasAttribute("download")) return;
+      if (lien.closest("[data-lcdp-mentions-editeur-slot]")) return;
+      let url;
+      try { url = new URL(lien.href, window.location.href); } catch (_) { return; }
+      if (!["http:", "https:"].includes(url.protocol) ||
+          (url.origin === location.origin && url.pathname === location.pathname && url.search === location.search && url.hash)) return;
+      if (!modificationsLocales && !sauvegardeEnCours && !requeteEnCours) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (requeteEnCours) return;
+      verrouillerActions(true);
+      try {
+        if (await synchroniserBrouillon()) window.location.assign(url.href);
+      } catch (error) {
+        afficherStatus(String(error?.message || error), "error");
+      } finally { verrouillerActions(false); }
+    }, true);
 
     document.getElementById("lcdp-main-admin").hidden = false;
     verrouillerActions(true);
@@ -925,10 +950,8 @@
   }
 
   window.addEventListener("beforeunload", (event) => {
-    if (!modificationsLocales) {
-      return;
-    }
-
+    if (!modificationsLocales && !sauvegardeEnCours) return;
+    if (modificationsLocales) controleurEditeur?.sauvegarderBrouillon();
     event.preventDefault();
     event.returnValue = "";
   });
