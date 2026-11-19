@@ -41,8 +41,9 @@
       const brut = stockage.getItem(cle);
       const d = lire(brut);
       if (d && (d.version === version || environnement.confirmer(
-        "Un brouillon local existe, mais le document a changé sur le serveur. Restaurer ce brouillon local ? " +
-        "Vérifie les différences avant tout enregistrement ou publication. Si tu refuses, le brouillon reste conservé dans le navigateur."
+        configuration.sauvegardeAuto
+          ? "Un brouillon local existe, mais la version en base a changé. Restaurer cette copie REMPLACE le brouillon actuel lors de la sauvegarde automatique, sans modifier la publication. Annuler conserve la copie locale. Restaurer ?"
+          : "Un brouillon local existe, mais le document a changé sur le serveur. Restaurer ce brouillon local ? Vérifie les différences avant tout enregistrement ou publication. Si tu refuses, le brouillon reste conservé dans le navigateur."
       ))) {
         dernier = brut;
         blocs = d.blocs;
@@ -69,8 +70,9 @@
         return false;
       }
     }
-    function confirmerSauvegarde(nouvelleVersion) {
+    function confirmerSauvegarde(nouvelleVersion, instantane = null) {
       version = String(nouvelleVersion ?? version);
+      if (Array.isArray(instantane)) return sauver(instantane);
       try {
         stockage = environnement.stockage();
         // Ne supprimer que la copie qui correspond à l'éditeur ayant obtenu la confirmation serveur.
@@ -110,7 +112,7 @@
     const admin = window.LCDP_ADMIN_AUTORISATION?.admin;
     const protection = creerProtectionBrouillon(options.brouillon, options.blocs, {
       stockage: () => window.localStorage,
-      identite: admin?.idadmin || admin?.id || admin?.idAdmin || admin?.id_admin || admin?.emailadmin || admin?.email || "",
+      identite: admin?.idadmin || admin?.id || admin?.idAdmin || admin?.id_admin || admin?.adminemail || admin?.emailadmin || admin?.email || "",
       confirmer: message => window.confirm(message),
       identifiant: () => crypto.randomUUID(),
       maintenant: () => new Date().toISOString()
@@ -139,13 +141,14 @@
 
     return Object.freeze({
       lire: () => lire(root),
+      lireBrouillon: () => lireInstantane(root).map(bloc => ({ ...bloc, titre: bloc.titre.trim(), html: nettoyerHtmlClient(bloc.html) })),
       definirBlocs: (blocs) => definirBlocs(root, blocs),
       ajouterBloc: (bloc) => ajouterBloc(root, bloc, true),
       valider: () => valider(root),
       brouillonRestaure: protection?.restauration === true,
       protectionDisponible: () => protection?.disponible() === true,
       sauvegarderBrouillon: () => protection?.sauver(lireInstantane(root)) === true,
-      confirmerBrouillon: version => protection?.confirmerSauvegarde(version) === true
+      confirmerBrouillon: (version, conserver = false) => protection?.confirmerSauvegarde(version, conserver ? lireInstantane(root) : null) === true
     });
   }
 
