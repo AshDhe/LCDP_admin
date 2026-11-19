@@ -32,6 +32,73 @@
     membre: Object.freeze({ route: "/admin/faq-membre", libelle: "FAQ membres", page: "/ESPACE-MEMBRE/FAQ-membre.html" })
   });
 
+  // FAQ uniquement : espaces insécables avant la ponctuation française.
+  // Ne pas ajouter d'espace dans les URL, heures, codes ou autres chaînes compactes.
+  function espacesInsecablesFAQ(texte) {
+    return String(texte ?? "").replace(/[ \t\u00a0\u202f]+(?=[?!:;])/g,
+      espaces => espaces.replace(/[ \t]/g, "\u00a0"));
+  }
+
+  // Traiter uniquement le texte affiché, jamais les attributs des liens.
+  // Parcourir les segments continus d'un paragraphe, y compris le gras/italique.
+  function espacesInsecablesHtmlFAQ(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html ?? "");
+    let noeuds = [];
+    function traiterSegment() {
+      const texte = noeuds.map(n => n.data).join("");
+      const corrige = espacesInsecablesFAQ(texte);
+      if (corrige !== texte) {
+        let debut = 0;
+        for (const n of noeuds) {
+          const valeur = corrige.slice(debut, debut + n.data.length);
+          debut += n.data.length;
+          if (n.data !== valeur) n.data = valeur;
+        }
+      }
+      noeuds = [];
+    }
+    function visiter(parent) {
+      for (const n of parent.childNodes) {
+        if (n.nodeType === 3) { noeuds.push(n); continue; }
+        if (n.nodeType !== 1) continue;
+        const coupure = /^(P|BR|DIV|UL|OL|LI|SECTION|ARTICLE|BLOCKQUOTE|H[1-6])$/.test(n.tagName);
+        if (coupure) traiterSegment();
+        visiter(n);
+        if (coupure) traiterSegment();
+      }
+    }
+    visiter(template.content);
+    traiterSegment();
+    return template.innerHTML;
+  }
+
+  function normaliserBlocsFAQ(blocs) {
+    return blocs.map(bloc => ({
+      ...bloc,
+      titre: espacesInsecablesFAQ(bloc.titre),
+      html: espacesInsecablesHtmlFAQ(bloc.html)
+    }));
+  }
+
+  function installerEspacesInsecablesFAQ(racine) {
+    // Même longueur : le curseur et la sélection restent à leur place.
+    function normaliserQuestion(event) {
+      const champ = event.target;
+      if (!champ.matches?.("[data-lcdp-editeur-titre]") || event.isComposing) return;
+      const valeur = espacesInsecablesFAQ(champ.value);
+      if (valeur === champ.value) return;
+      const debut = champ.selectionStart, fin = champ.selectionEnd, sens = champ.selectionDirection;
+      champ.value = valeur;
+      if (debut !== null && fin !== null) champ.setSelectionRange(debut, fin, sens || "none");
+      // L'écouteur partagé reçoit déjà l'événement input après la capture.
+      if (event.type !== "input") champ.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    racine.addEventListener("input", normaliserQuestion, true);
+    racine.addEventListener("compositionend", normaliserQuestion, true);
+    racine.addEventListener("focusout", normaliserQuestion, true);
+  }
+
   function urlAdmin(path) {
     return typeof window.LCDP_urlAdmin === "function"
       ? window.LCDP_urlAdmin(path)
@@ -306,6 +373,7 @@
       event.stopImmediatePropagation();
       controleurEditeur.ajouterBloc({ id: "q-" + crypto.randomUUID(), titre: "", html: "<p><br></p>" });
     }, true);
+    installerEspacesInsecablesFAQ(racine);
     installerConfirmationSuppressionFAQ(racine);
     installerLiensFAQ(racine, espace);
     slot.hidden = false;
@@ -425,7 +493,7 @@
 
     return {
       titre: espaceActif === "membre" ? "FAQ membres" : "FAQ",
-      blocs: controleurEditeur.lire()
+      blocs: normaliserBlocsFAQ(controleurEditeur.lire())
     };
   }
 
@@ -492,7 +560,7 @@
       try {
         const documentLocal = {
           titre: espace === "membre" ? "FAQ membres" : "FAQ",
-          blocs: controleurEditeur.lireBrouillon()
+          blocs: normaliserBlocsFAQ(controleurEditeur.lireBrouillon())
         };
         afficherStatus("Sauvegarde automatique en base…", "dirty");
         const data = await appelerFaq(espace, "/brouillon", {
