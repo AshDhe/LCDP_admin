@@ -85,7 +85,7 @@
       [
         "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
         "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
-        "/ESPACE-ADMIN/B_ADMIN/faq-admin.css?v=20261118-faq-espaces"
+        "/ESPACE-ADMIN/B_ADMIN/faq-admin.css?v=20261119-faq-statut-sauvegarde"
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -137,11 +137,6 @@
                   data-lcdp-mentions-meta
                 ></p>
 
-                <p
-                  class="lcdp-mentions-admin__status"
-                  data-lcdp-mentions-status
-                  role="status"
-                ></p>
               </header>
 
               <div id="lcdp-faq-admin-panneau" class="lcdp-faq-admin__panneau">
@@ -153,9 +148,7 @@
               </p>
 
               <div class="lcdp-mentions-admin__actions" data-lcdp-mentions-actions hidden>
-                <button type="button" class="lcdp-button lcdp-button-primary" data-lcdp-mentions-previsualiser>Prévisualiser</button>
-                <button type="button" class="lcdp-button lcdp-button-orange" data-lcdp-mentions-enregistrer>Enregistrer le brouillon</button>
-                <button type="button" class="lcdp-button lcdp-button-orange" data-lcdp-mentions-publier>Publier</button>
+                <button type="button" class="lcdp-button lcdp-button-primary" data-lcdp-mentions-publier>Publier</button>
               </div>
 
               <div
@@ -164,51 +157,9 @@
                 hidden
               ></div>
 
-              <div
-                class="lcdp-mentions-admin__actions"
-                data-lcdp-mentions-actions
-                hidden
-              >
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-primary"
-                  data-lcdp-mentions-previsualiser
-                >
-                  Prévisualiser
-                </button>
-
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
-                  data-lcdp-mentions-enregistrer
-                >
-                  Enregistrer le brouillon
-                </button>
-
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
-                  data-lcdp-mentions-publier
-                >
-                  Publier
-                </button>
+              <div class="lcdp-mentions-admin__actions" data-lcdp-mentions-actions hidden>
+                <button type="button" class="lcdp-button lcdp-button-primary" data-lcdp-mentions-publier>Publier</button>
               </div>
-
-              <section
-                class="lcdp-mentions-admin__preview"
-                data-lcdp-mentions-preview
-                hidden
-                aria-label="Prévisualisation des FAQ"
-              >
-                <h2 class="lcdp-mentions-admin__preview-title">
-                  Prévisualisation
-                </h2>
-
-                <div
-                  class="lcdp-mentions-admin__preview-content"
-                  data-lcdp-mentions-preview-content
-                ></div>
-              </section>
               </div>
             </div>
 
@@ -217,15 +168,20 @@
       </section>
     </main>
 
+    <div class="lcdp-faq-admin__suivi" data-faq-suivi role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span class="lcdp-faq-admin__suivi-espace" data-faq-suivi-espace></span>
+      <p class="lcdp-mentions-admin__status" data-lcdp-mentions-status></p>
+      <span class="lcdp-faq-admin__suivi-heure" data-faq-suivi-heure></span>
+    </div>
+
   </div>
 
   <script>
     (() => {
       const attribut = value => String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-      document.write('<link rel="stylesheet" href="' + attribut(window.LCDP_urlPublic("/ESPACE-PUBLIC/faq-accordeon.css?v=20261119-gabarit-editorial-commun")) + '">');
       document.write('<script src="' + attribut(window.LCDP_urlPublic("/ESPACE-PUBLIC/faq-accordeon.js?v=20261119-faq-ouverture")) + '"><\/script>');
     })();
   </script>
-  <script src="./faq-admin.js?v=20261119-espaces-insecables"></script>
+  <script src="./faq-admin.js?v=20261119-faq-statut-sauvegarde"></script>
 </body>
 </html>

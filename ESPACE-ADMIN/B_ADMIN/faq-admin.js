@@ -465,7 +465,7 @@
     revisionLocale++;
     afficherStatus(
       conflitVersion ? "Conflit de version : rédaction préservée si la copie locale est disponible. Recharge pour récupérer le brouillon." :
-      sauvegardeLocale ? "Sauvegarde automatique en attente…" : "Copie locale indisponible. Sauvegarde en base en attente.",
+      sauvegardeLocale ? "Modifications en cours — sauvegarde automatique…" : "Copie locale indisponible. Sauvegarde en base en attente.",
       conflitVersion || !sauvegardeLocale ? "error" : "dirty"
     );
     planifierSauvegarde();
@@ -477,7 +477,7 @@
       afficherStatus("Brouillon local restauré — sauvegarde automatique en attente.", "dirty");
     } else if (!controleurEditeur?.protectionDisponible()) {
       afficherStatus("Stockage de secours local indisponible.", "error");
-    } else afficherStatus("Brouillon chargé.");
+    } else afficherStatus("Sauvegarde automatique active.", "ready");
   }
 
   function lireDocumentLocal() {
@@ -503,9 +503,13 @@
     );
 
     if (!status) return;
-
-    status.textContent = message || "";
-    status.dataset.state = etat;
+    const suivi = document.querySelector("[data-faq-suivi]");
+    const libelle = document.querySelector("[data-faq-suivi-espace]");
+    if (libelle && libelle.textContent !== ESPACES_FAQ[espaceActif].libelle) libelle.textContent = ESPACES_FAQ[espaceActif].libelle;
+    if (suivi) suivi.hidden = !message;
+    if (status.textContent !== (message || "")) status.textContent = message || "";
+    if (status.dataset.state !== etat) status.dataset.state = etat;
+    if (suivi) suivi.dataset.state = etat;
   }
 
   function actualiserMeta() {
@@ -534,6 +538,20 @@
     }
 
     meta.textContent = morceaux.join(" — ");
+    afficherHeureSauvegarde(documentCharge.datemaj);
+  }
+
+  function afficherHeureSauvegarde(value) {
+    const cible = document.querySelector("[data-faq-suivi-heure]");
+    if (!cible) return;
+    const date = value ? new Date(value) : null;
+    const texte = date && !Number.isNaN(date.getTime())
+      ? "Dernière sauvegarde en base : " + new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris", day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+        }).format(date)
+      : "Aucun horaire de sauvegarde confirmé.";
+    if (cible.textContent !== texte) cible.textContent = texte;
   }
 
   function verrouillerActions(verrouiller) {
@@ -576,8 +594,8 @@
         prochaineTentative = 0;
         actualiserMeta();
         afficherStatus(modificationsLocales
-          ? (secours ? "Nouvelles modifications en attente…" : "Nouvelles modifications : secours local indisponible.")
-          : "Brouillon enregistré en base.", modificationsLocales ? (secours ? "dirty" : "error") : "");
+          ? (secours ? "Sauvegarde effectuée — nouvelles modifications en attente…" : "Sauvegarde effectuée — nouvelles modifications sans secours local.")
+          : "Sauvegarde automatique effectuée.", modificationsLocales ? (secours ? "dirty" : "error") : "saved");
         return true;
       } catch (error) {
         conflitVersion = error?.status === 409;
@@ -604,16 +622,6 @@
     return true;
   }
 
-  async function enregistrerBrouillon() {
-    if (requeteEnCours || !documentCharge) return;
-    verrouillerActions(true);
-    try {
-      if (await synchroniserBrouillon()) afficherStatus("Brouillon enregistré en base.");
-    } catch (error) {
-      afficherStatus(String(error?.message || error), "error");
-    } finally { verrouillerActions(false); }
-  }
-
   async function publier() {
     if (requeteEnCours || !documentCharge) return;
     verrouillerActions(true);
@@ -633,52 +641,12 @@
       controleurEditeur.confirmerBrouillon(data.version);
       modificationsLocales = false;
       actualiserMeta();
-      afficherStatus(ESPACES_FAQ[espaceActif].libelle + " publiées.");
+      afficherStatus(ESPACES_FAQ[espaceActif].libelle + " publiées.", "saved");
       await afficherAlerte(ESPACES_FAQ[espaceActif].libelle + " publiées.");
     } catch (error) {
       afficherStatus(String(error?.message || error || ""), "error");
       await afficherAlerte(String(error?.message || error || ""));
     } finally { verrouillerActions(false); }
-  }
-
-  function previsualiser() {
-    let documentLocal;
-
-    try {
-      documentLocal = lireDocumentLocal();
-    } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      return;
-    }
-
-    const preview = document.querySelector(
-      "[data-lcdp-mentions-preview]"
-    );
-    const contenu = document.querySelector(
-      "[data-lcdp-mentions-preview-content]"
-    );
-
-    contenu.innerHTML = "";
-
-    window.LCDP_FAQ.afficher(contenu, documentLocal.blocs);
-
-    appliquerRoutes(contenu);
-    preview.hidden = false;
-    preview.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  }
-
-  function nettoyerHtmlPourApercu(value) {
-    const moduleEditeur = window.LCDP_EDITEUR_CONTENU;
-
-    return typeof moduleEditeur?.nettoyerHtml === "function"
-      ? moduleEditeur.nettoyerHtml(value)
-      : "";
   }
 
   async function afficherAlerte(message) {
@@ -900,7 +868,6 @@
     const loading = document.querySelector("[data-lcdp-mentions-loading]");
     const actions = document.querySelectorAll("[data-lcdp-mentions-actions]");
     const slot = document.querySelector("[data-lcdp-mentions-editeur-slot]");
-    const preview = document.querySelector("[data-lcdp-mentions-preview]");
     observateurLiensFAQ?.disconnect();
     observateurLiensFAQ = null;
     espaceActif = espace;
@@ -913,12 +880,11 @@
     annulerMinuteur();
     actualiserOnglets();
     document.querySelector("[data-lcdp-mentions-meta]").textContent = "";
+    afficherHeureSauvegarde(null);
     afficherStatus("");
     actions.forEach(action => { action.hidden = true; });
     slot.hidden = true;
     slot.replaceChildren();
-    preview.hidden = true;
-    document.querySelector("[data-lcdp-mentions-preview-content]").replaceChildren();
     loading.textContent = "Chargement des " + ESPACES_FAQ[espace].libelle + "…";
     loading.hidden = false;
     try {
@@ -939,6 +905,7 @@
       loading.textContent = espace === "membre"
         ? "FAQ membres indisponibles. Le stockage indépendant doit être confirmé par le Worker. " + String(error?.message || error)
         : String(error?.message || error);
+      afficherStatus("Sauvegarde automatique indisponible : " + String(error?.message || error), "error");
       console.error(error);
     }
   }
@@ -972,11 +939,7 @@
       bouton.addEventListener("click", () => choisirEspace(bouton.dataset.faqEspace));
     }
 
-    for (const [attribut, action] of [
-      ["data-lcdp-mentions-previsualiser", previsualiser],
-      ["data-lcdp-mentions-enregistrer", enregistrerBrouillon],
-      ["data-lcdp-mentions-publier", publier]
-    ]) document.querySelectorAll("[" + attribut + "]").forEach(bouton => bouton.addEventListener("click", action));
+    document.querySelectorAll("[data-lcdp-mentions-publier]").forEach(bouton => bouton.addEventListener("click", publier));
 
     setInterval(() => { void tenterSauvegardeAuto(); }, INTERVALLE_AUTO);
     document.addEventListener("visibilitychange", () => {

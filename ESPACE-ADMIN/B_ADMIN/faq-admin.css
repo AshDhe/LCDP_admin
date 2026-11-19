@@ -51,31 +51,6 @@
   margin: 0;
 }
 
-.lcdp-mentions-admin__preview {
-  width: 100%;
-  padding-top: var(--lcdp-space-3);
-  border-top: 1px solid var(--lcdp-color-border);
-  display: flex;
-  flex-direction: column;
-  gap: var(--lcdp-space-3);
-}
-
-.lcdp-mentions-admin__preview[hidden] {
-  display: none !important;
-}
-
-.lcdp-mentions-admin__preview-title {
-  margin: 0;
-  color: var(--lcdp-color-text);
-  font-size: 1.35rem;
-}
-
-.lcdp-mentions-admin__preview-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--lcdp-space-3);
-}
-
 .lcdp-mentions-admin__loading {
   margin: 0;
   padding: var(--lcdp-space-4);
@@ -104,3 +79,46 @@
 .lcdp-page-faq-admin .lcdp-faq-admin__onglets button:disabled { cursor:wait; }
 .lcdp-page-faq-admin .lcdp-faq-admin__panneau { display:flex; flex-direction:column; gap:var(--lcdp-space-3); min-width:0; }
 .lcdp-page-faq-admin .lcdp-faq-admin__panneau > [hidden] { display:none !important; }
+
+/* Indicateur de sauvegarde des FAQ, présent pendant toute la rédaction. */
+.lcdp-page-faq-admin #lcdp-main-admin { padding-bottom: 100px; }
+.lcdp-page-faq-admin .lcdp-faq-admin__suivi {
+  position: fixed;
+  z-index: 30;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: min(440px, calc(100% - 32px));
+  box-sizing: border-box;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--lcdp-color-surface, #fff);
+  border: 1px solid var(--lcdp-color-border, #d5dcd4);
+  border-left: 4px solid var(--lcdp-color-primary, #55733f);
+  border-radius: var(--lcdp-radius-small, 8px);
+  box-shadow: 0 3px 14px #00000014;
+  overflow-wrap: anywhere;
+}
+.lcdp-page-faq-admin .lcdp-faq-admin__suivi[hidden] { display: none !important; }
+.lcdp-page-faq-admin .lcdp-faq-admin__suivi[data-state="dirty"],
+.lcdp-page-faq-admin .lcdp-faq-admin__suivi[data-state="error"],
+.lcdp-page-faq-admin .lcdp-faq-admin__suivi[data-state="erreur"] { border-left-color: var(--lcdp-color-orange, #eaa03b); }
+.lcdp-faq-admin__suivi-espace, .lcdp-faq-admin__suivi-heure {
+  font-size: .8rem;
+  color: var(--lcdp-color-text-muted);
+  line-height: 1.35;
+}
+.lcdp-faq-admin__suivi .lcdp-mentions-admin__status { min-height: 0; font-size: .9rem; }
+.lcdp-faq-admin__suivi[data-state="saved"] .lcdp-mentions-admin__status,
+.lcdp-faq-admin__suivi[data-state="ready"] .lcdp-mentions-admin__status { color: var(--lcdp-color-logo-green, var(--lcdp-color-primary)); }
+@media (max-width: 620px) {
+  .lcdp-page-faq-admin #lcdp-main-admin { padding-bottom: 150px; }
+  .lcdp-page-faq-admin .lcdp-faq-admin__suivi {
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 16px);
+    max-height: 27vh;
+    overflow: auto;
+  }
+}
