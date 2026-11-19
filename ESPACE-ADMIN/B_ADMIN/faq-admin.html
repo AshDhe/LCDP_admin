@@ -129,7 +129,7 @@
 
                 <p class="lcdp-mentions-admin__explication" data-faq-explication>
                   Chaque bloc correspond à une question et à sa réponse.
-                  Modifie leur ordre, enregistre le brouillon, puis publie les FAQ publiques.
+                  Le brouillon est sauvegardé automatiquement en base. La publication reste manuelle.
                 </p>
 
                 <p
@@ -153,9 +153,9 @@
               </p>
 
               <div class="lcdp-mentions-admin__actions" data-lcdp-mentions-actions hidden>
-                <button type="button" class="lcdp-button lcdp-button-orange" data-lcdp-mentions-enregistrer>
-                  Enregistrer le brouillon
-                </button>
+                <button type="button" class="lcdp-button lcdp-button-primary" data-lcdp-mentions-previsualiser>Prévisualiser</button>
+                <button type="button" class="lcdp-button lcdp-button-orange" data-lcdp-mentions-enregistrer>Enregistrer le brouillon</button>
+                <button type="button" class="lcdp-button lcdp-button-orange" data-lcdp-mentions-publier>Publier</button>
               </div>
 
               <div
@@ -226,6 +226,6 @@
       document.write('<script src="' + attribut(window.LCDP_urlPublic("/ESPACE-PUBLIC/faq-accordeon.js?v=20261119-gabarit-editorial-commun")) + '"><\/script>');
     })();
   </script>
-  <script src="./faq-admin.js?v=20261119-brouillons-locaux"></script>
+  <script src="./faq-admin.js?v=20261119-faq-autosave"></script>
 </body>
 </html>
