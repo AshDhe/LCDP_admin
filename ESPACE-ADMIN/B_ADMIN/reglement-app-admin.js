@@ -237,7 +237,7 @@
     slot.appendChild(fragment);
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-brouillons-locaux"
+      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-editeur-listes"
     );
 
     const moduleEditeur = window.LCDP_EDITEUR_CONTENU;

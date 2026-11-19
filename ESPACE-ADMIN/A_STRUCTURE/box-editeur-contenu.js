@@ -248,6 +248,14 @@
     );
 
     let selectionLien = null;
+    let selectionListe = null;
+    function memoriserSelectionListe() {
+      const range = memoriserSelectionDans(zone);
+      if (range && zone.contains(range.startContainer) && zone.contains(range.endContainer)) selectionListe = range;
+    }
+    for (const evenement of ["mouseup", "keyup", "input", "focusout"]) {
+      zone.addEventListener(evenement, memoriserSelectionListe);
+    }
 
     titre.addEventListener("input", () => {
       masquerErreur(bloc);
@@ -282,13 +290,35 @@
     bloc
       .querySelectorAll("[data-lcdp-editeur-commande]")
       .forEach((bouton) => {
+        const commande = String(bouton.dataset.lcdpEditeurCommande || "");
+        const estCommandeListe = commande === "insertUnorderedList" || commande === "insertOrderedList";
+        if (estCommandeListe) {
+          // Le clic sur la barre ne doit pas déplacer la sélection hors du contenu.
+          bouton.addEventListener("mousedown", event => {
+            if (event.button !== 0) return;
+            memoriserSelectionListe();
+            event.preventDefault();
+          });
+        }
         bouton.addEventListener("click", () => {
-          const commande = String(
-            bouton.dataset.lcdpEditeurCommande || ""
-          );
-
-          zone.focus();
-          executerCommande(commande);
+          if (!estCommandeListe) {
+            zone.focus();
+            executerCommande(commande);
+            etat.onChange();
+            return;
+          }
+          const range = memoriserSelectionDans(zone) || selectionListe;
+          if (!range || !zone.contains(range.startContainer) || !zone.contains(range.endContainer)) return;
+          zone.focus({ preventScroll: true });
+          restaurerSelection(range);
+          const balise = commande === "insertUnorderedList" ? "UL" : "OL";
+          if (!basculerListe(zone, range, balise)) {
+            // N'appeler la commande native que pour créer une liste depuis du texte.
+            // Ne jamais lui confier une sélection qui touche une liste existante.
+            if (Array.from(zone.querySelectorAll("ul,ol")).some(liste => range.intersectsNode(liste))) return;
+            executerCommande(commande);
+          }
+          memoriserSelectionListe();
           etat.onChange();
         });
       });
@@ -361,6 +391,110 @@
       actualiserBoutons(root);
       etat.onChange();
     });
+  }
+
+  function basculerListe(zone, range, balise) {
+    const selection = window.getSelection();
+    if (!range || !zone.contains(range.startContainer) || !zone.contains(range.endContainer)) return false;
+    const estListe = node => node && (node.tagName === "UL" || node.tagName === "OL");
+    // Si la sélection est entièrement dans une liste imbriquée, travailler à ce niveau.
+    let racine = zone;
+    let parent = range.commonAncestorContainer;
+    if (parent.nodeType !== Node.ELEMENT_NODE) parent = parent.parentElement;
+    const proche = parent?.closest("ul,ol");
+    if (proche && zone.contains(proche) && proche.parentElement !== zone) racine = proche.parentElement;
+    const blocs = Array.from(racine.children);
+    const unites = blocs.flatMap(bloc => estListe(bloc)
+      ? Array.from(bloc.children).filter(item => item.tagName === "LI").map(item => ({ item, liste: bloc }))
+      : [{ item: bloc, liste: null }]);
+    function touche(item) {
+      if (range.collapsed) return item.contains(range.startContainer);
+      if (!range.intersectsNode(item)) return false;
+      // La fin au début exact d'une puce ne sélectionne pas cette puce.
+      if (item.contains(range.endContainer)) {
+        const avant = document.createRange();
+        avant.selectNodeContents(item);
+        avant.setEnd(range.endContainer, range.endOffset);
+        if (!avant.toString() && !avant.cloneContents().querySelector("br")) return false;
+      }
+      if (item.contains(range.startContainer)) {
+        const apres = document.createRange();
+        apres.selectNodeContents(item);
+        apres.setStart(range.startContainer, range.startOffset);
+        if (!apres.toString() && !apres.cloneContents().querySelector("br")) return false;
+      }
+      return true;
+    }
+    const choisis = unites.filter(u => touche(u.item));
+    // Une création depuis du texte ordinaire garde le comportement natif existant.
+    if (!choisis.some(u => u.liste)) return false;
+    const retirer = choisis.every(u => u.liste?.tagName === balise);
+    const selectionnes = new Set(choisis.map(u => u.item));
+    const transformes = [];
+    const debut = range.startContainer, fin = range.endContainer;
+    const offsetDebut = range.startOffset, offsetFin = range.endOffset;
+    const replie = range.collapsed;
+    for (const bloc of blocs) {
+      if (!estListe(bloc) || !Array.from(bloc.children).some(item => selectionnes.has(item))) continue;
+      const fragment = document.createDocumentFragment();
+      let groupe = null;
+      for (const item of Array.from(bloc.children)) {
+        if (item.tagName !== "LI") { fragment.appendChild(item); groupe = null; continue; }
+        const choisi = selectionnes.has(item);
+        if (choisi && retirer) {
+          groupe = null;
+          let p = document.createElement("p");
+          const debutItem = transformes.length;
+          function ajouterParagraphe() {
+            if (!p.hasChildNodes()) p.appendChild(document.createElement("br"));
+            fragment.appendChild(p); transformes.push(p); p = document.createElement("p");
+          }
+          for (const enfant of Array.from(item.childNodes)) {
+            if (estListe(enfant)) {
+              if (p.hasChildNodes()) ajouterParagraphe();
+              fragment.appendChild(enfant); transformes.push(enfant);
+            } else if (enfant.tagName === "P" || enfant.tagName === "DIV") {
+              if (p.hasChildNodes()) ajouterParagraphe();
+              p.append(...enfant.childNodes); ajouterParagraphe();
+            } else p.appendChild(enfant);
+          }
+          if (p.hasChildNodes() || transformes.length === debutItem) ajouterParagraphe();
+        } else {
+          const type = choisi ? balise : bloc.tagName;
+          if (!groupe || groupe.tagName !== type) {
+            groupe = document.createElement(type.toLowerCase()); fragment.appendChild(groupe);
+          }
+          groupe.appendChild(item);
+          if (choisi) transformes.push(item);
+        }
+      }
+      bloc.replaceWith(fragment);
+    }
+    if (!retirer) {
+      let groupe = null;
+      for (const bloc of Array.from(racine.children)) {
+        if (!selectionnes.has(bloc) || estListe(bloc)) { groupe = null; continue; }
+        if (!groupe) { groupe = document.createElement(balise.toLowerCase()); bloc.before(groupe); }
+        const item = document.createElement("li"); item.append(...bloc.childNodes); groupe.appendChild(item);
+        bloc.remove(); transformes.push(item);
+      }
+    }
+    // Les nœuds de texte sont déplacés, pas réécrits ; garder la sélection quand possible.
+    const restauree = document.createRange();
+    try {
+      if (!zone.contains(debut) || !zone.contains(fin)) throw new Error("Sélection déplacée");
+      restauree.setStart(debut, offsetDebut); restauree.setEnd(fin, offsetFin);
+      if (!replie && restauree.collapsed) throw new Error("Sélection déplacée");
+    } catch (_) {
+      transformes.sort((a, b) => a === b ? 0 : a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+      const premier = transformes[0], dernier = transformes[transformes.length - 1];
+      if (!premier) return true;
+      restauree.selectNodeContents(premier);
+      if (replie) restauree.collapse(true);
+      else restauree.setEnd(dernier, dernier.childNodes.length);
+    }
+    selection.removeAllRanges(); selection.addRange(restauree);
+    return true;
   }
 
   function executerCommande(commande) {
