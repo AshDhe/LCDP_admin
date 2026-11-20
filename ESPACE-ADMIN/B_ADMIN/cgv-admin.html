@@ -84,6 +84,7 @@
       [
         "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
         "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
+        "/ESPACE-ADMIN/B_ADMIN/faq-admin.css?v=20261120-suivi-juridique",
         "/ESPACE-ADMIN/B_ADMIN/mentions-legales-admin.css"
       ].forEach((path) => {
         document.write(
@@ -134,12 +135,6 @@
                 <p
                   class="lcdp-mentions-admin__meta"
                   data-lcdp-mentions-meta
-                ></p>
-
-                <p
-                  class="lcdp-mentions-admin__status"
-                  data-lcdp-mentions-status
-                  role="status"
                 ></p>
               </header>
 
@@ -198,7 +193,14 @@
           </div>
         </div>
       </section>
+
     </main>
+
+    <div class="lcdp-faq-admin__suivi" data-faq-suivi role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span class="lcdp-faq-admin__suivi-espace" data-faq-suivi-espace>Conditions générales de vente</span>
+      <p class="lcdp-mentions-admin__status" data-lcdp-mentions-status></p>
+      <span class="lcdp-faq-admin__suivi-heure" data-faq-suivi-heure></span>
+    </div>
 
   </div>
 
@@ -361,6 +363,6 @@
     </section>
   </template>
 
-  <script src="./cgv-admin.js?v=20261120-sauvegarde-automatique"></script>
+  <script src="./cgv-admin.js?v=20261120-suivi-juridique"></script>
 </body>
 </html>
