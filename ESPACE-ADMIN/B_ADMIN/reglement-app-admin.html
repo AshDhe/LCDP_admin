@@ -122,8 +122,7 @@
                 </h1>
 
                 <p class="lcdp-reglement-app-admin__explication">
-                  Modifie le brouillon, prévisualise le rendu, puis publie
-                  lorsque la version est prête à être affichée sur le site.
+                  Le brouillon est enregistré automatiquement en base. La publication reste manuelle.
                 </p>
 
                 <p
@@ -145,11 +144,6 @@
                 Chargement des règlement application…
               </p>
 
-              <div
-                id="lcdp-editeur-reglement-app-slot"
-                data-lcdp-reglement-app-editeur-slot
-                hidden
-              ></div>
 
               <div
                 class="lcdp-reglement-app-admin__actions"
@@ -167,19 +161,16 @@
                 <button
                   type="button"
                   class="lcdp-button lcdp-button-orange"
-                  data-lcdp-reglement-app-enregistrer
-                >
-                  Enregistrer le brouillon
-                </button>
-
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
                   data-lcdp-reglement-app-publier
                 >
                   Publier
                 </button>
               </div>
+              <div
+                id="lcdp-editeur-reglement-app-slot"
+                data-lcdp-reglement-app-editeur-slot
+                hidden
+              ></div>
 
               <section
                 class="lcdp-reglement-app-admin__preview"
@@ -205,6 +196,6 @@
 
   </div>
 
-  <script src="./reglement-app-admin.js?v=20261119-editeur-listes"></script>
+  <script src="./reglement-app-admin.js?v=20261120-sauvegarde-automatique"></script>
 </body>
 </html>
