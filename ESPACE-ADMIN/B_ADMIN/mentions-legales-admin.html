@@ -122,8 +122,7 @@
                 </h1>
 
                 <p class="lcdp-mentions-admin__explication">
-                  Modifie le brouillon, prévisualise le rendu, puis publie
-                  lorsque la version est prête à être affichée sur le site.
+                  Le brouillon est enregistré automatiquement en base. La publication reste manuelle.
                 </p>
 
                 <p
@@ -145,11 +144,6 @@
                 Chargement des mentions légales…
               </p>
 
-              <div
-                id="lcdp-editeur-mentions-slot"
-                data-lcdp-mentions-editeur-slot
-                hidden
-              ></div>
 
               <div
                 class="lcdp-mentions-admin__actions"
@@ -167,19 +161,16 @@
                 <button
                   type="button"
                   class="lcdp-button lcdp-button-orange"
-                  data-lcdp-mentions-enregistrer
-                >
-                  Enregistrer le brouillon
-                </button>
-
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
                   data-lcdp-mentions-publier
                 >
                   Publier
                 </button>
               </div>
+              <div
+                id="lcdp-editeur-mentions-slot"
+                data-lcdp-mentions-editeur-slot
+                hidden
+              ></div>
 
               <section
                 class="lcdp-mentions-admin__preview"
@@ -205,6 +196,6 @@
 
   </div>
 
-  <script src="./mentions-legales-admin.js?v=20261119-editeur-listes"></script>
+  <script src="./mentions-legales-admin.js?v=20261120-sauvegarde-automatique"></script>
 </body>
 </html>
