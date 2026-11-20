@@ -396,6 +396,8 @@
       .forEach((bouton) => {
         bouton.disabled = requeteEnCours;
       });
+    const editeur = document.querySelector("[data-lcdp-mentions-editeur-slot]");
+    if (editeur) editeur.inert = requeteEnCours;
   }
 
   function sauvegarderUneFois() {
