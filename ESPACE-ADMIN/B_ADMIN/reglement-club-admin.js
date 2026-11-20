@@ -386,7 +386,7 @@
       .forEach((bouton) => {
         bouton.disabled = requeteEnCours;
       });
-    const editeur = document.querySelector("[data-lcdp-mentions-editeur-slot]");
+    const editeur = document.querySelector("[data-lcdp-reglement-club-editeur-slot]");
     if (editeur) editeur.inert = requeteEnCours;
   }
 
