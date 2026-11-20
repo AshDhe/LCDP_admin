@@ -354,7 +354,12 @@
 
     if (!status) return;
 
-    status.textContent = message || "";
+    const suivi = document.querySelector("[data-faq-suivi]");
+    if (suivi) {
+      suivi.hidden = !message;
+      suivi.dataset.state = etat;
+    }
+    if (status.textContent !== (message || "")) status.textContent = message || "";
     status.dataset.state = etat;
   }
 
@@ -384,6 +389,20 @@
     }
 
     meta.textContent = morceaux.join(" — ");
+    afficherHeureSauvegarde(documentCharge.datemaj);
+  }
+
+  function afficherHeureSauvegarde(value) {
+    const cible = document.querySelector("[data-faq-suivi-heure]");
+    if (!cible) return;
+    const date = value ? new Date(value) : null;
+    const texte = date && !Number.isNaN(date.getTime())
+      ? "Dernière sauvegarde en base : " + new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris", day: "2-digit", month: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+        }).format(date)
+      : "Aucun horaire de sauvegarde confirmé.";
+    if (cible.textContent !== texte) cible.textContent = texte;
   }
 
   function verrouillerActions(verrouiller) {
