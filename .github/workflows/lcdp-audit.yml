@@ -1,0 +1,50 @@
+name: LCDP — Audit statique transversal
+run-name: Audit des 5 espaces — ${{ github.event_name }}
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "18 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lcdp-audit.yml"
+      - "TESTS/audit-statique.mjs"
+      - "ESPACE-ADMIN/B_ADMIN/TestsRegressions.*"
+      - "ESPACE-ADMIN/accueil-admin.html"
+permissions:
+  contents: read
+concurrency:
+  group: lcdp-audit-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verifier:
+    name: Contrôle / ${{ matrix.depot }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        depot:
+          - LCDP_public
+          - LCDP_membre
+          - LCDP_parc
+          - LCDP_coach
+          - LCDP_admin
+    steps:
+      - name: Charger le module de contrôle
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Charger le dépôt à vérifier
+        uses: actions/checkout@v4
+        with:
+          repository: AshDhe/${{ matrix.depot }}
+          ref: main
+          path: verification
+          persist-credentials: false
+      - name: Configurer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Vérifier les ressources et la syntaxe
+        run: node TESTS/audit-statique.mjs "${{ matrix.depot }}" "./verification"

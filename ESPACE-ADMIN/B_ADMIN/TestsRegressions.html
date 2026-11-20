@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tests et régressions — Administration La Clé du Parc</title>
+  <meta name="description" content="Historique vérifiable des audits GitHub Actions des cinq espaces LCDP.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const url = (base, path) => String(base || "").replace(/\/+$/, "") + "/" + String(path || "").replace(/^\/+/, "");
+      window.LCDP_urlAdmin = p => typeof c.adminUrl === "function" ? c.adminUrl(p) : url(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase, p);
+      window.LCDP_urlObjet = p => typeof c.objetUrl === "function" ? c.objetUrl(p) : url(c.objetBaseUrl || c.OBJET_BASE, p);
+      ["/CSSBASE/cssbase.css", "/CSSBASE/lcdp-central-mobile-first.css"].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(p) + '">');
+      });
+      ["/ESPACE-ADMIN/A_STRUCTURE/css-admin.css", "/ESPACE-ADMIN/B_ADMIN/TestsRegressions.css"].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '?v=20261120-admin13">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-tests-admin">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Tests et régressions">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-tests__en-tete">
+                <div>
+                  <h1>Tests et régressions</h1>
+                  <p>ADMIN 13 · Audits automatiques des cinq dépôts La Clé du Parc.</p>
+                </div>
+                <div class="lcdp-tests__actions">
+                  <button class="lcdp-button lcdp-button-secondary" id="lcdp-tests-refresh" type="button">Actualiser</button>
+                  <a class="lcdp-button lcdp-button-primary" target="_blank" rel="noopener noreferrer" href="https://github.com/AshDhe/LCDP_admin/actions/workflows/lcdp-audit.yml">Exécuter dans GitHub</a>
+                </div>
+              </header>
+              <p class="lcdp-tests__note">Ces résultats proviennent de GitHub Actions. Ils vérifient la syntaxe des fichiers JavaScript, les pages de référence et les chemins de scripts locaux. Ils ne constituent pas une validation de la production Cloudflare, des transactions Stripe, de Supabase ou des e-mails Resend.</p>
+              <p id="lcdp-tests-etat" role="status" aria-live="polite">Chargement des exécutions GitHub…</p>
+              <div class="lcdp-tests__indicateurs" aria-label="Synthèse de la dernière exécution">
+                <div><span>Dernière exécution</span><strong id="lcdp-tests-dernier">—</strong></div>
+                <div><span>Résultat global</span><strong id="lcdp-tests-global">Non vérifié</strong></div>
+                <div><span>Dépôts validés</span><strong id="lcdp-tests-valides">—</strong></div>
+                <div><span>Dépôts en échec</span><strong id="lcdp-tests-echecs">—</strong></div>
+              </div>
+              <h2>Dernier contrôle par espace</h2>
+              <div class="lcdp-tests__modules" id="lcdp-tests-modules" aria-live="polite"></div>
+              <div class="lcdp-tests__historique-titre">
+                <h2>Historique des exécutions</h2>
+                <label>Afficher
+                  <select id="lcdp-tests-filtre">
+                    <option value="tous">Toutes</option>
+                    <option value="success">Réussies</option>
+                    <option value="failure">En échec</option>
+                    <option value="running">En cours</option>
+                  </select>
+                </label>
+              </div>
+              <div class="lcdp-tests__table-scroll">
+                <table>
+                  <caption>Exécutions GitHub Actions, de la plus récente à la plus ancienne</caption>
+                  <thead><tr><th scope="col">Début</th><th scope="col">Résultat</th><th scope="col">Déclenchement</th><th scope="col">Révision du pipeline</th><th scope="col">Détail</th></tr></thead>
+                  <tbody id="lcdp-tests-historique"><tr><td colspan="5">Aucune donnée chargée.</td></tr></tbody>
+                </table>
+              </div>
+              <p class="lcdp-tests__mention">Historique GitHub Actions public, limité aux 30 dernières exécutions chargées. Les liens ouvrent les journaux originaux dans GitHub. Aucun résultat fictif ni évaluation automatique des workers Cloudflare.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./TestsRegressions.js?v=20261120-admin13"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+.lcdp-page-tests-admin .lcdp-admin-page-content {display:grid; gap:var(--lcdp-space-3,12px);}
+.lcdp-page-tests-admin h1 {margin:0;}
+.lcdp-page-tests-admin h2 {font-size:1.1rem;margin:0;}
+.lcdp-tests__en-tete,.lcdp-tests__historique-titre {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.lcdp-tests__en-tete p {margin:8px 0 0;}
+.lcdp-tests__actions {display:flex;flex-wrap:wrap;gap:10px;}
+.lcdp-tests__actions .lcdp-button {min-width:130px;text-decoration:none;}
+.lcdp-tests__note,.lcdp-tests__mention {margin:0;color:var(--lcdp-color-text-muted,#555);line-height:1.5;}
+.lcdp-tests__indicateurs {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.lcdp-tests__indicateurs>div,.lcdp-tests__module {padding:14px;border:1px solid var(--lcdp-color-border,#ddd);border-radius:var(--lcdp-radius-medium,10px);}
+.lcdp-tests__indicateurs span {display:block;font-size:.85rem;margin-bottom:8px;}
+.lcdp-tests__indicateurs strong {display:block;font-size:1.16rem;overflow-wrap:anywhere;}
+.lcdp-tests__modules {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
+.lcdp-tests__module h3 {font-size:1rem;margin:0 0 8px;overflow-wrap:anywhere;}
+.lcdp-tests__module p {margin:5px 0;line-height:1.4;}
+.lcdp-tests__module a {display:inline-block;margin-top:8px;text-decoration:underline;overflow-wrap:anywhere;}
+.lcdp-tests__statut {font-weight:700;}
+.lcdp-tests__statut[data-etat="success"] {color:#1d653d;}
+.lcdp-tests__statut[data-etat="failure"] {color:#a22c29;}
+.lcdp-tests__statut[data-etat="running"] {color:var(--lcdp-color-text,#222);}
+.lcdp-tests__table-scroll {max-width:100%;overflow-x:auto;}
+.lcdp-tests__table-scroll table {width:100%;border-collapse:collapse;min-width:640px;}
+.lcdp-tests__table-scroll th,.lcdp-tests__table-scroll td {padding:10px;border-bottom:1px solid var(--lcdp-color-border,#ddd);text-align:left;vertical-align:top;}
+.lcdp-tests__table-scroll th {font-weight:700;}
+.lcdp-tests__table-scroll a {text-decoration:underline;}
+.lcdp-tests__historique-titre label {display:flex;align-items:center;gap:8px;}
+#lcdp-tests-etat {margin:0;min-height:1.5em;}
+#lcdp-tests-etat[role="alert"] {color:#a22c29;}
+@media(max-width:1000px){.lcdp-tests__indicateurs {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:520px){.lcdp-tests__indicateurs {grid-template-columns:1fr 1fr;}.lcdp-tests__actions {width:100%;}.lcdp-tests__actions .lcdp-button {flex:1;}}
