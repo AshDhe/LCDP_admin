@@ -259,7 +259,7 @@
     slot.appendChild(fragment);
 
     await chargerScriptAdminUneFois(
-      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261119-editeur-listes"
+      "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.js?v=20261121-ids-uniques-1"
     );
 
     const moduleEditeur = window.LCDP_EDITEUR_CONTENU;
