@@ -185,10 +185,23 @@
 
     etat.compteur += 1;
 
-    const identifiant = normaliserIdentifiant(
+    // Un ancien brouillon peut contenir des identifiants en doublon.
+    // Les corriger dans le DOM, sans toucher aux titres, textes ou à l'ordre.
+    const baseIdentifiant = normaliserIdentifiant(
       bloc.id,
       "bloc-" + etat.compteur
     );
+    const identifiantsExistants = new Set(
+      obtenirBlocs(root).map(section => section.dataset.lcdpEditeurBlocId)
+    );
+    let identifiant = baseIdentifiant;
+    let tentative = 0;
+    while (identifiantsExistants.has(identifiant)) {
+      tentative += 1;
+      const suffixe = "-" + etat.compteur +
+        (tentative > 1 ? "-" + tentative : "");
+      identifiant = baseIdentifiant.slice(0, 64 - suffixe.length) + suffixe;
+    }
     const titre = element.querySelector(
       "[data-lcdp-editeur-titre]"
     );
