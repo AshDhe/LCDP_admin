@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+
+  <title>Statut - Administration - La Clé du Parc</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Édition et publication du statut de l’association La Clé du Parc."
+  >
+
+  <script src="../../config.js"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const config = window.SITE_CONFIG || {};
+
+      function nettoyerBaseUrl(value) {
+        return String(value || "").replace(/\/+$/, "");
+      }
+
+      function construireUrl(base, path) {
+        return nettoyerBaseUrl(base) + "/" +
+          String(path || "").replace(/^\/+/, "");
+      }
+
+      const adminBase = nettoyerBaseUrl(
+        config.adminBaseUrl ||
+        config.ADMIN_BASE ||
+        config.siteBase ||
+        ""
+      );
+
+      const publicBase = nettoyerBaseUrl(
+        config.publicBaseUrl ||
+        config.PUBLIC_BASE ||
+        ""
+      );
+
+      const objetBase = nettoyerBaseUrl(
+        config.objetBaseUrl ||
+        config.OBJET_BASE ||
+        construireUrl(publicBase, "/OBJET")
+      );
+
+      window.SITE_BASE = adminBase;
+      window.LCDP_ADMIN_BASE = adminBase;
+      window.LCDP_PUBLIC_BASE = publicBase;
+      window.LCDP_OBJET_BASE = objetBase;
+
+      window.LCDP_urlAdmin = function LCDP_urlAdmin(path) {
+        return typeof config.adminUrl === "function"
+          ? config.adminUrl(path)
+          : construireUrl(adminBase, path);
+      };
+
+      window.LCDP_urlPublic = function LCDP_urlPublic(path) {
+        return typeof config.publicUrl === "function"
+          ? config.publicUrl(path)
+          : construireUrl(publicBase, path);
+      };
+
+      window.LCDP_urlObjet = function LCDP_urlObjet(path) {
+        return typeof config.objetUrl === "function"
+          ? config.objetUrl(path)
+          : construireUrl(objetBase, path);
+      };
+
+      [
+        "/CSSBASE/cssbase.css",
+        "/CSSBASE/lcdp-central-mobile-first.css",
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlObjet(path) +
+          '">'
+        );
+      });
+
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css",
+        "/ESPACE-ADMIN/B_ADMIN/faq-admin.css?v=20261120-suivi-juridique",
+        "/ESPACE-ADMIN/B_ADMIN/statut-admin.css"
+      ].forEach((path) => {
+        document.write(
+          '<link rel="stylesheet" href="' +
+          window.LCDP_urlAdmin(path) +
+          '">'
+        );
+      });
+    })();
+  </script>
+
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+
+<body class="lcdp-page-admin-interieure lcdp-page-statut-admin">
+  <div class="lcdp-site-page">
+
+    <div id="lcdp-bandeau-slot"></div>
+    <div id="lcdp-lightbox-slot"></div>
+
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section
+        class="lcdp-page-section"
+        aria-label="Éditeur du statut"
+      >
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-statut-admin__entete">
+                <h1 class="lcdp-statut-admin__titre">
+                  Statut
+                </h1>
+
+                <p class="lcdp-statut-admin__explication">
+                  Le brouillon est enregistré automatiquement en base. La publication reste manuelle.
+                </p>
+
+                <p
+                  class="lcdp-statut-admin__meta"
+                  data-lcdp-statut-meta
+                ></p>
+              </header>
+
+              <p
+                class="lcdp-statut-admin__loading"
+                data-lcdp-statut-loading
+              >
+                Chargement du statut…
+              </p>
+
+
+              <div
+                class="lcdp-statut-admin__actions"
+                data-lcdp-statut-actions
+                hidden
+              >
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-primary"
+                  data-lcdp-statut-previsualiser
+                >
+                  Prévisualiser
+                </button>
+
+                <button
+                  type="button"
+                  class="lcdp-button lcdp-button-orange"
+                  data-lcdp-statut-publier
+                >
+                  Publier
+                </button>
+              </div>
+              <div
+                id="lcdp-editeur-statut-slot"
+                data-lcdp-statut-editeur-slot
+                hidden
+              ></div>
+
+              <section
+                class="lcdp-statut-admin__preview"
+                data-lcdp-statut-preview
+                hidden
+                aria-label="Prévisualisation des statut"
+              >
+                <h2 class="lcdp-statut-admin__preview-title">
+                  Prévisualisation
+                </h2>
+
+                <div
+                  class="lcdp-statut-admin__preview-content"
+                  data-lcdp-statut-preview-content
+                ></div>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <div class="lcdp-faq-admin__suivi" data-faq-suivi role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span class="lcdp-faq-admin__suivi-espace" data-faq-suivi-espace>Règlement du club</span>
+      <p class="lcdp-statut-admin__status lcdp-mentions-admin__status" data-lcdp-statut-status></p>
+      <span class="lcdp-faq-admin__suivi-heure" data-faq-suivi-heure></span>
+    </div>
+
+  </div>
+
+  <script src="./statut-admin.js?v=20261120-suivi-juridique"></script>
+</body>
+</html>
