@@ -81,8 +81,8 @@
 .lcdp-page-faq-admin .lcdp-faq-admin__panneau > [hidden] { display:none !important; }
 
 /* Indicateur de sauvegarde des FAQ, présent pendant toute la rédaction. */
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) #lcdp-main-admin { padding-bottom: 100px; }
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi {
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) #lcdp-main-admin { padding-bottom: 100px; }
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi {
   position: fixed;
   z-index: 30;
   right: max(16px, env(safe-area-inset-right));
@@ -100,10 +100,10 @@
   box-shadow: 0 3px 14px #00000014;
   overflow-wrap: anywhere;
 }
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi[hidden] { display: none !important; }
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi[data-state="dirty"],
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi[data-state="error"],
-:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi[data-state="erreur"] { border-left-color: var(--lcdp-color-orange, #eaa03b); }
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi[hidden] { display: none !important; }
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi[data-state="dirty"],
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi[data-state="error"],
+:is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi[data-state="erreur"] { border-left-color: var(--lcdp-color-orange, #eaa03b); }
 .lcdp-faq-admin__suivi-espace, .lcdp-faq-admin__suivi-heure {
   font-size: .8rem;
   color: var(--lcdp-color-text-muted);
@@ -113,8 +113,8 @@
 .lcdp-faq-admin__suivi[data-state="saved"] .lcdp-mentions-admin__status,
 .lcdp-faq-admin__suivi[data-state="ready"] .lcdp-mentions-admin__status { color: var(--lcdp-color-logo-green, var(--lcdp-color-primary)); }
 @media (max-width: 620px) {
-  :is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) #lcdp-main-admin { padding-bottom: 150px; }
-  :is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin) .lcdp-faq-admin__suivi {
+  :is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) #lcdp-main-admin { padding-bottom: 150px; }
+  :is(.lcdp-page-faq-admin, .lcdp-page-mentions-legales-admin, .lcdp-page-reglement-club-admin, .lcdp-page-reglement-app-admin, .lcdp-page-statut-admin) .lcdp-faq-admin__suivi {
     right: 8px;
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 16px);
