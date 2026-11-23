@@ -265,7 +265,7 @@
       datedebut: "",
       datefin: "",
       prixabottc: "",
-      txtvafr: 20,
+      txtvafr: 10,
       maxduo: "",
       duoplus: "",
       freqduoplus: "",
