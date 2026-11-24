@@ -175,8 +175,39 @@ async function verifierRegressionsMembre(lire) {
   await verifier("Planifier : lien règlement au singulier",()=>exige(plan.includes("Règlement de l'application — Invitation")&&plan.includes("/ESPACE-PUBLIC/reglement-app.html"),"Lien réglementaire absent"));
   return resultats;
 }
+async function verifierAbonnementCompte(compte){
+  const a=compte.indexOf("  function libelleCompteurCompte("),b=compte.indexOf("  // Deux raccourcis dans Statut membre",a);
+  if(a<0||b<a)throw Error("Fonctions Abonnement introuvables");
+  const results=[];
+  const cas=[
+    {nom:"DA valide sans abonnement",da:"oui",abonnements:[],message:"Aucun abonnement souscrit",label:"Souscrire",href:"/ESPACE-MEMBRE/reserver-membre.html?mode=aboreza",fetches:1},
+    {nom:"DA absente",da:null,message:"Vous ne pouvez pas encore souscrire d’abonnement",label:"Être invité(e)",href:"/ESPACE-MEMBRE/reserver-membre.html",fetches:0},
+    {nom:"DA en cours",da:"encours",message:"Vous ne pouvez pas encore souscrire d’abonnement",label:"Être invité(e)",href:"/ESPACE-MEMBRE/reserver-membre.html",fetches:0},
+    {nom:"DA refusée",da:"non",message:"Vous ne pouvez pas encore souscrire d’abonnement",label:"Être invité(e)",href:"/ESPACE-MEMBRE/reserver-membre.html",fetches:0},
+    {nom:"Abonnement existant",da:"oui",abonnements:[{}],count:1,message:"1 abonnement souscrit",fetches:1},
+    {nom:"Historique indisponible",da:"oui",echec:true,message:"Impossible de charger les abonnements.",fetches:1}
+  ];
+  for(const c of cas){
+    try{
+      const classes=new Set();
+      const resume={classList:{add:k=>classes.add(k),remove:k=>classes.delete(k)}};
+      const bouton={setAttribute(){}},nombre={},action={removeAttribute(k){delete this[k];}},liste={replaceChildren(){}};
+      const map={"#lcdp-compte-abonnement-resume":resume,"#lcdp-compte-abonnement-nombre":nombre,"#lcdp-compte-abonnement-compteur":bouton,"#lcdp-compte-abonnement-liste":liste,"#lcdp-compte-abonnement-action":action};
+      const section={querySelector:k=>map[k]};
+      let fetches=0,history=0;
+      const env={document:{getElementById:()=>section},normaliserStatudaCompte:x=>String(x||"").trim().toLowerCase(),construireUrlMembre:x=>x,ENDPOINT_ABONNEMENTS_COMPTE:"https://test.invalid",fetch:async()=>{fetches++;return {status:c.echec?503:200,ok:!c.echec,json:async()=>c.echec?{}:{ok:true,abonnements:c.abonnements}};},trierAbonnementsCompte:x=>x,rangAbonnementCompte:()=>2,remplirHistoriqueAbonnementsCompte:()=>{history++;},console:{error(){}}};
+      const fn=new Function(...Object.keys(env),"let versionChargementAbonnementsCompte=0;\n"+compte.slice(a,b)+"\nreturn actualiserBlocAbonnementCompte;")(...Object.values(env));
+      await fn({statuda:c.da});
+      if(section.hidden!==false||resume.textContent!==c.message||fetches!==c.fetches||bouton.hidden!==!c.count||bouton.disabled!==!c.count||action.hidden!==!c.label||classes.has("lcdp-compte-placeholder-da")===Boolean(c.count)||history!==(c.count?1:0))throw Error("Etat ou compteur incorrect");
+      if(c.label&&(action.textContent!==c.label||action.href!==c.href))throw Error("Action incorrecte");
+      results.push({nom:"Abonnement : "+c.nom,ok:true});
+    }catch(e){results.push({nom:"Abonnement : "+c.nom,ok:false,erreur:String(e.message||e)});}
+  }
+  results.push({nom:"Services : typographie commune et alerte vide",ok:compte.includes('texte.className="lcdp-compte-alertes-vide lcdp-compte-placeholder-da";')&&compte.includes('afficherSlotService(liste,"Aucune alerte planifiée");')});
+  return results;
+}
 const regressions = depot === "LCDP_membre"
-  ? await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8"))
+  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8"))]
   : [];
 compteurs.regressionsMetier = regressions.length;
 for (const test of regressions) {
