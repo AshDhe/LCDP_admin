@@ -8,7 +8,8 @@
   const types={
     cgv:{titre:"CGV",membre:true,path:"/ESPACE-MEMBRE/cgv-lcdp.html",slot:"lcdp-cgv-contenu"},
     "reglement-app":{titre:"Règlement application",path:"/ESPACE-PUBLIC/reglement-app.html",slot:"lcdp-boxtext-reglement-app-slot"},
-    "reglement-club":{titre:"Règlement club",path:"/ESPACE-PUBLIC/reglement-club.html",slot:"lcdp-boxtext-reglement-club-slot"}
+    "reglement-club":{titre:"Règlement club",path:"/ESPACE-PUBLIC/reglement-club.html",slot:"lcdp-boxtext-reglement-club-slot"},
+    "mentions-legales":{titre:"Mentions légales",path:"/ESPACE-PUBLIC/mentions-legales.html",slot:"lcdp-mentions-legales-contenu",mentions:true}
   };
   function element(doc,tag,classe,texte){
     const e=doc.createElement(tag);if(classe)e.className=classe;if(texte!==undefined)e.textContent=texte;return e;
@@ -67,18 +68,20 @@
     if(!editeur)throw Error("Structure de rédaction introuvable.");
     const doc=document.implementation.createHTMLDocument(mode.titre+" — Version en projet");
     doc.documentElement.lang="fr";
-    doc.documentElement.setAttribute("data-lcdp-css","c085 c034 c038 c032 c083 c036 c037");
+    doc.documentElement.setAttribute("data-lcdp-css","c085 c034 c038 c032 c083 c036 c037"+(mode.mentions?" c084":""));
     doc.body.className="lcdp-page-document-legal lcdp-app-page";
     const viewport=element(doc,"meta");viewport.name="viewport";viewport.content="width=device-width, initial-scale=1";doc.head.append(viewport);
     const css=element(doc,"link");css.rel="stylesheet";css.href=urlObjet("/CSSBASE/lcdp-central-mobile-first.css");doc.head.append(css);
-    const wrapper=element(doc,"div",mode.membre?"lcdp-site-page lcdp-app-wrapper":"lcdp-app-wrapper");
+    const wrapper=element(doc,"div",mode.membre||mode.mentions?"lcdp-site-page lcdp-app-wrapper":"lcdp-app-wrapper");
     const bandeau=element(doc,"div");bandeau.id="lcdp-bandeau-slot";bandeau.inert=true;
     const main=element(doc,"main","lcdp-site-main");
     const section=element(doc,"section","lcdp-page-section");section.setAttribute("aria-label",mode.titre);
     const container=element(doc,"div","lcdp-page-container");
     const page=element(doc,"div","lcdp-page-content lcdp-stack-large lcdp-document-legal");
     const titre=element(doc,mode.membre?"header":"div","lcdp-editorial-page-heading");
-    titre.append(element(doc,"h1","lcdp-title-page-center lcdp-document-legal__title",mode.titre));
+    const h1=element(doc,"h1","lcdp-title-page-center lcdp-document-legal__title",mode.titre);
+    if(mode.mentions)h1.id="lcdp-mentions-legales-titre";
+    titre.append(h1);
     const contenu=element(doc,"div","lcdp-stack-large lcdp-document-legal__content");contenu.id=mode.slot;
     const footer=element(doc,"div");footer.id="lcdp-footer-slot";footer.inert=true;
     const nettoyer=mode.membre?html=>nettoyerCgv(doc,html):window.LCDP_DOCUMENTS_LEGAUX?.nettoyerHtml||window.LCDP_EDITEUR_CONTENU?.nettoyerHtml;
@@ -93,6 +96,15 @@
       // Le brouillon est déjà normalisé par lireBrouillon ; second filtrage avant insertion.
       texte.innerHTML=nettoyer(String(bloc?.html||""));
       routes(texte,mode);box.append(h2,texte);enveloppe.append(box);contenu.append(enveloppe);
+    }
+    if(mode.mentions){
+      const dernier=contenu.querySelector("div:last-child > section[data-lcdp-boxtext] > [data-lcdp-boxtext-content]");
+      if(dernier){
+        const actions=element(doc,"div","lcdp-contact-juridique-actions");
+        const bouton=element(doc,"button","lcdp-button lcdp-button-secondary","Demande juridique");
+        bouton.type="button";bouton.disabled=true;bouton.title="Action inactive dans la version en projet";
+        actions.append(bouton);dernier.append(actions);
+      }
     }
     page.append(titre,contenu);container.append(page);section.append(container);main.append(section);wrapper.append(bandeau,main,footer);doc.body.append(wrapper);
 
