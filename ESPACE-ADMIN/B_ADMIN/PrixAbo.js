@@ -318,19 +318,19 @@
         {
           id: "lcdp-prixabo-enregistrer",
           type: "submit",
-          style: "lcdp-button-orange",
+          style: "lcdp-button-orange lcdp-button-mini",
           label: "Enregistrer"
         },
         {
           id: "lcdp-prixabo-retour",
           type: "button",
-          style: "lcdp-button-secondary",
+          style: "lcdp-button-secondary lcdp-button-mini",
           label: "Retour à la liste"
         },
         ...(modeEdition === "update" ? [{
           id: "lcdp-prixabo-supprimer",
           type: "button",
-          style: "lcdp-button-secondary",
+          style: "lcdp-button-secondary lcdp-button-mini",
           label: "Supprimer"
         }] : [])
       ],
