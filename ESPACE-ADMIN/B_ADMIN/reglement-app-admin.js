@@ -594,51 +594,17 @@
     finally{verrouillerActions(false);}
   }
 
-  function previsualiser() {
-    let documentLocal;
-
+  async function previsualiser() {
     try {
-      documentLocal = lireDocumentLocal();
+      if (!controleurEditeur) throw new Error("Éditeur non initialisé.");
+      if (!window.LCDP_APERCU_DOCUMENT_LEGAL?.ouvrir) throw new Error("Module de prévisualisation indisponible.");
+      // Prévisualiser la rédaction actuelle, y compris les sections incomplètes.
+      await window.LCDP_APERCU_DOCUMENT_LEGAL.ouvrir("reglement-app", {
+        blocs: controleurEditeur.lireBrouillon()
+      });
     } catch (error) {
-      afficherStatus(
-        String(error?.message || error || ""),
-        "error"
-      );
-      return;
+      afficherStatus(String(error?.message || error || ""), "error");
     }
-
-    const preview = document.querySelector(
-      "[data-lcdp-reglement-app-preview]"
-    );
-    const contenu = document.querySelector(
-      "[data-lcdp-reglement-app-preview-content]"
-    );
-
-    contenu.innerHTML = "";
-
-    documentLocal.blocs.forEach((bloc) => {
-      const box = document.createElement("section");
-      box.className = "lcdp-component lcdp-boxtext";
-
-      const titre = document.createElement("h2");
-      titre.className = "lcdp-boxtext__title";
-      titre.textContent = bloc.titre;
-
-      const texte = document.createElement("div");
-      texte.className = "lcdp-boxtext__content";
-      texte.innerHTML = nettoyerHtmlPourApercu(bloc.html);
-
-      box.appendChild(titre);
-      box.appendChild(texte);
-      contenu.appendChild(box);
-    });
-
-    appliquerRoutes(contenu);
-    preview.hidden = false;
-    preview.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
   }
 
   function nettoyerHtmlPourApercu(value) {
