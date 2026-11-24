@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta
     name="description"
-    content="Édition et publication des CGV de La Clé du Parc."
+    content="Rédaction et versions officielles des CGV de La Clé du Parc."
   >
 
   <script src="../../config.js"></script>
@@ -73,6 +73,7 @@
       [
         "/CSSBASE/cssbase.css",
         "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-navigation-onglets.css",
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -123,13 +124,20 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
+              <div class="lcdp-page-faq-admin">
+                <nav class="lcdp-navigation-onglets lcdp-faq-admin__onglets" aria-label="Gestion des CGV">
+                  <button type="button" class="lcdp-navigation-onglets__onglet" data-cgv-onglet="redaction" aria-pressed="true" aria-controls="lcdp-cgv-redaction">Rédaction en cours</button>
+                  <button type="button" class="lcdp-navigation-onglets__onglet" data-cgv-onglet="versions" aria-pressed="false" aria-controls="lcdp-cgv-versions">Versions CGV</button>
+                </nav>
+              </div>
+              <div id="lcdp-cgv-redaction">
               <header class="lcdp-mentions-admin__entete">
                 <h1 class="lcdp-mentions-admin__titre">
                   CGV
                 </h1>
 
                 <p class="lcdp-mentions-admin__explication">
-                  Le brouillon est enregistré automatiquement en base. La publication reste manuelle.
+                  Le brouillon est enregistré automatiquement en base. Seule la version CGV désignée comme applicable est consultable par les membres.
                 </p>
 
                 <p
@@ -159,13 +167,7 @@
                   Prévisualiser
                 </button>
 
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
-                  data-lcdp-mentions-publier
-                >
-                  Publier
-                </button>
+                <p data-cgv-disponibilite role="status"></p>
               </div>
               <div
                 id="lcdp-editeur-mentions-slot"
@@ -187,6 +189,19 @@
                   class="lcdp-mentions-admin__preview-content"
                   data-lcdp-mentions-preview-content
                 ></div>
+              </section>
+              </div>
+              <section id="lcdp-cgv-versions" hidden aria-label="Versions CGV">
+                <header class="lcdp-mentions-admin__entete">
+                  <h1 class="lcdp-mentions-admin__titre">Versions CGV</h1>
+                  <p class="lcdp-mentions-admin__explication">Une seule version est applicable à la fois. Le contenu et le PDF de chaque version restent inchangés.</p>
+                </header>
+                <p data-cgv-versions-etat role="status" aria-live="polite"></p>
+                <div class="lcdp-editeur-contenu__blocs" data-cgv-versions-liste></div>
+                <section class="lcdp-mentions-admin__preview" data-cgv-archive hidden aria-label="Version archivée">
+                  <h2 class="lcdp-mentions-admin__preview-title" data-cgv-archive-titre></h2>
+                  <div class="lcdp-mentions-admin__preview-content" data-cgv-archive-contenu></div>
+                </section>
               </section>
             </div>
 
@@ -211,6 +226,10 @@
       data-lcdp-editeur-contenu
       aria-label="Éditeur de contenu"
     >
+      <div class="lcdp-editeur-contenu__entete">
+        <p class="lcdp-editeur-contenu__aide" aria-hidden="true"></p>
+        <button type="button" class="lcdp-button lcdp-button-orange" data-cgv-creer-version disabled>Créer une version</button>
+      </div>
       <div class="lcdp-editeur-contenu__entete">
         <p class="lcdp-editeur-contenu__aide">
           Chaque section comprend un titre et un ou plusieurs paragraphes.
@@ -363,6 +382,6 @@
     </section>
   </template>
 
-  <script src="./cgv-admin.js?v=20261120-suivi-juridique"></script>
+  <script src="./cgv-admin.js?v=20261124-versions-cgv"></script>
 </body>
 </html>
