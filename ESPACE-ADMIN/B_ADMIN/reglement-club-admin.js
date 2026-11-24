@@ -12,6 +12,7 @@
   const DELAI_AUTO = 900, INTERVALLE_AUTO = 4000;
   let revisionLocale = 0, sauvegardeEnCours = null, minuteurAuto = null;
   let conflitVersion = false, prochaineTentative = 0;
+  let versionnementDisponible = false, chargementVersions = null;
 
   function annulerMinuteur() {
     if (minuteurAuto !== null) { clearTimeout(minuteurAuto); minuteurAuto = null; }
@@ -294,6 +295,19 @@
       onChange: signalerModificationLocale
     });
 
+    const barreVersion = document.createElement("div");
+    barreVersion.className = "lcdp-editeur-contenu__entete";
+    const espace = document.createElement("p");
+    espace.className = "lcdp-editeur-contenu__aide";
+    espace.setAttribute("aria-hidden","true");
+    const boutonVersion = document.createElement("button");
+    boutonVersion.type = "button";
+    boutonVersion.className = "lcdp-button lcdp-button-orange";
+    boutonVersion.setAttribute("data-cgv-creer-version","");
+    boutonVersion.textContent = "Créer une version";
+    boutonVersion.disabled = true;
+    barreVersion.append(espace,boutonVersion);
+    racine.prepend(barreVersion);
     slot.hidden = false;
   }
 
@@ -369,15 +383,6 @@
       );
     }
 
-    if (documentCharge.datepublication) {
-      morceaux.push(
-        "Dernière publication : " +
-        formaterDateHeure(documentCharge.datepublication)
-      );
-    } else {
-      morceaux.push("Aucune publication enregistrée");
-    }
-
     meta.textContent = morceaux.join(" — ");
     afficherHeureSauvegarde(documentCharge.datemaj);
   }
@@ -407,6 +412,11 @@
       });
     const editeur = document.querySelector("[data-lcdp-reglement-club-editeur-slot]");
     if (editeur) editeur.inert = requeteEnCours;
+    document.querySelectorAll("[data-cgv-onglet]").forEach(b => b.disabled = requeteEnCours);
+    const panneau = document.getElementById("lcdp-cgv-versions");
+    if (panneau) panneau.inert = requeteEnCours;
+    const creer = document.querySelector("[data-cgv-creer-version]");
+    if (creer) creer.disabled = requeteEnCours || !versionnementDisponible;
   }
 
   function sauvegarderUneFois() {
@@ -461,30 +471,127 @@
     return true;
   }
 
-  async function publier() {
-    if (requeteEnCours || !documentCharge) return;
-    verrouillerActions(true);
-    try {
-      if (!await synchroniserBrouillon()) return;
-      const documentLocal = lireDocumentLocal();
-      const confirme = await demanderConfirmationPublication();
-      if (!confirme) return;
-      afficherStatus("Publication en cours…");
-      const data = await appelerJson("/admin/reglement-club/publier", {
-        method: "POST", body: { version: documentCharge.version, ...documentLocal }
-      });
-      documentCharge = data;
-      controleurEditeur.confirmerBrouillon(data.version);
-      modificationsLocales = false;
-      actualiserMeta();
-      afficherStatus("Règlement club" + " publié.", "saved");
-      await afficherAlerte("Règlement club" + " publié.");
-    } catch (error) {
-      afficherStatus(String(error?.message || error), "error");
-      await afficherAlerte(String(error?.message || error));
-    } finally {
-      verrouillerActions(false);
+  const cgvBase = "/admin/reglement-club/versions";
+  const parCgv = s => document.querySelector(s);
+  const dateCgv = value => new Intl.DateTimeFormat("fr-FR", {timeZone:"Europe/Paris",dateStyle:"long"}).format(new Date(value));
+  function elementCgv(tag, classe, texte) {
+    const e = document.createElement(tag);
+    if (classe) e.className = classe;
+    if (texte !== undefined) e.textContent = texte;
+    return e;
+  }
+  function boutonCgv(texte, action, primaire=false) {
+    const b=elementCgv("button","lcdp-button "+(primaire?"lcdp-button-primary":"lcdp-button-secondary")+" lcdp-editeur-contenu__petit-bouton",texte);
+    b.type="button"; b.addEventListener("click",action); return b;
+  }
+  function montrerOngletCgv(onglet) {
+    document.getElementById("lcdp-cgv-redaction").hidden=onglet!=="redaction";
+    document.getElementById("lcdp-cgv-versions").hidden=onglet!=="versions";
+    document.querySelectorAll("[data-cgv-onglet]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.cgvOnglet===onglet)));
+    if(onglet==="versions")void actualiserVersionsCgv();
+  }
+  function rendreDisponibiliteCgv(disponible, message="") {
+    versionnementDisponible=disponible;
+    const b=parCgv("[data-cgv-creer-version]");
+    if(b)b.disabled=!disponible||requeteEnCours;
+    const m=parCgv("[data-cgv-disponibilite]");
+    if(m)m.textContent=message;
+  }
+  async function consulterVersionCgv(id) {
+    const d=await appelerJson(cgvBase+"/"+encodeURIComponent(id));
+    const v=d.version, contenu=parCgv("[data-cgv-archive-contenu]");
+    if(!v||!Array.isArray(v.contenu?.blocs))throw new Error("Archive officielle inexploitable.");
+    contenu.replaceChildren();
+    for(const bloc of v.contenu.blocs){
+      const box=elementCgv("section","lcdp-component lcdp-boxtext");
+      const titre=elementCgv("h2","lcdp-boxtext__title",bloc.titre);
+      const texte=elementCgv("div","lcdp-boxtext__content");
+      texte.innerHTML=nettoyerHtmlPourApercu(bloc.html);
+      box.append(titre,texte); contenu.append(box);
     }
+    appliquerRoutes(contenu);
+    parCgv("[data-cgv-archive-titre]").textContent=v.nom+" — "+dateCgv(v.datecreation);
+    const panneau=parCgv("[data-cgv-archive]");panneau.hidden=false;
+    panneau.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  async function telechargerVersionCgv(id) {
+    const r=await fetch(endpointEditingAdmin()+cgvBase+"/"+encodeURIComponent(id)+"/pdf",{credentials:"include",cache:"no-store",headers:{Accept:"application/pdf"}});
+    if(!r.ok||!String(r.headers.get("Content-Type")).includes("application/pdf"))throw new Error("PDF officiel indisponible.");
+    const url=URL.createObjectURL(await r.blob());
+    const lien=elementCgv("a"); lien.href=url;lien.download="reglement-club-"+id+".pdf";
+    document.body.append(lien);lien.click();lien.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  async function operationCgv(action) {
+    if(requeteEnCours)return;
+    verrouillerActions(true);
+    try { await action(); }
+    catch(error){const m=String(error?.message||error); afficherStatus(m,"error");parCgv("[data-cgv-versions-etat]").textContent=m;}
+    finally{verrouillerActions(false);}
+  }
+  function afficherListeCgv(data) {
+    const liste=parCgv("[data-cgv-versions-liste]");
+    liste.replaceChildren();
+    const etat=parCgv("[data-cgv-versions-etat]");
+    etat.textContent=data.versions.length?(data.applicable?"Version applicable désignée.":"Aucune version applicable sélectionnée."):"Aucune version officielle créée.";
+    for(const v of data.versions){
+      const card=elementCgv("article","lcdp-editeur-contenu__bloc");
+      const actif=v.id===data.applicable;
+      card.append(elementCgv("h2","lcdp-boxtext__title",v.nom),elementCgv("p","lcdp-editeur-contenu__aide",dateCgv(v.datecreation)+(actif?" — Version applicable":"")));
+      const label=elementCgv("label","lcdp-editeur-contenu__titre-zone");
+      label.append(elementCgv("span","lcdp-editeur-contenu__label","Nom de la version"));
+      const input=elementCgv("input","lcdp-editeur-contenu__titre");input.type="text";input.maxLength=160;input.value=v.nom;label.append(input);
+      const actions=elementCgv("div","lcdp-editeur-contenu__ordre");
+      actions.append(
+        boutonCgv("Renommer",()=>operationCgv(async()=>{const nom=input.value.trim();if(!nom)throw new Error("Nom de version obligatoire.");await appelerJson(cgvBase+"/"+v.id+"/renommer",{method:"POST",body:{nom}});await actualiserVersionsCgv();})),
+        boutonCgv("Consulter",()=>operationCgv(()=>consulterVersionCgv(v.id))),
+        boutonCgv("PDF",()=>operationCgv(()=>telechargerVersionCgv(v.id)))
+      );
+      if(!actif)actions.append(boutonCgv("Rendre applicable",()=>operationCgv(async()=>{
+        if(!await demanderConfirmationVersion("Rendre cette version applicable ?","Cette version devient celle consultable sur le site."))return;
+        await appelerJson(cgvBase+"/"+v.id+"/activer",{method:"POST",body:{}});
+        await actualiserVersionsCgv();
+      }),true));
+      card.append(label,actions);liste.append(card);
+    }
+  }
+  function actualiserVersionsCgv() {
+    if(chargementVersions)return chargementVersions;
+    const travail=(async()=>{
+      try{
+        let data=await appelerJson(cgvBase);
+        if(data.initialisationNecessaire){
+          // Reprendre à l'identique l'ancienne publication, pas le brouillon courant.
+          await appelerJson(cgvBase+"/initialiser",{method:"POST",body:{}});
+          data=await appelerJson(cgvBase);
+        }
+        if(!Array.isArray(data.versions))throw new Error("Inventaire des versions inexploitable.");
+        afficherListeCgv(data);rendreDisponibiliteCgv(true);
+        return true;
+      }catch(e){
+        const msg=e?.status===404?"Versionnement indisponible : mise à jour du Worker editing-admin nécessaire.":String(e?.message||e);
+        rendreDisponibiliteCgv(false,msg);
+        parCgv("[data-cgv-versions-etat]").textContent=msg;
+        parCgv("[data-cgv-versions-liste]").replaceChildren();
+        return false;
+      }
+    })();
+    chargementVersions=travail.finally(()=>{chargementVersions=null;});
+    return chargementVersions;
+  }
+  async function creerVersionCgv() {
+    if(requeteEnCours||!documentCharge||!versionnementDisponible)return;
+    verrouillerActions(true);
+    try{
+      lireDocumentLocal();
+      if(!await demanderConfirmationVersion("Créer une version de ce document ?","Le contenu de la rédaction est archivé dans une version indépendante. Il ne devient pas automatiquement applicable."))return;
+      if(!await synchroniserBrouillon())return;
+      const d=await appelerJson(cgvBase,{method:"POST",body:{version:documentCharge.version}});
+      if(!d.id)throw new Error("Création de la version non confirmée.");
+      await actualiserVersionsCgv();
+      afficherStatus("Version officielle créée.","saved");
+      await afficherAlerte("Version officielle créée.");
+    }catch(error){afficherStatus(String(error?.message||error),"error");await afficherAlerte(String(error?.message||error));}
+    finally{verrouillerActions(false);}
   }
 
   function previsualiser() {
@@ -589,57 +696,57 @@
     });
   }
 
-  async function demanderConfirmationPublication() {
-    const slotChoix = document.getElementById('lcdp-lightbox-slot');
-    if (!slotChoix) return false;
-    const hrefCss = typeof window.LCDP_urlObjet === 'function'
-      ? window.LCDP_urlObjet('/CSSBASE/lcdp-lightbox-convergence.css')
-      : null;
-    if (!hrefCss) return false;
-    if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === hrefCss)) {
-      await new Promise((resolve, reject) => {
-        const feuille = document.createElement('link');
-        feuille.rel = 'stylesheet';
-        feuille.href = hrefCss;
-        feuille.onload = resolve;
-        feuille.onerror = () => { feuille.remove(); reject(new Error('CSS CHOIX indisponible.')); };
-        document.head.appendChild(feuille);
-      });
-    }
-    slotChoix.replaceChildren();
-    try {
-      slotChoix.appendChild(await chargerFragmentObjet('/HTMLBASE/02-dialogue-reference-choix.html'));
-      const dialogue = slotChoix.querySelector('[data-lcdp-dialogue-reference="choix"]');
-      const titre = slotChoix.querySelector('[data-lcdp-dialogue-titre]');
-      const texte = slotChoix.querySelector('[data-lcdp-dialogue-message]');
-      const annuler = slotChoix.querySelector('[data-lcdp-dialogue-action="annuler"]');
-      const confirmer = slotChoix.querySelector('[data-lcdp-dialogue-action="confirmer"]');
-      if (!dialogue || !titre || !texte || !annuler || !confirmer) throw new Error('Structure CHOIX incomplète.');
-      titre.textContent = "Publier les règlement club";
-      texte.textContent = 'La version affichée sur le site sera remplacée par le contenu actuel.';
-      annuler.textContent = 'Annuler';
-      confirmer.textContent = 'Publier';
-      return await new Promise(resolve => {
-        let resolu = false;
-        const terminer = valeur => {
-          if (resolu) return;
-          resolu = true;
-          document.removeEventListener('keydown', gererClavier);
-          slotChoix.replaceChildren();
-          resolve(valeur);
-        };
-        const gererClavier = event => {
-          if (event.key === 'Escape') { event.preventDefault(); terminer(false); }
-        };
-        document.addEventListener('keydown', gererClavier);
-        annuler.addEventListener('click', () => terminer(false), {once:true});
-        confirmer.addEventListener('click', () => terminer(true), {once:true});
-        dialogue.addEventListener('click', e => { if (e.target === dialogue) terminer(false); });
-        annuler.focus();
-      });
-    } catch (error) {
+  async function demanderConfirmationVersion(titre, message) {
+    if (true) {
+      const slotChoix = document.getElementById('lcdp-lightbox-slot');
+      if (!slotChoix) return false;
+      const hrefCss = typeof window.LCDP_urlObjet === 'function'
+        ? window.LCDP_urlObjet('/CSSBASE/lcdp-lightbox-convergence.css')
+        : null;
+      if (!hrefCss) return false;
+      if (!Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l => l.href === hrefCss)) {
+        await new Promise((resolve, reject) => {
+          const lien = document.createElement('link');
+          lien.rel = 'stylesheet';
+          lien.href = hrefCss;
+          lien.onload = resolve;
+          lien.onerror = () => { lien.remove(); reject(new Error('CSS CHOIX indisponible.')); };
+          document.head.appendChild(lien);
+        });
+      }
       slotChoix.replaceChildren();
-      throw error;
+      try {
+        slotChoix.appendChild(await chargerFragmentObjet('/HTMLBASE/02-dialogue-reference-choix.html'));
+        const dialogue = slotChoix.querySelector('[data-lcdp-dialogue-reference="choix"]');
+        const heading = slotChoix.querySelector('[data-lcdp-dialogue-titre]');
+        const texte = slotChoix.querySelector('[data-lcdp-dialogue-message]');
+        const non = slotChoix.querySelector('[data-lcdp-dialogue-action="annuler"]');
+        const oui = slotChoix.querySelector('[data-lcdp-dialogue-action="confirmer"]');
+        if (!dialogue || !heading || !texte || !non || !oui) throw new Error('Structure CHOIX incomplète.');
+        heading.textContent = titre;
+        texte.textContent = message;
+        non.textContent = 'Non';
+        oui.textContent = 'Oui';
+        return await new Promise(resolve => {
+          let termine = false;
+          function fermer(valeur) {
+            if (termine) return;
+            termine = true;
+            document.removeEventListener('keydown', onEscape);
+            slotChoix.replaceChildren();
+            resolve(valeur);
+          }
+          function onEscape(e) { if(e.key === 'Escape') {e.preventDefault(); fermer(false);} }
+          document.addEventListener('keydown', onEscape);
+          non.addEventListener('click', () => fermer(false), {once:true});
+          oui.addEventListener('click', () => fermer(true), {once:true});
+          dialogue.addEventListener('click', e => {if(e.target===dialogue)fermer(false);});
+          non.focus();
+        });
+      } catch (error) {
+        slotChoix.replaceChildren();
+        throw error;
+      }
     }
 
   }
@@ -756,9 +863,9 @@
       .querySelector("[data-lcdp-reglement-club-previsualiser]")
       ?.addEventListener("click", previsualiser);
 
-    document
-      .querySelector("[data-lcdp-reglement-club-publier]")
-      ?.addEventListener("click", publier);
+    document.querySelector("[data-cgv-creer-version]")?.addEventListener("click", creerVersionCgv);
+    document.querySelectorAll("[data-cgv-onglet]").forEach(b=>b.addEventListener("click",()=>montrerOngletCgv(b.dataset.cgvOnglet)));
+    void actualiserVersionsCgv();
 
     actualiserMeta();
     afficherEtatBrouillonLocal();

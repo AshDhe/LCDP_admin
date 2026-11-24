@@ -73,6 +73,7 @@
       [
         "/CSSBASE/cssbase.css",
         "/CSSBASE/lcdp-central-mobile-first.css",
+        "/CSSBASE/lcdp-navigation-onglets.css",
       ].forEach((path) => {
         document.write(
           '<link rel="stylesheet" href="' +
@@ -117,13 +118,20 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
 
             <div class="lcdp-admin-page-content">
+              <div class="lcdp-page-faq-admin">
+                <nav class="lcdp-navigation-onglets lcdp-faq-admin__onglets" aria-label="Gestion des versions">
+                  <button type="button" class="lcdp-navigation-onglets__onglet" data-cgv-onglet="redaction" aria-pressed="true" aria-controls="lcdp-cgv-redaction">Rédaction en cours</button>
+                  <button type="button" class="lcdp-navigation-onglets__onglet" data-cgv-onglet="versions" aria-pressed="false" aria-controls="lcdp-cgv-versions">Versions officielles</button>
+                </nav>
+              </div>
+              <div id="lcdp-cgv-redaction">
               <header class="lcdp-reglement-club-admin__entete">
                 <h1 class="lcdp-reglement-club-admin__titre">
                   Règlement club
                 </h1>
 
                 <p class="lcdp-reglement-club-admin__explication">
-                  Le brouillon est enregistré automatiquement en base. La publication reste manuelle.
+                  Le brouillon est enregistré automatiquement en base. Seule la version officielle désignée comme applicable est consultable sur le site.
                 </p>
 
                 <p
@@ -153,13 +161,7 @@
                   Prévisualiser
                 </button>
 
-                <button
-                  type="button"
-                  class="lcdp-button lcdp-button-orange"
-                  data-lcdp-reglement-club-publier
-                >
-                  Publier
-                </button>
+                <p data-cgv-disponibilite role="status"></p>
               </div>
               <div
                 id="lcdp-editeur-reglement-club-slot"
@@ -182,6 +184,19 @@
                   data-lcdp-reglement-club-preview-content
                 ></div>
               </section>
+              </div>
+              <section id="lcdp-cgv-versions" hidden aria-label="Versions officielles">
+                <header class="lcdp-reglement-club-admin__entete">
+                  <h1 class="lcdp-reglement-club-admin__titre">Versions officielles</h1>
+                  <p class="lcdp-reglement-club-admin__explication">Une seule version est applicable à la fois. Le contenu et le PDF de chaque version restent inchangés.</p>
+                </header>
+                <p data-cgv-versions-etat role="status" aria-live="polite"></p>
+                <div class="lcdp-editeur-contenu__blocs" data-cgv-versions-liste></div>
+                <section class="lcdp-reglement-club-admin__preview" data-cgv-archive hidden aria-label="Version archivée">
+                  <h2 class="lcdp-reglement-club-admin__preview-title" data-cgv-archive-titre></h2>
+                  <div class="lcdp-reglement-club-admin__preview-content" data-cgv-archive-contenu></div>
+                </section>
+              </section>
             </div>
 
           </div>
@@ -198,6 +213,6 @@
 
   </div>
 
-  <script src="./reglement-club-admin.js?v=20261120-suivi-juridique"></script>
+  <script src="./reglement-club-admin.js?v=20261124-versions-officielles"></script>
 </body>
 </html>
