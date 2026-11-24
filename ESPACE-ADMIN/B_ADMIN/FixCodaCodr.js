@@ -81,179 +81,209 @@
     if(!r.ok||d?.success!==true)throw Error(r.status===404?"Worker ADMIN DATA à mettre à jour.":d?.message||"Service FIX CODA CODR indisponible.");
     return d;
   }
-  async function confirmer(m,action,methode){
+  const valeur=v=>String(v??"");
+  const normaliser=v=>valeur(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
+  function contact(v,type){
+    const texte=valeur(v).trim(), numero=texte.replace(/[\s().-]/g,"");
+    const a=el("a",texte);
+    if(type==="tel"&&/^\+?\d{6,15}$/.test(numero))a.href="tel:"+numero;
+    else if(type==="mail"&&/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(texte))a.href="mailto:"+encodeURIComponent(texte);
+    else return document.createTextNode(texte||"—");
+    return a;
+  }
+  async function dialogue(titreTexte,contenu,libelle,validation){
     const slot=document.getElementById("lcdp-lightbox-slot");
-    slot.replaceChildren(await fragment(urlObjet("/HTMLBASE/02-dialogue-reference-choix.html"),"Confirmation"));
+    slot.replaceChildren(await fragment(urlObjet("/HTMLBASE/02-dialogue-reference-choix.html"),"Dialogue"));
     const box=slot.querySelector('[data-lcdp-dialogue-reference="choix"]');
     const titre=slot.querySelector("[data-lcdp-dialogue-titre]"),texte=slot.querySelector("[data-lcdp-dialogue-message]"),non=slot.querySelector('[data-lcdp-dialogue-action="annuler"]'),oui=slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
-    if(!box||!titre||!texte||!non||!oui){slot.replaceChildren();throw Error("Confirmation indisponible.");}
-    titre.textContent=action==="redefinir"?"Autoriser la redéfinition du CODR ?":"Lever le blocage ?";
-    texte.textContent="Je confirme avoir vérifié l’identité de "+nom(m)+" "+(methode==="visio"?"en visioconférence":"en présentiel")+". "+(action==="redefinir"?"Le lien personnel est envoyé à "+m.emailmembre+".":"Cette action ne lève aucun autre blocage du compte.");
-    non.textContent="Annuler";oui.textContent=action==="redefinir"?"Autoriser et envoyer":"Débloquer";
+    if(!box||!titre||!texte||!non||!oui){slot.replaceChildren();throw Error("Dialogue indisponible.");}
+    titre.textContent=titreTexte;
+    texte.textContent="";
+    const corps=el("div");texte.after(corps);corps.append(contenu);
+    non.textContent=validation?"Annuler":"Fermer";
+    oui.textContent=libelle||"Confirmer";
+    if(!validation)oui.remove();
     const avant=document.activeElement;
     return new Promise(resolve=>{
       let fini=false;
       const fin=v=>{if(fini)return;fini=true;document.removeEventListener("keydown",clavier);slot.replaceChildren();avant?.focus();resolve(v);};
-      const clavier=e=>{if(e.key==="Escape"){e.preventDefault();fin(false);}if(e.key==="Tab"){if(!e.shiftKey&&document.activeElement===oui){e.preventDefault();non.focus();}else if(e.shiftKey&&document.activeElement===non){e.preventDefault();oui.focus();}}};
-      document.addEventListener("keydown",clavier);non.addEventListener("click",()=>fin(false));oui.addEventListener("click",()=>fin(true));box.addEventListener("click",e=>{if(e.target===box)fin(false);});non.focus();
+      const clavier=e=>{
+        if(e.key==="Escape"){e.preventDefault();fin(null);}
+        if(e.key==="Tab"){
+          const focus=[...box.querySelectorAll("button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]")].filter(x=>x.getClientRects().length);
+          const premier=focus[0],dernier=focus.at(-1);
+          if(!e.shiftKey&&document.activeElement===dernier){e.preventDefault();premier?.focus();}
+          else if(e.shiftKey&&document.activeElement===premier){e.preventDefault();dernier?.focus();}
+        }
+      };
+      document.addEventListener("keydown",clavier);
+      non.addEventListener("click",()=>fin(null));
+      oui.addEventListener("click",()=>{if(validation){const v=validation();if(v)fin(v);}});
+      box.addEventListener("click",e=>{if(e.target===box)fin(null);});
+      non.focus();
     });
   }
-  // Les listes de travail sont affichées sans recherche préalable.
-  // Coordonnées lues depuis le serveur ; aucun code ni jeton dans cette page.
-  function coordonnees(m) {
-    const bloc=el("div");
-    const tel=String(m.tel||"").trim(), email=String(m.emailmembre||"").trim();
-    const numero=tel.replace(/[\s().-]/g,"");
-    const pTel=el("p");
-    if(/^\+?\d{6,15}$/.test(numero)){
-      const a=el("a",tel);a.href="tel:"+numero;pTel.append(a);
-    }else pTel.textContent=tel||"Téléphone non renseigné";
-    const pMail=el("p");
-    if(/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(email)){
-      const a=el("a",email);a.href="mailto:"+encodeURIComponent(email);pMail.append(a);
-    }else pMail.textContent=email||"E-mail non renseigné";
-    bloc.append(pTel,pMail);
-    return bloc;
-  }
-  function ligneInfo(parent,libelle,valeur){
-    const p=el("p");p.append(el("strong",libelle+" : "),document.createTextNode(valeur||"Non renseigné"));parent.append(p);
+  async function confirmer(m,coda){
+    const corps=el("div");
+    corps.append(el("p",nom(m)));
+    const p=el("p");p.append(document.createTextNode("Téléphone : "),contact(m.tel,"tel"));corps.append(p);
+    const pMail=el("p");pMail.append(document.createTextNode("E-mail : "),contact(m.emailmembre,"mail"));corps.append(pMail);
+    if(!coda){
+      const visio=el("a","Proposer un rendez-vous en visio");
+      if(/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(valeur(m.emailmembre))){
+        visio.href="mailto:"+encodeURIComponent(m.emailmembre)+"?subject="+encodeURIComponent("La Clé du Parc — rendez-vous en visio")+"&body="+encodeURIComponent("Bonjour,\n\nMerci de m’indiquer vos disponibilités pour un rendez-vous en visioconférence afin de traiter votre demande.\n\nLa Clé du Parc");
+        corps.append(visio);
+      }
+    }
+    const lab=el("label","Identité vérifiée : ");const methode=el("select",undefined,"lcdp-table-lecture-admin__filter-input");
+    for(const [v,t] of [["","Choisir la méthode"],["visio","En visioconférence"],["presentiel","En présentiel"]]){const o=el("option",t);o.value=v;methode.append(o);}
+    lab.append(methode);corps.append(lab);
+    const check=el("input");check.type="checkbox";
+    if(!coda){const l=el("label");l.append(check,document.createTextNode(" Je confirme avec le membre son adresse e-mail enregistrée."));const p=el("p");p.append(l);corps.append(p);}
+    const msg=el("p");msg.setAttribute("role","alert");corps.append(msg);
+    return dialogue(coda?"Débloquer CODA":"Mail CODR",corps,coda?"Débloquer CODA":"Envoyer le lien sécurisé",()=>{
+      if(!methode.value){msg.textContent="Sélectionnez la méthode de vérification d’identité.";return null;}
+      if(!coda&&!check.checked){msg.textContent="Confirmez l’adresse e-mail avec le membre.";return null;}
+      return methode.value;
+    });
   }
   function onglet(zone,type){
     const coda=type==="coda";
-    const titreListe=coda?"CODA bloqués":"Demandes de redéfinition du CODR";
-    zone.append(el("h2",titreListe));
-    zone.append(el("p",coda?"Débloquez la modification du CODA après vérification de l’identité du membre. Le code lui-même ne change pas.":"Contactez le membre, vérifiez son identité et son adresse e-mail, puis autorisez l’envoi du lien sécurisé de redéfinition."));
-    const rafraichir=btn("Actualiser la liste",()=>{if(!occupé)charger(0);});
-    zone.append(rafraichir);
-    const info=el("p");info.setAttribute("role","status");zone.append(info);
-    const liste=el("div"), detail=el("section",undefined,"lcdp-box-formulaire");
-    detail.hidden=true;
-    zone.append(liste,detail);
-    let page=0,sequence=0,terme="";
-    function etatMessage(m){
-      if(coda)return "Modification bloquée";
-      if(m.lien_actif)return "Lien sécurisé envoyé — en attente du membre";
-      if(m.demande)return "Demande à traiter";
-      if(m.codr_bloque)return "CODR bloqué — sans demande";
-      return "Aucune demande en cours";
+    zone.append(el("h2",coda?"CODA bloqués":"Demandes CODR"));
+    const cadre=el("div",undefined,"lcdp-table-lecture-admin");
+    const scroll=el("div",undefined,"lcdp-table-lecture-admin__scroll");
+    const table=el("table",undefined,"lcdp-table-lecture-admin__table");
+    const thead=el("thead"),head=el("tr"),sorts=el("tr",undefined,"lcdp-table-lecture-admin__sorts"),filtres=el("tr",undefined,"lcdp-table-lecture-admin__filters"),body=el("tbody");
+    const colonnes=[
+      {key:"selection",label:""},
+      {key:"nommembre",label:"Nom",tri:true},
+      {key:"prenommembre",label:"Prénom",tri:true},
+      {key:"selfie",label:"Selfie actif"},
+      {key:"tel",label:"Téléphone",tri:true},
+      {key:"emailmembre",label:"E-mail",tri:true},
+      {key:"date",label:coda?"Date blocage":"Date demande",tri:true},
+      {key:"etat",label:"État",tri:true},
+      {key:"action",label:"Action"},
+      {key:"historique",label:"Historique"}
+    ];
+    let rows=[],page=0,sortKey="nommembre",direction=1,emailConfigure=false,chargement=false;
+    const selection=new Set(),filters={},photos=new Map(),pageSize=25;
+    const triBoutons=[];
+    const tout=el("input");tout.type="checkbox";tout.setAttribute("aria-label","Sélectionner les lignes de la page");
+    const statut=el("p",undefined,"lcdp-table-lecture-admin__status");statut.setAttribute("role","status");
+    const recherche=el("input",undefined,"lcdp-table-lecture-admin__filter-input");recherche.type="search";recherche.placeholder="Rechercher dans la liste";recherche.setAttribute("aria-label","Rechercher dans la liste");
+    const uniquement=el("input");uniquement.type="checkbox";
+    const labelSelection=el("label");labelSelection.append(uniquement,document.createTextNode(" Sélection uniquement"));
+    const compteur=el("p");
+    const actualiser=btn("Actualiser",()=>{if(!occupé)charger();});
+    const reset=btn("Réinitialiser les filtres",()=>{recherche.value="";uniquement.checked=false;Object.values(filters).forEach(f=>f.value="");page=0;rendre();});
+    const controls=el("div");controls.append(recherche,labelSelection,actualiser,reset,compteur);
+    zone.append(controls,cadre,statut);
+    const etat=m=>coda?"Bloqué":m.lien_actif?"Mail envoyé":m.demande?"À traiter":m.codr_bloque?"Bloqué":"—";
+    const dateBrute=m=>coda?m.coda_blocage:m.demande_date||m.codr_dernier_echec;
+    const champ=(m,k)=>k==="etat"?etat(m):k==="date"?date(dateBrute(m)):valeur(m[k]);
+    for(const c of colonnes){
+      const th=el("th",c.label);th.scope="col";if(c.key==="selection")th.append(tout);head.append(th);
+      const s=el("th"),filtre=el("th");
+      if(c.tri){
+        const actions=el("div",undefined,"lcdp-table-lecture-admin__sort-actions");
+        for(const d of [1,-1]){
+          const b=el("button",d===1?"↑":"↓","lcdp-table-lecture-admin__sort-button");b.type="button";b.title="Classer "+c.label+(d===1?" par ordre croissant":" par ordre décroissant");b.setAttribute("aria-label",b.title);
+          b.addEventListener("click",()=>{sortKey=c.key;direction=d;page=0;rendre();});
+          triBoutons.push({b,key:c.key,d});actions.append(b);
+        }
+        s.append(actions);
+        const i=el("input",undefined,"lcdp-table-lecture-admin__filter-input");i.type="search";i.placeholder="Filtrer";i.setAttribute("aria-label","Filtrer "+c.label);
+        i.addEventListener("input",()=>{page=0;rendre();});filters[c.key]=i;filtre.append(i);
+      }
+      sorts.append(s);filtres.append(filtre);
     }
-    function fermerFiche(){detail.replaceChildren();detail.hidden=true;}
-    async function charger(p=0){
-      const seq=++sequence;
-      page=p;fermerFiche();rafraichir.disabled=true;
-      info.textContent=terme?"Recherche : "+terme:"";
-      liste.replaceChildren(el("p","Chargement de la liste…"));
+    thead.append(head,sorts,filtres);table.append(thead,body);scroll.append(table);cadre.append(scroll);
+    const pagination=el("div");
+    const precedent=btn("Précédent",()=>{page--;rendre();});
+    const suivant=btn("Suivant",()=>{page++;rendre();});
+    const pageTexte=el("span");pagination.append(precedent,pageTexte,suivant);zone.append(pagination);
+    recherche.addEventListener("input",()=>{page=0;rendre();});
+    uniquement.addEventListener("change",()=>{page=0;rendre();});
+    function visibles(){
+      const q=normaliser(recherche.value);
+      return rows.filter(m=>(!uniquement.checked||selection.has(m.idmembre))&&(!q||normaliser(colonnes.filter(c=>c.tri).map(c=>champ(m,c.key)).join(" ")).includes(q))&&Object.entries(filters).every(([k,i])=>normaliser(champ(m,k)).includes(normaliser(i.value))))
+      .sort((a,b)=>direction*(sortKey==="date"?(Date.parse(dateBrute(a))||0)-(Date.parse(dateBrute(b))||0):champ(a,sortKey).localeCompare(champ(b,sortKey),"fr",{sensitivity:"base",numeric:true})));
+    }
+    async function selfie(m,td){
+      const img=el("img");img.width=56;img.height=56;img.alt="Selfie actif de "+nom(m);
+      td.textContent="…";
       try{
-        const d=await appel({type,q:terme,page:p});
-        if(seq!==sequence)return;
-        if(!Array.isArray(d.rows))throw Error("Réponse de liste invalide.");
-        const rows=d.rows.slice().sort((a,b)=>coda?0:Number(Boolean(b.demande))-Number(Boolean(a.demande)));
-        liste.replaceChildren();
-        if(!coda&&!d.emailConfigure){
-          const avert=el("p","Envoi du lien sécurisé indisponible : le service EMAILTOKENZ n’est pas raccordé.");avert.setAttribute("role","alert");liste.append(avert);
-        }
-        if(!rows.length){
-          liste.append(el("p",terme?"Aucun membre trouvé.":coda?"Aucun CODA bloqué.":"Aucune demande de redéfinition ni aucun CODR bloqué."));
-        }else{
-          info.textContent=(terme?"Résultats pour « "+terme+" » — ":"")+rows.length+" dossier"+(rows.length>1?"s":"")+" sur cette page.";
-          const cadre=el("div",undefined,"lcdp-table-lecture-admin"),scroll=el("div",undefined,"lcdp-table-lecture-admin__scroll"),table=el("table",undefined,"lcdp-table-lecture-admin__table"),thead=el("thead"),head=el("tr"),tbody=el("tbody");
-          for(const t of ["Membre","Coordonnées",coda?"Blocage":"Demande / situation","Traitement"]){const th=el("th",t);th.scope="col";head.append(th);}
-          thead.append(head);
-          for(const m of rows){
-            const tr=el("tr"),identite=el("td"),contact=el("td"),etat=el("td"),actions=el("td");
-            identite.append(el("strong",nom(m)),el("p",m.idmembre));
-            contact.append(coordonnees(m));
-            etat.append(el("strong",etatMessage(m)));
-            if(coda){
-              etat.append(el("p",date(m.coda_blocage)),el("p",String(m.coda_echecs??0)+" échec(s)"));
-            }else{
-              if(m.demande)etat.append(el("p","Demande du "+date(m.demande_date)));
-              if(m.codr_bloque)etat.append(el("p","CODR bloqué · "+date(m.codr_dernier_echec)));
-            }
-            actions.append(btn(coda?"Traiter le blocage":"Traiter le dossier",()=>{if(!occupé)fiche(m,d.emailConfigure);},true));
-            tr.append(identite,contact,etat,actions);tbody.append(tr);
-          }
-          table.append(thead,tbody);scroll.append(table);cadre.append(scroll);liste.append(cadre);
-        }
-        if(p>0)liste.append(btn("Page précédente",()=>{if(!occupé)charger(p-1);}));
-        if(d.suivante)liste.append(btn("Page suivante",()=>{if(!occupé)charger(p+1);}));
-      }catch(e){
-        if(seq===sequence){
-          const msg=el("p",e.message,"lcdp-table-lecture-admin__status lcdp-table-lecture-admin__status--error");
-          msg.setAttribute("role","alert");liste.replaceChildren(msg);
-        }
-      }finally{if(seq===sequence)rafraichir.disabled=false;}
+        if(!photos.has(m.idmembre))photos.set(m.idmembre,appel({type,vue:"selfie",membre:m.idmembre}).then(d=>{
+          if(!Object.hasOwn(d,"photo"))throw Error("Worker à mettre à jour.");
+          return d.photo;
+        }).catch(e=>{photos.delete(m.idmembre);throw e;}));
+        const photo=await photos.get(m.idmembre);
+        if(!td.isConnected)return;
+        if(!photo){td.textContent="—";return;}
+        if(!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo))throw Error("Selfie invalide");
+        img.src=photo;img.addEventListener("error",()=>{td.textContent="Photo illisible";});td.replaceChildren(img);
+      }catch{if(td.isConnected)td.textContent="Indisponible";}
     }
-    function fiche(m,emailConfigure){
-      detail.replaceChildren();detail.hidden=false;
-      const h=el("h3",nom(m));h.tabIndex=-1;
-      detail.append(h,el("p",etatMessage(m)),coordonnees(m));
-      ligneInfo(detail,"Identifiant membre",m.idmembre);
-      ligneInfo(detail,coda?"Date du blocage":"Date de la demande",date(coda?m.coda_blocage:m.demande_date));
-      ligneInfo(detail,"Dernière validation e-mail",date(m.dateemailvalid));
-      ligneInfo(detail,"Dernier selfie enregistré",date(m.selfie_date));
-      ligneInfo(detail,"Dernière modification du navigateur",date(m.navigateur_date));
-      ligneInfo(detail,"Récupération du compte",m.recovery);
-      if(!coda&&m.emailmembre&&/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(m.emailmembre)){
-        const visio=el("a","Proposer un rendez-vous en visio","lcdp-button lcdp-button-secondary");
-        visio.href="mailto:"+encodeURIComponent(m.emailmembre)+"?subject="+encodeURIComponent("La Clé du Parc — rendez-vous de vérification")+"&body="+encodeURIComponent("Bonjour,\n\nJe vous propose un rendez-vous en visioconférence afin de vérifier votre identité et de traiter votre demande. Merci de m’indiquer vos disponibilités.\n\nLa Clé du Parc");
-        detail.append(visio);
-      }
-      const retour=btn("Fermer le dossier",()=>{if(!occupé)fermerFiche();});
-      if(m.recovery!=="normal"&&m.recovery!=="terminee"){
-        detail.append(el("p","Compte en récupération : traitement distinct nécessaire."),retour);
-        h.focus();detail.scrollIntoView({block:"nearest"});return;
-      }
-      detail.append(el("p","Vérifiez l’identité en visioconférence ou en présentiel. Un appel téléphonique sert à prendre contact et à confirmer l’adresse e-mail, mais ne remplace pas cette vérification."));
-      const champ=el("p");
-      const select=el("select",undefined,"lcdp-table-lecture-admin__filter-input");
-      select.id="fix-methode-"+type;
-      for(const [v,t] of [["","Choisir la méthode"],["visio","Identité vérifiée en visioconférence"],["presentiel","Identité vérifiée en présentiel"]]){
-        const option=el("option",t);option.value=v;select.append(option);
-      }
-      const label=el("label","Vérification d’identité : ");label.htmlFor=select.id;champ.append(label,select);detail.append(champ);
-      let emailConfirme=null;
-      if(!coda){
-        const p=el("p"),lab=el("label");
-        emailConfirme=el("input");emailConfirme.type="checkbox";
-        lab.append(emailConfirme,document.createTextNode(" Je confirme avec le membre l’adresse enregistrée : "+(m.emailmembre||"non renseignée")));
-        p.append(lab);detail.append(p);
-      }
-      const statut=el("p",undefined,"lcdp-table-lecture-admin__status");statut.setAttribute("role","status");
-      const action=coda?"debloquer":"redefinir";
-      const possible=coda?Boolean(m.coda_blocage):Boolean(emailConfigure&&m.emailmembre&&m.dateemailvalid&&!m.lien_actif);
-      const bouton=btn(coda?"Débloquer le CODA":"Envoyer le lien sécurisé CODR",agir,true);
-      function etatBouton(){bouton.disabled=occupé||!possible||!select.value||(!coda&&!emailConfirme.checked);}
-      select.addEventListener("change",etatBouton);
-      emailConfirme?.addEventListener("change",etatBouton);
-      etatBouton();
-      if(!possible)detail.append(el("p",coda?"Date de blocage absente : intervention impossible.":m.lien_actif?"Un lien valide est déjà envoyé.":"Envoi indisponible : vérifier le raccordement du service et l’adresse e-mail validée."));
-      async function agir(){
-        if(occupé||!possible||!select.value||(!coda&&!emailConfirme.checked))return;
-        occupé=true;etatBouton();retour.disabled=true;statut.textContent="";
-        const methode=select.value;
-        try{
-          if(!await confirmer(m,action,methode))return;
-          const d=await appel(null,{action,type,membre:m.idmembre,methode,identiteVerifiee:true,date:coda?m.coda_blocage:m.codr_dernier_echec,email:m.emailmembre,dateEmail:m.dateemailvalid});
-          afficherStatut(d.message);
-          info.textContent=d.message;
-          await charger(page);
-          info.textContent=d.message;
-        }catch(e){statut.textContent=e.message;statut.classList.add("lcdp-table-lecture-admin__status--error");statut.setAttribute("role","alert");}
-        finally{occupé=false;retour.disabled=false;etatBouton();}
-      }
-      detail.append(bouton,retour,statut);
-      h.focus();detail.scrollIntoView({block:"nearest"});
+    async function historique(m){
+      if(occupé)return;occupé=true;
+      try{
+        const d=await appel({type,vue:"historique",membre:m.idmembre});
+        if(!Array.isArray(d.rows)||d.rows.some(x=>!Object.hasOwn(x,"action")))throw Error("Historique non raccordé.");
+        const contenu=el("div");
+        if(!d.rows.length)contenu.append(el("p","Aucune intervention administrative enregistrée."));
+        else for(const x of d.rows){contenu.append(el("p",date(x.creation)+" — "+x.action+(x.methode?" · "+x.methode:"")));}
+        await dialogue("Historique — "+nom(m),contenu);
+      }catch(e){afficherStatut(e.message,true);}finally{occupé=false;}
     }
-    // Recherche secondaire : conserver l’intervention spontanée prévue par le service.
-    if(!coda){
-      const recherche=el("details");recherche.append(el("summary","Rechercher un autre membre (sans demande préalable)"));
-      const form=el("form"),label=el("label","Nom, prénom, e-mail ou identifiant"),input=el("input",undefined,"lcdp-table-lecture-admin__filter-input");
-      input.id="fix-recherche-codr";label.htmlFor=input.id;input.type="search";input.maxLength=100;
-      const lancer=el("button","Rechercher","lcdp-button lcdp-button-primary");lancer.type="submit";
-      const tout=btn("Revenir à toutes les demandes",()=>{if(occupé)return;input.value="";terme="";recherche.open=false;charger(0);});
-      form.append(label,input,lancer,tout);recherche.append(form);zone.append(recherche);
-      form.addEventListener("submit",e=>{e.preventDefault();if(occupé)return;terme=input.value.trim();charger(0);});
+    async function agir(m){
+      if(occupé)return;occupé=true;
+      try{
+        const methode=await confirmer(m,coda);
+        if(!methode)return;
+        const d=await appel(null,{action:coda?"debloquer":"redefinir",type,membre:m.idmembre,methode,identiteVerifiee:true,date:coda?m.coda_blocage:m.codr_dernier_echec,email:m.emailmembre,dateEmail:m.dateemailvalid});
+        afficherStatut(d.message);await charger();
+      }catch(e){afficherStatut(e.message,true);}finally{occupé=false;}
+    }
+    function rendre(){
+      const liste=visibles(),pages=Math.max(1,Math.ceil(liste.length/pageSize));page=Math.max(0,Math.min(page,pages-1));
+      const courant=liste.slice(page*pageSize,(page+1)*pageSize);
+      triBoutons.forEach(({b,key,d})=>b.setAttribute("aria-pressed",String(key===sortKey&&d===direction)));
+      compteur.textContent=liste.length+" / "+rows.length+" dossier(s) · "+selection.size+" sélectionné(s)";
+      tout.checked=courant.length>0&&courant.every(m=>selection.has(m.idmembre));tout.indeterminate=!tout.checked&&courant.some(m=>selection.has(m.idmembre));tout.disabled=!courant.length;
+      tout.onchange=()=>{courant.forEach(m=>tout.checked?selection.add(m.idmembre):selection.delete(m.idmembre));rendre();};
+      body.replaceChildren();
+      if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":coda?"Aucun CODA bloqué.":"Aucune demande CODR ni aucun CODR bloqué.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
+      for(const m of courant){
+        const tr=el("tr"),tdSel=el("td"),check=el("input");check.type="checkbox";check.checked=selection.has(m.idmembre);check.setAttribute("aria-label","Sélectionner "+nom(m));
+        check.addEventListener("change",()=>{check.checked?selection.add(m.idmembre):selection.delete(m.idmembre);rendre();});tdSel.append(check);
+        const photo=el("td"),tel=el("td"),email=el("td"),actions=el("td"),hist=el("td");
+        tel.append(contact(m.tel,"tel"));email.append(contact(m.emailmembre,"mail"));
+        const b=btn(coda?"Débloquer CODA":"Mail CODR",()=>agir(m),true);
+        const recuperation=m.recovery!=="normal"&&m.recovery!=="terminee";
+        b.disabled=recuperation||(coda?!m.coda_blocage:!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
+        if(b.disabled)b.title=recuperation?"Compte en récupération":coda?"Date de blocage absente":m.lien_actif?"Lien déjà envoyé":"Service e-mail ou adresse validée indisponible";
+        actions.append(b);hist.append(btn("Historique",()=>historique(m)));
+        tr.append(tdSel,el("td",m.nommembre||"—"),el("td",m.prenommembre||"—"),photo,tel,email,el("td",date(dateBrute(m))),el("td",etat(m)),actions,hist);
+        body.append(tr);selfie(m,photo);
+      }
+      precedent.disabled=page===0;suivant.disabled=page>=pages-1;pageTexte.textContent=" Page "+(page+1)+" / "+pages+" ";
+    }
+    async function charger(){
+      if(chargement)return;chargement=true;actualiser.disabled=true;statut.textContent="Chargement…";rendre();
+      try{
+        const all=new Map();let p=0,d;
+        do{
+          d=await appel({type,q:"",page:p++});
+          if(!Array.isArray(d.rows))throw Error("Liste invalide.");
+          for(const m of d.rows)all.set(m.idmembre,m);
+          if(p>10000)throw Error("Liste trop volumineuse.");
+        }while(d.suivante);
+        rows=[...all.values()];emailConfigure=d.emailConfigure===true;photos.clear();
+        for(const id of selection)if(!all.has(id))selection.delete(id);
+        statut.textContent=!coda&&!emailConfigure?"Envoi CODR indisponible : service EMAILTOKENZ non raccordé.":"";
+      }catch(e){rows=[];selection.clear();photos.clear();statut.textContent=e.message;statut.setAttribute("role","alert");}
+      finally{chargement=false;actualiser.disabled=false;rendre();}
     }
     return charger();
   }
