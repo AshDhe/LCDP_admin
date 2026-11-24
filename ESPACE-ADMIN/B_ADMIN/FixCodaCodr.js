@@ -249,7 +249,7 @@
       reset.disabled=!Object.values(filters).some(f=>f.value);
       pagination.classList.toggle("lcdp-hidden",pages<=1);
       body.replaceChildren();
-      if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":fermeture?"Aucun CODR bloqué pour la fermeture du compte.":coda?"Aucun CODA bloqué.":"Aucune demande de changement de CODR.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
+      if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":fermeture?"Aucun CODR bloqué pour la fermeture du compte.":coda?"Aucun CODA bloqué suite à une tentative de changement du CODA.":"Aucune demande de changement de CODR.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
       for(const m of courant){
         const tr=el("tr");
         const photo=el("td"),tel=el("td"),email=el("td"),actions=el("td"),hist=el("td");
