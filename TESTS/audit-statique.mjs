@@ -206,8 +206,51 @@ async function verifierAbonnementCompte(compte){
   results.push({nom:"Services : typographie commune et alerte vide",ok:compte.includes('texte.className="lcdp-compte-alertes-vide lcdp-compte-placeholder-da";')&&compte.includes('afficherSlotService(liste,"Aucune alerte planifiée");')});
   return results;
 }
+
+async function verifierRetractationPaiement(lire) {
+  const paiement=lire("paiement-membre.js"), compte=lire("mes-informations.js");
+  const resultats=[];
+  const test=(nom,fn)=>{try{fn();resultats.push({nom,ok:true});}catch(e){resultats.push({nom,ok:false,erreur:String(e.message||e)});}};
+  const exige=(condition,message)=>{if(!condition)throw Error(message);};
+  const extrait=(source,debut,fin)=>{
+    const a=source.indexOf(debut), b=source.indexOf(fin,a+debut.length);
+    exige(a>=0&&b>a,"Fonction de rétractation introuvable");
+    return source.slice(a,b);
+  };
+  const cas=[
+    ["1J : régime propre","1J","2026-12-01","jour"],
+    ["1M : dans le délai","1M","2026-12-01","pendant"],
+    ["3M : J+14 inclus","3M","2026-12-08","pendant"],
+    ["5M : J+15 hors délai","5M","2026-12-09","apres"],
+    ["12M : début après le délai","12M","2027-01-01","apres"],
+    ["Date absente","3M","","invalide"]
+  ];
+  for(const [nom,formule,debut,attendu] of cas) test("Rétractation Paiement : "+nom,()=>{
+    class DateFixe extends Date {constructor(...args){super(...(args.length?args:["2026-11-24T12:00:00Z"]));}}
+    const fn=new Function("Date",extrait(paiement,"  function chevaucheRetractation(","  function dateCourteJJMMAAAA(")+"\nreturn chevaucheRetractation;")(DateFixe);
+    exige((fn(formule,debut)??"invalide")===attendu,"Profil de rétractation inattendu");
+  });
+  test("Rétractation Paiement : souscription sans option obsolète",()=>{
+    const expression=paiement.match(/apiPaiement\('\/valider',\s*\{method:'POST',\s*body:JSON\.stringify\((\{[^}]+\})\)/);
+    exige(expression,"Corps de souscription introuvable");
+    const body=new Function("panier","echeancier","return "+expression[1])({idpanier:"test"},"echeances");
+    exige(Object.keys(body).sort().join(",")==="echeancier,idpanier"&&body.idpanier==="test"&&body.echeancier==="echeances","Choix obsolète ou contrat altéré");
+  });
+  test("Rétractation Paiement : information pivot 1M sans extension",()=>{
+    exige(paiement.includes("1M standard, sans extension")&&paiement.includes("Votre formule complète s’applique ensuite"),"Mention contractuelle absente");
+  });
+  for(const [nom,instant,possible,attendu] of [
+    ["J+14","2026-12-08T22:59:59Z",true,0],
+    ["J+15","2026-12-08T23:00:00Z",true,null],
+    ["Droit refusé par serveur","2026-11-25T12:00:00Z",false,null]
+  ])test("Rétractation Mon compte : "+nom,()=>{
+    const fn=new Function(extrait(compte,"  function joursRestantsRetractationCompte(","  function libellesExtensionsCompte(")+"\nreturn joursRestantsRetractationCompte;")();
+    exige(fn({dateSouscription:"2026-11-24T10:00:00Z",retractationPossible:possible},new Date(instant))===attendu,"Décompte erroné");
+  });
+  return resultats;
+}
 const regressions = depot === "LCDP_membre"
-  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8"))]
+  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8")), ...await verifierRetractationPaiement(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8"))]
   : [];
 compteurs.regressionsMetier = regressions.length;
 for (const test of regressions) {
