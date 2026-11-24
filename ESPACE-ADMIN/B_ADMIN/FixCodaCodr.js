@@ -149,65 +149,58 @@
   }
   function onglet(zone,type){
     const coda=type==="coda";
-    zone.append(el("h2",coda?"CODA bloqués":"Demandes CODR"));
+    const actualiser=btn("Actualiser",()=>{if(!occupé)charger();});
+    actualiser.classList.add("lcdp-button-mini");
+    zone.append(actualiser);
     const cadre=el("div",undefined,"lcdp-table-lecture-admin");
     const scroll=el("div",undefined,"lcdp-table-lecture-admin__scroll");
     const table=el("table",undefined,"lcdp-table-lecture-admin__table");
-    const thead=el("thead"),head=el("tr"),sorts=el("tr",undefined,"lcdp-table-lecture-admin__sorts"),filtres=el("tr",undefined,"lcdp-table-lecture-admin__filters"),body=el("tbody");
+    const thead=el("thead"),head=el("tr"),filtres=el("tr",undefined,"lcdp-table-lecture-admin__filters"),body=el("tbody");
     const colonnes=[
-      {key:"selection",label:""},
       {key:"nommembre",label:"Nom",tri:true},
       {key:"prenommembre",label:"Prénom",tri:true},
-      {key:"selfie",label:"Selfie actif"},
-      {key:"tel",label:"Téléphone",tri:true},
+      {key:"selfie",label:"Selfie"},
+      {key:"tel",label:"Tél.",tri:true},
       {key:"emailmembre",label:"E-mail",tri:true},
-      {key:"date",label:coda?"Date blocage":"Date demande",tri:true},
-      {key:"etat",label:"État",tri:true},
+      {key:"date",label:"Date",tri:true},
       {key:"action",label:"Action"},
       {key:"historique",label:"Historique"}
     ];
     let rows=[],page=0,sortKey="nommembre",direction=1,emailConfigure=false,chargement=false;
-    const selection=new Set(),filters={},photos=new Map(),pageSize=25;
+    const filters={},photos=new Map(),pageSize=25;
     const triBoutons=[];
-    const tout=el("input");tout.type="checkbox";tout.setAttribute("aria-label","Sélectionner les lignes de la page");
     const statut=el("p",undefined,"lcdp-table-lecture-admin__status");statut.setAttribute("role","status");
-    const recherche=el("input",undefined,"lcdp-table-lecture-admin__filter-input");recherche.type="search";recherche.placeholder="Rechercher dans la liste";recherche.setAttribute("aria-label","Rechercher dans la liste");
-    const uniquement=el("input");uniquement.type="checkbox";
-    const labelSelection=el("label");labelSelection.append(uniquement,document.createTextNode(" Sélection uniquement"));
-    const compteur=el("p");
-    const actualiser=btn("Actualiser",()=>{if(!occupé)charger();});
-    const reset=btn("Réinitialiser les filtres",()=>{recherche.value="";uniquement.checked=false;Object.values(filters).forEach(f=>f.value="");page=0;rendre();});
-    const controls=el("div");controls.append(recherche,labelSelection,actualiser,reset,compteur);
-    zone.append(controls,cadre,statut);
-    const etat=m=>coda?"Bloqué":m.lien_actif?"Mail envoyé":m.demande?"À traiter":m.codr_bloque?"Bloqué":"—";
+    statut.classList.add("lcdp-hidden");
+    zone.append(cadre,statut);
     const dateBrute=m=>coda?m.coda_blocage:m.demande_date||m.codr_dernier_echec;
-    const champ=(m,k)=>k==="etat"?etat(m):k==="date"?date(dateBrute(m)):valeur(m[k]);
-    for(const c of colonnes){
-      const th=el("th",c.label);th.scope="col";if(c.key==="selection")th.append(tout);head.append(th);
-      const s=el("th"),filtre=el("th");
-      if(c.tri){
-        const actions=el("div",undefined,"lcdp-table-lecture-admin__sort-actions");
-        for(const d of [1,-1]){
-          const b=el("button",d===1?"↑":"↓","lcdp-table-lecture-admin__sort-button");b.type="button";b.title="Classer "+c.label+(d===1?" par ordre croissant":" par ordre décroissant");b.setAttribute("aria-label",b.title);
-          b.addEventListener("click",()=>{sortKey=c.key;direction=d;page=0;rendre();});
-          triBoutons.push({b,key:c.key,d});actions.append(b);
-        }
-        s.append(actions);
-        const i=el("input",undefined,"lcdp-table-lecture-admin__filter-input");i.type="search";i.placeholder="Filtrer";i.setAttribute("aria-label","Filtrer "+c.label);
-        i.addEventListener("input",()=>{page=0;rendre();});filters[c.key]=i;filtre.append(i);
-      }
-      sorts.append(s);filtres.append(filtre);
+    const champ=(m,k)=>k==="date"?date(dateBrute(m)):valeur(m[k]);
+    function mini(texte,action,principal=false){
+      const b=btn(texte,action,principal);b.classList.add("lcdp-button-mini");return b;
     }
-    thead.append(head,sorts,filtres);table.append(thead,body);scroll.append(table);cadre.append(scroll);
+    for(const c of colonnes){
+      const th=el("th");th.scope="col";
+      const filtre=el("th");
+      if(c.tri){
+        const b=el("button",c.label+" ↕","lcdp-button lcdp-button-secondary lcdp-button-mini");
+        b.type="button";b.setAttribute("aria-label","Trier par "+c.label);
+        b.addEventListener("click",()=>{direction=sortKey===c.key?-direction:1;sortKey=c.key;page=0;rendre();});
+        triBoutons.push({b,th,key:c.key,label:c.label});th.append(b);
+        const i=el("input",undefined,"lcdp-table-lecture-admin__filter-input");
+        i.type="search";i.placeholder="Filtrer";i.setAttribute("aria-label","Filtrer "+c.label);
+        i.addEventListener("input",()=>{page=0;rendre();});filters[c.key]=i;filtre.append(i);
+      }else th.textContent=c.label;
+      head.append(th);filtres.append(filtre);
+    }
+    const reset=mini("Effacer",()=>{Object.values(filters).forEach(f=>f.value="");page=0;rendre();});
+    reset.setAttribute("aria-label","Effacer les filtres");reset.title="Effacer les filtres";
+    filtres.lastElementChild.append(reset);
+    thead.append(head,filtres);table.append(thead,body);scroll.append(table);cadre.append(scroll);
     const pagination=el("div");
-    const precedent=btn("Précédent",()=>{page--;rendre();});
-    const suivant=btn("Suivant",()=>{page++;rendre();});
+    const precedent=mini("Précédent",()=>{page--;rendre();});
+    const suivant=mini("Suivant",()=>{page++;rendre();});
     const pageTexte=el("span");pagination.append(precedent,pageTexte,suivant);zone.append(pagination);
-    recherche.addEventListener("input",()=>{page=0;rendre();});
-    uniquement.addEventListener("change",()=>{page=0;rendre();});
     function visibles(){
-      const q=normaliser(recherche.value);
-      return rows.filter(m=>(!uniquement.checked||selection.has(m.idmembre))&&(!q||normaliser(colonnes.filter(c=>c.tri).map(c=>champ(m,c.key)).join(" ")).includes(q))&&Object.entries(filters).every(([k,i])=>normaliser(champ(m,k)).includes(normaliser(i.value))))
+      return rows.filter(m=>Object.entries(filters).every(([k,i])=>normaliser(champ(m,k)).includes(normaliser(i.value))))
       .sort((a,b)=>direction*(sortKey==="date"?(Date.parse(dateBrute(a))||0)-(Date.parse(dateBrute(b))||0):champ(a,sortKey).localeCompare(champ(b,sortKey),"fr",{sensitivity:"base",numeric:true})));
     }
     async function selfie(m,td){
@@ -248,29 +241,27 @@
     function rendre(){
       const liste=visibles(),pages=Math.max(1,Math.ceil(liste.length/pageSize));page=Math.max(0,Math.min(page,pages-1));
       const courant=liste.slice(page*pageSize,(page+1)*pageSize);
-      triBoutons.forEach(({b,key,d})=>b.setAttribute("aria-pressed",String(key===sortKey&&d===direction)));
-      compteur.textContent=liste.length+" / "+rows.length+" dossier(s) · "+selection.size+" sélectionné(s)";
-      tout.checked=courant.length>0&&courant.every(m=>selection.has(m.idmembre));tout.indeterminate=!tout.checked&&courant.some(m=>selection.has(m.idmembre));tout.disabled=!courant.length;
-      tout.onchange=()=>{courant.forEach(m=>tout.checked?selection.add(m.idmembre):selection.delete(m.idmembre));rendre();};
+      triBoutons.forEach(({b,th,key,label})=>{b.textContent=label+(key===sortKey?(direction===1?" ↑":" ↓"):" ↕");th.setAttribute("aria-sort",key===sortKey?(direction===1?"ascending":"descending"):"none");});
+      reset.disabled=!Object.values(filters).some(f=>f.value);
+      pagination.classList.toggle("lcdp-hidden",pages<=1);
       body.replaceChildren();
       if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":coda?"Aucun CODA bloqué.":"Aucune demande CODR ni aucun CODR bloqué.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
       for(const m of courant){
-        const tr=el("tr"),tdSel=el("td"),check=el("input");check.type="checkbox";check.checked=selection.has(m.idmembre);check.setAttribute("aria-label","Sélectionner "+nom(m));
-        check.addEventListener("change",()=>{check.checked?selection.add(m.idmembre):selection.delete(m.idmembre);rendre();});tdSel.append(check);
+        const tr=el("tr");
         const photo=el("td"),tel=el("td"),email=el("td"),actions=el("td"),hist=el("td");
         tel.append(contact(m.tel,"tel"));email.append(contact(m.emailmembre,"mail"));
-        const b=btn(coda?"Débloquer CODA":"Mail CODR",()=>agir(m),true);
+        const b=mini(coda?"Débloquer CODA":m.lien_actif?"Mail envoyé":"Mail CODR",()=>agir(m),true);
         const recuperation=m.recovery!=="normal"&&m.recovery!=="terminee";
         b.disabled=chargement||recuperation||(coda?!m.coda_blocage:!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
         if(b.disabled)b.title=recuperation?"Compte en récupération":coda?"Date de blocage absente":m.lien_actif?"Lien déjà envoyé":"Service e-mail ou adresse validée indisponible";
-        actions.append(b);hist.append(btn("Historique",()=>historique(m)));
-        tr.append(tdSel,el("td",m.nommembre||"—"),el("td",m.prenommembre||"—"),photo,tel,email,el("td",date(dateBrute(m))),el("td",etat(m)),actions,hist);
+        actions.append(b);hist.append(mini("Historique",()=>historique(m)));
+        tr.append(el("td",m.nommembre||"—"),el("td",m.prenommembre||"—"),photo,tel,email,el("td",date(dateBrute(m))),actions,hist);
         body.append(tr);selfie(m,photo);
       }
       precedent.disabled=page===0;suivant.disabled=page>=pages-1;pageTexte.textContent=" Page "+(page+1)+" / "+pages+" ";
     }
     async function charger(){
-      if(chargement)return;chargement=true;actualiser.disabled=true;statut.textContent="Chargement…";rendre();
+      if(chargement)return;chargement=true;actualiser.disabled=true;statut.textContent="";statut.classList.add("lcdp-hidden");statut.setAttribute("role","status");rendre();
       try{
         const all=new Map();let p=0,d;
         do{
@@ -280,10 +271,9 @@
           if(p>10000)throw Error("Liste trop volumineuse.");
         }while(d.suivante);
         rows=[...all.values()];emailConfigure=d.emailConfigure===true;photos.clear();
-        for(const id of selection)if(!all.has(id))selection.delete(id);
         statut.textContent=!coda&&!emailConfigure?"Envoi CODR indisponible : service EMAILTOKENZ non raccordé.":"";
-      }catch(e){rows=[];selection.clear();photos.clear();statut.textContent=e.message;statut.setAttribute("role","alert");}
-      finally{chargement=false;actualiser.disabled=false;rendre();}
+      }catch(e){rows=[];photos.clear();statut.textContent=e.message;statut.setAttribute("role","alert");}
+      finally{chargement=false;actualiser.disabled=false;statut.classList.toggle("lcdp-hidden",!statut.textContent);rendre();}
     }
     return charger();
   }
