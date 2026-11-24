@@ -4466,7 +4466,7 @@ async function gererFixCodes(request,env,url) {
         if(dossier?.success!==true||!Array.isArray(dossier.rows)||!dossier.rows.some(m=>m.idmembre===membre))return rep({success:false,message:"Dossier indisponible."},404);
         if(vue==="historique"){
           const rows=await requeteSupabase(env,"admin_fix_codes_journal?membre=eq."+membre+"&select=action,methode,creation&order=creation.desc,id.desc&limit=100");
-          return rep({success:true,rows:Array.isArray(rows)?rows:[]});
+          return rep({success:true,vue:"historique",rows:Array.isArray(rows)?rows:[]});
         }
         const rows=await requeteSupabase(env,"selfie?idmembre=eq."+membre+"&select=photo_base64,date_modification&order=date_modification.desc&limit=1");
         const brut=String(rows?.[0]?.photo_base64||"").trim();
