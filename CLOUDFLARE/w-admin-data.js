@@ -4458,6 +4458,23 @@ async function gererFixCodes(request,env,url) {
     if(request.method==="GET"){
       const type=url.searchParams.get("type")||"coda",q=url.searchParams.get("q")||"",page=Number(url.searchParams.get("page")||0);
       if(!["coda","codr"].includes(type)||q.length>100||!Number.isInteger(page)||page<0||page>10000)return rep({success:false,message:"Recherche invalide."},400);
+      const vue=url.searchParams.get("vue");
+      if(vue!==null){
+        const membre=url.searchParams.get("membre");
+        if(!["selfie","historique"].includes(vue)||!uuid(membre))return rep({success:false,message:"Requête invalide."},400);
+        const dossier=await requeteSupabase(env,"rpc/admin_fix_codes_liste",{method:"POST",body:{p_admin:auth.admin.id,p_type:type,p_recherche:membre,p_page:0}});
+        if(dossier?.success!==true||!Array.isArray(dossier.rows)||!dossier.rows.some(m=>m.idmembre===membre))return rep({success:false,message:"Dossier indisponible."},404);
+        if(vue==="historique"){
+          const rows=await requeteSupabase(env,"admin_fix_codes_journal?membre=eq."+membre+"&select=action,methode,creation&order=creation.desc,id.desc&limit=100");
+          return rep({success:true,rows:Array.isArray(rows)?rows:[]});
+        }
+        const rows=await requeteSupabase(env,"selfie?idmembre=eq."+membre+"&select=photo_base64,date_modification&order=date_modification.desc&limit=1");
+        const brut=String(rows?.[0]?.photo_base64||"").trim();
+        const photo=brut.replace(/^data:image\/(?:jpeg|png|webp);base64,/i,"").replace(/\s/g,"");
+        const mime=photo.startsWith("/9j/")?"image/jpeg":photo.startsWith("iVBOR")?"image/png":photo.startsWith("UklGR")?"image/webp":null;
+        if(!mime||!photo||photo.length>10000000||!(/^[A-Za-z0-9+/]+={0,2}$/).test(photo))return rep({success:true,photo:null});
+        return rep({success:true,photo:"data:"+mime+";base64,"+photo});
+      }
       const d=await requeteSupabase(env,"rpc/admin_fix_codes_liste",{method:"POST",body:{p_admin:auth.admin.id,p_type:type,p_recherche:q,p_page:page}});
       if(d?.success!==true||!Array.isArray(d.rows))return rep({success:false,message:"Liste indisponible."},d?.status||503);
       return rep({success:true,rows:d.rows.slice(0,50),suivante:d.rows.length>50,page,emailConfigure:!!emailConfig()});
