@@ -64,6 +64,10 @@ export default {
         }, 403);
       }
 
+      if ((request.method === "GET" || request.method === "POST") && path === "/admin/fix-codes") {
+        return await gererFixCodes(request, env, url);
+      }
+
       if ((request.method === "GET" || request.method === "POST") && path === "/membres/benevolat") {
         return await gererBenevolat(request, env);
       }
@@ -4435,4 +4439,47 @@ async function gererBenevolat(request, env) {
     tout("benevolat",{select:"idbenevolat,idparc,datejour,plage,debut,fin,updated_at,parcs!inner(nom,dptmt)",order:"datejour.asc,plage.asc,idbenevolat.asc"})
   ]);
   return rep({success:true,parcs,rows:rows.map(({parcs:p,...r})=>({...r,nom:p.nom,dptmt:p.dptmt})),maintenant:new Date().toISOString()});
+}
+/* Slot 20 Admin : FIX CODA CODR. Ne retourne jamais les secrets ni leurs empreintes. */
+async function gererFixCodes(request,env,url) {
+  const auth=await autoriserRoute(request,env,"/ESPACE-ADMIN/B_ADMIN/FixCodaCodr.html");
+  const rep=(payload,status=200)=>reponseJson(request,env,payload,status,auth.cookie);
+  if(!auth.success)return rep(auth.payload,auth.status);
+  const uuid=v=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  if(auth.permission!=="admin.fixcodes"||auth.admin?.type!=="root"||!uuid(auth.admin?.id))return rep({success:false,message:"Accès réservé à l’administrateur principal."},403);
+  const emailConfig=()=> {
+    try {
+      const u=new URL(String(env.W_EMAILTOKENZ_URL||""));
+      if(u.protocol!=="https:"||u.username||u.password||u.search||u.hash||!env.W_EMAILTOKENZ)return null;
+      return u.href.replace(/\/+$/,"");
+    }catch{return null;}
+  };
+  try {
+    if(request.method==="GET"){
+      const type=url.searchParams.get("type")||"coda",q=url.searchParams.get("q")||"",page=Number(url.searchParams.get("page")||0);
+      if(!["coda","codr"].includes(type)||q.length>100||!Number.isInteger(page)||page<0||page>10000)return rep({success:false,message:"Recherche invalide."},400);
+      const d=await requeteSupabase(env,"rpc/admin_fix_codes_liste",{method:"POST",body:{p_admin:auth.admin.id,p_type:type,p_recherche:q,p_page:page}});
+      if(d?.success!==true||!Array.isArray(d.rows))return rep({success:false,message:"Liste indisponible."},d?.status||503);
+      return rep({success:true,rows:d.rows.slice(0,50),suivante:d.rows.length>50,page,emailConfigure:!!emailConfig()});
+    }
+    const origin=request.headers.get("Origin");
+    if(origin!==ORIGINE_ADMIN_FIXE&&(!env.ADMIN_URL||origin!==String(env.ADMIN_URL).replace(/\/+$/,"")))return rep({success:false,message:"Origine non autorisée."},403);
+    if(!/^application\/json(?:;|$)/i.test(request.headers.get("Content-Type")||""))return rep({success:false,message:"Format JSON requis."},415);
+    let b;try{b=await request.json();}catch{return rep({success:false,message:"Requête invalide."},400);}
+    if(!b||!uuid(b.membre)||!["coda","codr"].includes(b.type)||!["visio","presentiel"].includes(b.methode)||b.identiteVerifiee!==true)return rep({success:false,message:"Vérification d’identité obligatoire."},400);
+    if(b.action==="debloquer"){
+      if(typeof b.date!=="string"||!Number.isFinite(Date.parse(b.date)))return rep({success:false,message:"Date de blocage invalide."},400);
+      const d=await requeteSupabase(env,"rpc/admin_fix_codes_debloquer",{method:"POST",body:{p_admin:auth.admin.id,p_membre:b.membre,p_type:b.type,p_methode:b.methode,p_date:b.date}});
+      return d?.success===true?rep({success:true,message:"Blocage levé."}):rep({success:false,message:d?.message||"Déblocage refusé."},d?.status||409);
+    }
+    if(b.action==="redefinir"&&b.type==="codr"){
+      const base=emailConfig();
+      if(!base)return rep({success:false,message:"Le Worker de notification n’est pas configuré."},503);
+      if(typeof b.email!=="string"||!b.email||b.email.length>254||typeof b.dateEmail!=="string"||!Number.isFinite(Date.parse(b.dateEmail)))return rep({success:false,message:"Adresse e-mail validée requise."},400);
+      const r=await fetch(base+"/codr-admin-authorize",{method:"POST",headers:{Authorization:"Bearer "+env.W_EMAILTOKENZ,"Content-Type":"application/json"},body:JSON.stringify({admin:auth.admin.id,membre:b.membre,methode:b.methode,email:b.email,dateEmail:b.dateEmail})});
+      const d=await r.json().catch(()=>null);
+      return r.ok&&d?.success===true?rep({success:true,message:"Lien de redéfinition envoyé au membre."}):rep({success:false,message:d?.message||"Envoi non confirmé. Vérifiez le raccordement du Worker EMAILTOKENZ."},r.status===404?503:r.status||503);
+    }
+    return rep({success:false,message:"Action inconnue."},400);
+  }catch{return rep({success:false,message:"Le service FIX CODA CODR est indisponible."},503);}
 }
