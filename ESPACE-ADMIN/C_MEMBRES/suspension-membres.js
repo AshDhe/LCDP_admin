@@ -37,7 +37,7 @@
       oui=slot.querySelector('[data-lcdp-dialogue-action="confirmer"]');
     if(!box||!titre||!texte||!non||!oui){slot.replaceChildren();throw Error('Confirmation indisponible. Aucune modification effectuée.');}
     titre.textContent=suspendre?'Suspendre ce membre ?':'Lever la suspension ?';
-    texte.textContent=(suspendre?'Confirmer la suspension disciplinaire de ':'Confirmer la levée de suspension de ')+nom(m)+' (ID : '+m.idmembre+') ?';
+    texte.textContent=(suspendre?'Confirmer la suspension administrative de ':'Confirmer la levée de suspension de ')+nom(m)+' (ID : '+m.idmembre+') ?';
     non.textContent='Non';oui.textContent='Oui';
     const avant=document.activeElement;
     return new Promise(resolve=>{
