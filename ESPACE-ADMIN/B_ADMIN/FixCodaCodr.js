@@ -181,9 +181,10 @@
       const th=el("th");th.scope="col";
       const filtre=el("th");
       if(c.tri){
-        const b=el("button",c.label+" ↕","lcdp-button lcdp-button-secondary lcdp-button-mini");
-        b.type="button";b.setAttribute("aria-label","Trier par "+c.label);
-        b.addEventListener("click",()=>{direction=sortKey===c.key?-direction:1;sortKey=c.key;page=0;rendre();});
+        const b=el("a",c.label+" ↕","lcdp-link-secondary");
+        b.href="#";b.setAttribute("role","button");b.setAttribute("aria-label","Trier par "+c.label);
+        const trier=e=>{e.preventDefault();direction=sortKey===c.key?-direction:1;sortKey=c.key;page=0;rendre();};
+        b.addEventListener("click",trier);b.addEventListener("keydown",e=>{if(e.key===" ")trier(e);});
         triBoutons.push({b,th,key:c.key,label:c.label});th.append(b);
         const i=el("input",undefined,"lcdp-table-lecture-admin__filter-input");
         i.type="search";i.placeholder="Filtrer";i.setAttribute("aria-label","Filtrer "+c.label);
