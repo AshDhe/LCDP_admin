@@ -229,7 +229,7 @@
       if(occupé)return;occupé=true;
       try{
         const d=await appel({type,vue:"historique",membre:m.idmembre});
-        if(!Array.isArray(d.rows)||d.rows.some(x=>!Object.hasOwn(x,"action")))throw Error("Historique non raccordé.");
+        if(d.vue!=="historique"||!Array.isArray(d.rows)||d.rows.some(x=>!Object.hasOwn(x,"action")))throw Error("Historique non raccordé.");
         const contenu=el("div");
         if(!d.rows.length)contenu.append(el("p","Aucune intervention administrative enregistrée."));
         else for(const x of d.rows){contenu.append(el("p",date(x.creation)+" — "+x.action+(x.methode?" · "+x.methode:"")));}
@@ -261,7 +261,7 @@
         tel.append(contact(m.tel,"tel"));email.append(contact(m.emailmembre,"mail"));
         const b=btn(coda?"Débloquer CODA":"Mail CODR",()=>agir(m),true);
         const recuperation=m.recovery!=="normal"&&m.recovery!=="terminee";
-        b.disabled=recuperation||(coda?!m.coda_blocage:!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
+        b.disabled=chargement||recuperation||(coda?!m.coda_blocage:!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
         if(b.disabled)b.title=recuperation?"Compte en récupération":coda?"Date de blocage absente":m.lien_actif?"Lien déjà envoyé":"Service e-mail ou adresse validée indisponible";
         actions.append(b);hist.append(btn("Historique",()=>historique(m)));
         tr.append(tdSel,el("td",m.nommembre||"—"),el("td",m.prenommembre||"—"),photo,tel,email,el("td",date(dateBrute(m))),el("td",etat(m)),actions,hist);
