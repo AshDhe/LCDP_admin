@@ -123,32 +123,35 @@
       non.focus();
     });
   }
-  async function confirmer(m,coda){
+  async function confirmer(m,type){
+    const coda=type==="coda", fermeture=type==="codr_fermeture", deblocage=coda||fermeture;
+    const libelle=coda?"Débloquer CODA":"Débloquer CODR";
     const corps=el("div");
     corps.append(el("p",nom(m)));
     const p=el("p");p.append(document.createTextNode("Téléphone : "),contact(m.tel,"tel"));corps.append(p);
     const pMail=el("p");pMail.append(document.createTextNode("E-mail : "),contact(m.emailmembre,"mail"));corps.append(pMail);
-    if(!coda){
+    if(!deblocage){
       const visio=el("a","Proposer un rendez-vous en visio");
       if(/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(valeur(m.emailmembre))){
         visio.href="mailto:"+encodeURIComponent(m.emailmembre)+"?subject="+encodeURIComponent("La Clé du Parc — rendez-vous en visio")+"&body="+encodeURIComponent("Bonjour,\n\nMerci de m’indiquer vos disponibilités pour un rendez-vous en visioconférence afin de traiter votre demande.\n\nLa Clé du Parc");
         corps.append(visio);
       }
     }
+    if(fermeture)corps.append(el("p","Ce déblocage rétablit deux essais de CODR pour la fermeture du compte uniquement."));
     const lab=el("label","Identité vérifiée : ");const methode=el("select",undefined,"lcdp-table-lecture-admin__filter-input");
     for(const [v,t] of [["","Choisir la méthode"],["visio","En visioconférence"],["presentiel","En présentiel"]]){const o=el("option",t);o.value=v;methode.append(o);}
     lab.append(methode);corps.append(lab);
     const check=el("input");check.type="checkbox";
-    if(!coda){const l=el("label");l.append(check,document.createTextNode(" Je confirme avec le membre son adresse e-mail enregistrée."));const p=el("p");p.append(l);corps.append(p);}
+    if(!deblocage){const l=el("label");l.append(check,document.createTextNode(" Je confirme avec le membre son adresse e-mail enregistrée."));const p=el("p");p.append(l);corps.append(p);}
     const msg=el("p");msg.setAttribute("role","alert");corps.append(msg);
-    return dialogue(coda?"Débloquer CODA":"Mail CODR",corps,coda?"Débloquer CODA":"Envoyer le lien sécurisé",()=>{
+    return dialogue(deblocage?libelle:"Mail CODR",corps,deblocage?libelle:"Envoyer le lien sécurisé",()=>{
       if(!methode.value){msg.textContent="Sélectionnez la méthode de vérification d’identité.";return null;}
-      if(!coda&&!check.checked){msg.textContent="Confirmez l’adresse e-mail avec le membre.";return null;}
+      if(!deblocage&&!check.checked){msg.textContent="Confirmez l’adresse e-mail avec le membre.";return null;}
       return methode.value;
     });
   }
   function onglet(zone,type){
-    const coda=type==="coda";
+    const coda=type==="coda", fermeture=type==="codr_fermeture", deblocage=coda||fermeture;
     const actualiser=btn("Actualiser",()=>{if(!occupé)charger();});
     actualiser.classList.add("lcdp-button-mini");
     zone.append(actualiser);
@@ -172,7 +175,7 @@
     const statut=el("p",undefined,"lcdp-table-lecture-admin__status");statut.setAttribute("role","status");
     statut.classList.add("lcdp-hidden");
     zone.append(cadre,statut);
-    const dateBrute=m=>coda?m.coda_blocage:m.demande_date||m.codr_dernier_echec;
+    const dateBrute=m=>fermeture?m.fermeture_blocage:coda?m.coda_blocage:m.demande_date||m.codr_dernier_echec;
     const champ=(m,k)=>k==="date"?date(dateBrute(m)):valeur(m[k]);
     function mini(texte,action,principal=false){
       const b=btn(texte,action,principal);b.classList.add("lcdp-button-mini");return b;
@@ -226,16 +229,16 @@
         if(d.vue!=="historique"||!Array.isArray(d.rows)||d.rows.some(x=>!Object.hasOwn(x,"action")))throw Error("Historique non raccordé.");
         const contenu=el("div");
         if(!d.rows.length)contenu.append(el("p","Aucune intervention administrative enregistrée."));
-        else for(const x of d.rows){contenu.append(el("p",date(x.creation)+" — "+x.action+(x.methode?" · "+x.methode:"")));}
+        else for(const x of d.rows){contenu.append(el("p",date(x.creation)+" — "+(x.action==="debloquer_codr_fermeture"?"Déblocage CODR — fermeture du compte":x.action)+(x.methode?" · "+x.methode:"")));}
         await dialogue("Historique — "+nom(m),contenu);
       }catch(e){afficherStatut(e.message,true);}finally{occupé=false;}
     }
     async function agir(m){
       if(occupé)return;occupé=true;
       try{
-        const methode=await confirmer(m,coda);
+        const methode=await confirmer(m,type);
         if(!methode)return;
-        const d=await appel(null,{action:coda?"debloquer":"redefinir",type,membre:m.idmembre,methode,identiteVerifiee:true,date:coda?m.coda_blocage:m.codr_dernier_echec,email:m.emailmembre,dateEmail:m.dateemailvalid});
+        const d=await appel(null,{action:deblocage?"debloquer":"redefinir",type,membre:m.idmembre,methode,identiteVerifiee:true,date:deblocage?dateBrute(m):m.codr_dernier_echec,email:m.emailmembre,dateEmail:m.dateemailvalid});
         afficherStatut(d.message);await charger();
       }catch(e){afficherStatut(e.message,true);}finally{occupé=false;}
     }
@@ -246,15 +249,15 @@
       reset.disabled=!Object.values(filters).some(f=>f.value);
       pagination.classList.toggle("lcdp-hidden",pages<=1);
       body.replaceChildren();
-      if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":coda?"Aucun CODA bloqué.":"Aucune demande CODR ni aucun CODR bloqué.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
+      if(!courant.length){const tr=el("tr"),td=el("td",chargement?"Chargement…":rows.length?"Aucun résultat.":fermeture?"Aucun CODR bloqué pour la fermeture du compte.":coda?"Aucun CODA bloqué.":"Aucune demande de changement de CODR.");td.colSpan=colonnes.length;tr.append(td);body.append(tr);}
       for(const m of courant){
         const tr=el("tr");
         const photo=el("td"),tel=el("td"),email=el("td"),actions=el("td"),hist=el("td");
         tel.append(contact(m.tel,"tel"));email.append(contact(m.emailmembre,"mail"));
-        const b=mini(coda?"Débloquer CODA":m.lien_actif?"Mail envoyé":"Mail CODR",()=>agir(m),true);
+        const b=mini(fermeture?"Débloquer CODR":coda?"Débloquer CODA":m.lien_actif?"Mail envoyé":"Mail CODR",()=>agir(m),true);
         const recuperation=m.recovery!=="normal"&&m.recovery!=="terminee";
-        b.disabled=chargement||recuperation||(coda?!m.coda_blocage:!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
-        if(b.disabled)b.title=recuperation?"Compte en récupération":coda?"Date de blocage absente":m.lien_actif?"Lien déjà envoyé":"Service e-mail ou adresse validée indisponible";
+        b.disabled=chargement||recuperation||(deblocage?!dateBrute(m):!emailConfigure||!m.emailmembre||!m.dateemailvalid||m.lien_actif);
+        if(b.disabled)b.title=recuperation?"Compte en récupération":deblocage?"Date de blocage absente":m.lien_actif?"Lien déjà envoyé":"Service e-mail ou adresse validée indisponible";
         actions.append(b);hist.append(mini("Historique",()=>historique(m)));
         tr.append(el("td",m.nommembre||"—"),el("td",m.prenommembre||"—"),photo,tel,email,el("td",date(dateBrute(m))),actions,hist);
         body.append(tr);selfie(m,photo);
@@ -272,7 +275,7 @@
           if(p>10000)throw Error("Liste trop volumineuse.");
         }while(d.suivante);
         rows=[...all.values()];emailConfigure=d.emailConfigure===true;photos.clear();
-        statut.textContent=!coda&&!emailConfigure?"Envoi CODR indisponible : service EMAILTOKENZ non raccordé.":"";
+        statut.textContent=!deblocage&&!emailConfigure?"Envoi CODR indisponible : service EMAILTOKENZ non raccordé.":"";
       }catch(e){rows=[];photos.clear();statut.textContent=e.message;statut.setAttribute("role","alert");}
       finally{chargement=false;actualiser.disabled=false;statut.classList.toggle("lcdp-hidden",!statut.textContent);rendre();}
     }
@@ -282,8 +285,8 @@
     const guard=window.LCDP_GUARD_ADMIN;if(!guard?.verifierAccesPageAdmin||!await guard.verifierAccesPageAdmin())return;
     document.getElementById("lcdp-main-admin").hidden=false;
     await Promise.all([afficherBandeau(),afficherMenu(),script("/JSBASE/05-wraper-onglets.js")]);
-    const onglets=window.LCDP_WRAPER_ONGLETS.initialiser({racine:document.querySelector("[data-lcdp-wraper-onglets]"),idPrefix:"lcdp-fix-codes",ariaLabel:"Codes de sécurité",onglets:[{key:"coda",label:"CODA"},{key:"codr",label:"CODR"}]});
-    await Promise.all([onglet(onglets.zones.coda,"coda"),onglet(onglets.zones.codr,"codr")]);
+    const onglets=window.LCDP_WRAPER_ONGLETS.initialiser({racine:document.querySelector("[data-lcdp-wraper-onglets]"),idPrefix:"lcdp-fix-codes",ariaLabel:"Codes de sécurité",onglets:[{key:"coda",label:"CODA bloqué"},{key:"codr",label:"CODR à changer"},{key:"codr_fermeture",label:"CODR bloqué"}]});
+    await Promise.all([onglet(onglets.zones.coda,"coda"),onglet(onglets.zones.codr,"codr"),onglet(onglets.zones.codr_fermeture,"codr_fermeture")]);
   }
   initialiser().catch(e=>{afficherStatut(e.message||"Module indisponible.",true);});
 })();
