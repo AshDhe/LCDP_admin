@@ -249,8 +249,39 @@ async function verifierRetractationPaiement(lire) {
   });
   return resultats;
 }
+
+function verifierAvoirComptable(lire) {
+  const source=lire("avoir-abonnement.js");
+  const resultats=[];
+  const test=(nom,fn)=>{try{fn();resultats.push({nom:"Avoir : "+nom,ok:true});}catch(e){resultats.push({nom:"Avoir : "+nom,ok:false,erreur:String(e.message||e)});}};
+  const exige=(v,m)=>{if(!v)throw Error(m);};
+  const a=source.indexOf("  function construireLignesComptablesAvoir(");
+  const b=source.indexOf("  function creerBlocComptableAvoir(",a);
+  const fn=()=>{exige(a>=0&&b>a,"Fonction comptable introuvable");return new Function("formaterMontant",source.slice(a,b)+"\nreturn construireLignesComptablesAvoir;")(v=>Number(v).toFixed(2));};
+  const arrondi=v=>Math.round(v*100)/100;
+  for(const [jours,consomme,encaisse,net] of [[0,0,200,-200],[1,90,200,-110],[2,180,200,-20],[3,190,200,-10],[10,190,190,0],[0,0,0,0]]){
+    test(jours+" jour(s), encaissement "+encaisse,()=>{
+      const ht=arrondi(consomme/1.10),tva=arrondi(consomme-ht);
+      const blocs=fn()({joursConsommes:jours,tarif:{quantite:jours<=2?jours:1,prix_unitaire_ttc:jours<=2?90:190,reference:jours<=2?"1J":"1M"},
+        annulation:{ttc:-390,ht:-354.55,tva:-35.45},consommation:{ttc:consomme,ht,tva},
+        net:{ttc:consomme-390,ht:arrondi(ht-354.55),tva:arrondi(tva-35.45)},
+        remboursement:{encaisse_commande_ttc:-encaisse,facture_retractation_ttc:consomme,net_ttc:net}});
+      exige(blocs.length===4,"Ordre des blocs incomplet");
+      exige(blocs.slice(0,3).every(b=>b.lignes.map(x=>x[0]).join(",")==="Montant TTC,Montant HT,TVA"),"Ventilation absente");
+      exige(Number(blocs[0].lignes[0][1])===-390&&Number(blocs[1].lignes[0][1])===consomme&&Number(blocs[2].lignes[0][1])===consomme-390,"Avoir comptable incorrect");
+      exige(Number(blocs[3].lignes[0][1])===-encaisse&&Number(blocs[3].lignes[1][1])===consomme&&Number(blocs[3].lignes[2][1])===net,"Remboursement incorrect");
+      exige(net===0?blocs[3].mention==="Aucun remboursement dû.":blocs[3].mention.includes("14 jours calendaires"),"Mention de remboursement incorrecte");
+    });
+  }
+  test("Net positif bloqué",()=>{
+    let bloque=false;try{fn()({joursConsommes:0,remboursement:{net_ttc:1}});}catch(e){bloque=/positif/.test(e.message);}
+    exige(bloque,"Remboursement positif accepté");
+  });
+  test("Projet non émis identifié",()=>exige(source.includes("PROJET D’AVOIR — NON ÉMIS"),"Projet non identifié"));
+  return resultats;
+}
 const regressions = depot === "LCDP_membre"
-  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8")), ...await verifierRetractationPaiement(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8"))]
+  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8")), ...await verifierRetractationPaiement(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...verifierAvoirComptable(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8"))]
   : [];
 compteurs.regressionsMetier = regressions.length;
 for (const test of regressions) {
