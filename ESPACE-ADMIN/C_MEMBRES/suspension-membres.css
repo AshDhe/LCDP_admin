@@ -70,3 +70,15 @@
 .lcdp-suspension-admin__resultats { display:grid; gap:var(--lcdp-space-2); margin-block:var(--lcdp-space-3); }
 .lcdp-suspension-admin__resultats button { text-align:left; overflow-wrap:anywhere; white-space:normal; }
 .lcdp-suspension-admin__recherche { display:grid; gap:var(--lcdp-space-2); }
+
+/* Slot 34 — état calculé et suspension administrative motivée */
+#lcdp-suspension-liste-v2,
+#lcdp-suspension-fiche-v2 { width:100%; min-width:0; max-width:100%; }
+.lcdp-suspension-admin__decision { display:grid; gap:var(--lcdp-space-3); max-width:38rem; }
+.lcdp-suspension-admin__decision label { display:block; font-weight:600; }
+.lcdp-suspension-admin__decision select,
+.lcdp-suspension-admin__decision textarea {
+  display:block; width:100%; max-width:100%; margin-top:var(--lcdp-space-1); font:inherit;
+}
+.lcdp-suspension-admin__decision button { justify-self:start; }
+.lcdp-suspension-admin__avertissement { margin-block:var(--lcdp-space-3); }
