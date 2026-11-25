@@ -109,8 +109,8 @@
     const euros = vue === "euros";
     $("titre").textContent = euros ? "VT Abo — Montants en euros" : "VT Abo — Quantités vendues";
     $("sous-titre").textContent = euros
-      ? "Ventes mensuelles, montants TTC nets des remises."
-      : "Nombre d'abonnements vendus chaque mois.";
+      ? "Factures émises par mois, montants TTC nets des remises, avant avoirs."
+      : "Nombre de factures d’abonnements émises chaque mois.";
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
   }
@@ -220,7 +220,12 @@
     tbody.id="lcdp-ventesabo-declaratif-lignes";
     for (const [,libelle] of colonnesDeclaratif) tr.appendChild(cellule("th",libelle));
     thead.appendChild(tr);table.append(caption,thead,tbody);scroll.appendChild(table);wrap.appendChild(scroll);
-    section.append(h,info,status,wrap);$("note").after(section);
+    const hAnnuel=document.createElement("h3");hAnnuel.textContent="Cumul annuel par taux de TVA";
+    const annuel=wrap.cloneNode(true);
+    annuel.querySelector("caption").textContent="Cumul annuel des écritures";
+    annuel.querySelector("thead th").textContent="Année";
+    annuel.querySelector("tbody").id="lcdp-ventesabo-declaratif-annuel";
+    section.append(h,info,status,wrap,hAnnuel,annuel);$("note").after(section);
   }
   function lignesDeclaratif(lignes) {
     return lignes.map(l=>{
@@ -232,18 +237,32 @@
       return [String(l.mois).slice(0,7),Number(l.taux),...champs];
     }).sort((a,b)=>b[0].localeCompare(a[0])||a[1]-b[1]);
   }
+  function lignesDeclaratifAnnuel(lignes){
+    return lignesDeclaratif(lignes.map(l=>{
+      const an=Number(l.annee);
+      if(!Number.isInteger(an)||an<2000||an>9999)throw Error("Année comptable invalide.");
+      return {...l,mois:String(an)+"-01-01"};
+    })).map(l=>[l[0].slice(0,4),...l.slice(1)]);
+  }
   async function chargerDeclaratif() {
     const status=$("declaratif-statut"), corps=$("declaratif-lignes");
-    status.textContent="Chargement du journal comptable…";corps.replaceChildren();
+    status.textContent="Chargement du journal comptable…";corps.replaceChildren();$("declaratif-annuel").replaceChildren();
     try {
-      const lignes=lignesDeclaratif(await obtenirVentes("membres-declaratif-factures"));
+      const [mensuel,annuel]=await Promise.all([obtenirVentes("membres-declaratif-factures"),obtenirVentes("membres-declaratif-annuel")]);
+      const lignes=lignesDeclaratif(mensuel);
+      const cumul=lignesDeclaratifAnnuel(annuel);
       for (const l of lignes) {
         const tr=document.createElement("tr");
         tr.append(cellule("th",l[0]),cellule("td",l[1].toLocaleString("fr-FR")+" %"));
         l.slice(2).forEach(v=>tr.appendChild(cellule("td",devise.format(v))));
         corps.appendChild(tr);
       }
-      status.textContent=lignes.length?lignes.length+" ligne(s) comptable(s).":"Aucun document fiscal émis.";
+      const cible=$("declaratif-annuel");cible.replaceChildren();
+      for(const l of cumul){
+        const tr=document.createElement("tr");tr.append(cellule("th",l[0]),cellule("td",l[1].toLocaleString("fr-FR")+" %"));
+        l.slice(2).forEach(v=>tr.appendChild(cellule("td",devise.format(v))));cible.appendChild(tr);
+      }
+      status.textContent=lignes.length?lignes.length+" ligne(s) mensuelle(s) · "+cumul.length+" cumul(s) annuel(s).":"Aucun document fiscal émis.";
       status.setAttribute("role","status");
     } catch(err) {
       status.setAttribute("role","alert");status.textContent=err.message||"Journal comptable indisponible.";
