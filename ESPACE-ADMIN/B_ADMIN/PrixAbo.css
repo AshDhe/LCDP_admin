@@ -16,7 +16,7 @@
 .lcdp-page-prixabo .lcdp-prixabo-order-hint{margin:0;font-size:.82rem;color:inherit}
 
 /* Toutes les colonnes ont le même gabarit, indépendant du contenu. */
-.lcdp-page-prixabo .lcdp-prixabo-table{--lcdp-prixabo-column-width:136px;table-layout:fixed;width:calc(var(--lcdp-prixabo-column-count,29) * var(--lcdp-prixabo-column-width));min-width:0;max-width:none}
+.lcdp-page-prixabo .lcdp-prixabo-table{--lcdp-prixabo-column-width:120px;table-layout:fixed;width:calc(var(--lcdp-prixabo-column-count,29) * var(--lcdp-prixabo-column-width));min-width:0;max-width:none}
 .lcdp-page-prixabo .lcdp-prixabo-table col{width:var(--lcdp-prixabo-column-width)}
 .lcdp-page-prixabo .lcdp-prixabo-table th,.lcdp-page-prixabo .lcdp-prixabo-table td{box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;word-break:normal;vertical-align:top;text-align:left}
 .lcdp-page-prixabo .lcdp-prixabo-column-heading{white-space:normal;min-width:0;width:100%}
