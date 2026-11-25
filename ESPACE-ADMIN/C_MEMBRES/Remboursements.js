@@ -7,7 +7,7 @@
   const euro=new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"});
   const date=v=>v?new Date(v.length===10?v+"T12:00:00Z":v).toLocaleDateString("fr-FR",{timeZone:"Europe/Paris"}):"—";
   let occupe=false, onglet="faire", suivi=[], capacites={};
-  const libellesStripe={failed:"Échec définitif",canceled:"Annulé",requires_action:"Action requise",pending:"En cours",succeeded:"Remboursé"};
+  const libellesStripe={inconnu:"Statut non confirmé",failed:"Échec définitif",canceled:"Annulé",requires_action:"Action requise",pending:"En cours",succeeded:"Remboursé"};
   const statutFinalEchec=s=>s==="failed"||s==="canceled";
   function cellule(tag,v){const el=document.createElement(tag);el.textContent=String(v??"—");return el;}
   function etat(id,v,erreur=false){$(id).textContent=v;$(id).setAttribute("role",erreur?"alert":"status");}
@@ -114,12 +114,12 @@
   }
   async function confirmer(r,mode,select){
     if(occupe||!valide(r)){if(select)select.value="non";return;}
-    const texte=mode==="stripe"?"Déclencher le remboursement Stripe de "+euro.format(Number(r.montant_ttc))+" ?":"Confirmer le virement bancaire déjà effectué de "+euro.format(Number(r.montant_ttc))+" ?";
+    const texte=mode==="stripe"?"Déclencher le remboursement Stripe de "+euro.format(Number(r.montant_ttc))+" ?":"Confirmer le virement bancaire déjà effectué de "+euro.format(Number(r.montant_ttc))+" ?"+(r.mode_initial==="stripe"?" Confirmer également que le changement de moyen de remboursement est autorisé par le membre.":"");
     if(!window.confirm(texte)){if(select)select.value="non";return;}
     verrouiller(true);
     try{
       await api("",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:mode==="stripe"?"declencher_stripe":"confirmer_manuel",idavoir:r.idavoir,confirmation:true})},"/v2");
+        body:JSON.stringify({action:mode==="stripe"?"declencher_stripe":"confirmer_manuel",idavoir:r.idavoir,confirmation:true,accord_confirme:mode==="manuel"&&r.mode_initial==="stripe"})},"/v2");
     }catch(e){
       if(select)select.value="non";etat("statut","Opération non confirmée : "+e.message,true);verrouiller(false);return;
     }
