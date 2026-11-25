@@ -44,16 +44,26 @@
         cellule("td",r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0?euro.format(montant):"—"),
         cellule("td",date(r.date_limite)));
       const statut=cellule("td",historique?"Oui":"Non");
+      const action=document.createElement("td");
       if(estConfirmable(r)&&r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0){
         const bouton=document.createElement("button");
         bouton.type="button";
         bouton.className="lcdp-table-lecture-admin__cell-action";
-        bouton.textContent="Non — Enregistrer";
+        bouton.textContent="Enregistrer";
         bouton.setAttribute("aria-label","Enregistrer le remboursement de "+(nom||"ce membre"));
         bouton.addEventListener("click",()=>ouvrir(r));
-        statut.replaceChildren(bouton);
-      }
-      tr.append(statut,cellule("td",historique?date(r.paiement):"—"));
+        action.appendChild(bouton);
+        if(r.mode_initial==="virement"&&r.iban&&r.titulaire){
+          const virement=document.createElement("button");
+          virement.type="button";
+          virement.className="lcdp-table-lecture-admin__cell-action";
+          virement.textContent="Déclencher un virement";
+          virement.disabled=true;
+          virement.title="Service bancaire non raccordé";
+          action.append(document.createElement("br"),virement,document.createElement("br"),cellule("small","Non raccordé"));
+        }
+      }else action.textContent=historique?"—":"À vérifier";
+      tr.append(statut,cellule("td",historique?date(r.paiement):"—"),action);
       $("lignes").appendChild(tr);
     }
     etat("statut",rows.length?rows.length+" remboursement(s).":"Aucun remboursement enregistré.");
