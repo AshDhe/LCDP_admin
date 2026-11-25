@@ -319,6 +319,17 @@ async function verifierRemboursementsAdmin(lire) {
   const valid={montant:20,date:"2020-01-02",mode:"stripe",reference:"re_TEST",confirmation:true};
   await test("Confirmation du montant exact",()=>exige(front.construireConfirmation(row,valid).montant===20,"Montant incorrect"));
   for(const [nom,r,v] of [["Test non confirmable",{...row,environnement:"test"},valid],["Montant incorrect",row,{...valid,montant:21}],["Changement de moyen sans accord",row,{...valid,mode:"virement"}],["Référence Stripe invalide",row,{...valid,reference:"xxx"}],["Absence de confirmation",row,{...valid,confirmation:false}]]) await test(nom,()=>{let bloque=false;try{front.construireConfirmation(r,v);}catch{bloque=true;}exige(bloque,"Opération acceptée");});
+  await test("Liste vide : aucun tableau ni formulaire",()=>{
+    const zones={"table-slot":{replaceChildren(){this.vide=true;}},"synthese":{textContent:"ancien"}};
+    let statut="";
+    const rendre=new Function("$","etat",partie(js,"  function rendre(","  async function charger(")+"return rendre;")(id=>{exige(zones[id],"Élément créé en l’absence de dossier");return zones[id];},(_id,v)=>statut=v);
+    rendre([],"a_payer");
+    exige(zones["table-slot"].vide&&zones.synthese.textContent===""&&statut==="Aucun remboursement à effectuer.","Liste vide incorrecte");
+  });
+  await test("Formulaire uniquement sur sélection",()=>{
+    const html=lire("ESPACE-ADMIN/C_MEMBRES/Remboursements.html");
+    exige(/<template id="remb-form-template">[\s\S]*?<form id="remb-form"/.test(html)&&js.includes('$("detail").appendChild($("form-template").content.cloneNode(true))')&&js.includes('$("detail").replaceChildren()'),"Formulaire affiché en permanence");
+  });
   // Les workers sont conservés hors GitHub et testés séparément avant livraison.
   const ventes=lire("ESPACE-ADMIN/C_MEMBRES/VentesAbo.js");
   await test("Cumul annuel comptable",()=>{const fn=new Function(partie(ventes,"  const colonnesDeclaratif =","  async function chargerDeclaratif(")+"return lignesDeclaratifAnnuel;")();const l={annee:2026,taux:10,ca_facture_ht:100,ca_annule_ht:80,tva_facturee:10,tva_deduite_avoir:8,ca_net_ht:20,tva_nette:2,total_net_ttc:22};exige(fn([l])[0].join("|")==="2026|10|100|80|10|8|20|2|22","Cumul non réconcilié");});
