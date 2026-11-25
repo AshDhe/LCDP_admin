@@ -47,54 +47,39 @@
                 <button id="remb-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
               </header>
               <p id="remb-statut" role="status" aria-live="polite"></p>
-              <div id="remb-table-slot"></div>
-              <template id="remb-table-template">
-                <div class="lcdp-table-lecture-admin">
-                  <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
-                    <table class="lcdp-table-lecture-admin__table">
-                      <thead><tr><th scope="col">Nom</th><th scope="col">IBAN</th><th scope="col">Montant TTC</th><th scope="col">Échéance</th><th scope="col">Remboursé</th><th scope="col">Date de remboursement</th><th scope="col">Action</th></tr></thead><tbody id="remb-lignes"></tbody>
-                    </table>
-                  </div>
+              <div class="lcdp-table-lecture-admin">
+                <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
+                  <table class="lcdp-table-lecture-admin__table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Nom</th>
+                        <th scope="col">IBAN</th>
+                        <th scope="col">Montant TTC</th>
+                        <th scope="col">Échéance</th>
+                        <th scope="col">Remboursé</th>
+                        <th scope="col">Date de remboursement</th>
+                      </tr>
+                      <tr>
+                        <td colspan="4"></td>
+                        <td>
+                          <select id="remb-filtre" class="lcdp-table-lecture-admin__filter-input" aria-label="Filtrer les remboursements">
+                            <option value="a_payer" selected>Non</option>
+                            <option value="paye">Oui</option>
+                          </select>
+                        </td>
+                        <td></td>
+                      </tr>
+                    </thead>
+                    <tbody id="remb-lignes"></tbody>
+                  </table>
                 </div>
-              </template>
-              <div id="remb-detail"></div>
-              <template id="remb-form-template">
-                <section class="lcdp-stack">
-                  <h2 class="lcdp-text-strong-left">Remboursement effectué ?</h2>
-                  <p id="remb-selection"></p>
-                  <form id="remb-form" class="lcdp-stack">
-                    <input id="remb-montant" type="hidden">
-                    <label>Date et heure du remboursement
-                      <input id="remb-date" class="lcdp-table-lecture-admin__filter-input" type="datetime-local" required>
-                    </label>
-                    <label>Référence bancaire ou Stripe
-                      <input id="remb-reference" class="lcdp-table-lecture-admin__filter-input" type="text" maxlength="200" minlength="3" required autocomplete="off">
-                    </label>
-                    <details>
-                      <summary>Autre moyen de remboursement</summary>
-                      <label>Mode utilisé
-                        <select id="remb-mode" class="lcdp-table-lecture-admin__filter-input" required><option value="stripe">Stripe</option><option value="virement">Virement bancaire</option><option value="autre">Autre moyen</option></select>
-                      </label>
-                      <div id="remb-accord-slot"></div>
-                    </details>
-                    <template id="remb-accord-template"><label>Référence de l’accord du membre pour le changement de moyen de paiement
-                      <input id="remb-accord" class="lcdp-table-lecture-admin__filter-input" type="text" maxlength="500" required autocomplete="off">
-                    </label></template>
-                    <p class="lcdp-text-muted">Confirmer uniquement un remboursement déjà effectué.</p>
-                    <div class="lcdp-stack-small">
-                      <button id="remb-valider" type="submit" class="lcdp-button lcdp-button-primary">Oui, enregistrer</button>
-                      <button id="remb-fermer" type="button" class="lcdp-button lcdp-button-secondary">Annuler</button>
-                    </div>
-                    <p id="remb-message" role="status" aria-live="polite"></p>
-                  </form>
-                </section>
-              </template>
+              </div>
             </div>
           </div>
         </div>
       </section>
     </main>
   </div>
-  <script src="./Remboursements.js?v=20261125-table-action"></script>
+  <script src="./Remboursements.js?v=20261125-file-actions"></script>
 </body>
 </html>
