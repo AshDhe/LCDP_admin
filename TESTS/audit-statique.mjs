@@ -280,9 +280,37 @@ function verifierAvoirComptable(lire) {
   test("Projet non émis identifié",()=>exige(source.includes("PROJET D’AVOIR — NON ÉMIS"),"Projet non identifié"));
   return resultats;
 }
+
+function verifierJournalDocuments(source) {
+  const tests=[];const test=(nom,fn)=>{try{fn();tests.push({nom:"Archives : "+nom,ok:true});}catch(e){tests.push({nom:"Archives : "+nom,ok:false,erreur:String(e.message||e)});}};
+  const exige=(v,m)=>{if(!v)throw Error(m);};
+  const a=source.indexOf("  function construireLignesDocuments("),b=source.indexOf("  function libellePaiement(",a);
+  const fonctions=()=>{
+    exige(a>=0&&b>a,"Fonctions d’archive introuvables");
+    return new Function("formaterMontant","document","ENDPOINT_FACTUPAIEMENT",source.slice(a,b)+"\nreturn {construireLignesDocuments,creerLienDocumentArchive};")(v=>String(v),{createElement:()=>({}),createTextNode:t=>({textContent:t})},"https://test.invalid");
+  };
+  const facture={typeDocument:"facture",orderid:"CMD-TEST",numeroDocument:"FAC-TEST",dateDocument:"2026-11-10",etat:"emise",montantTtc:390,documentDisponible:true};
+  const avoir={typeDocument:"avoir",orderid:"CMD-TEST",idavoir:"AV-TEST",numeroDocument:"AVO-TEST",dateDocument:"2026-11-20",etat:"emise",montantTtc:-210,documentDisponible:true};
+  test("Tri commun et montant signé",()=>{const l=fonctions().construireLignesDocuments({documents:[facture,avoir]});exige(l.length===2&&l[0].nature==="Avoir"&&l[0].montant==="-210"&&l[1].nature==="Facture","Tri incorrect");});
+  test("Liens vers les HTML archivés",()=>{const f=fonctions(),l=f.construireLignesDocuments({documents:[facture,avoir]});exige(f.creerLienDocumentArchive(l[0].document).href.endsWith("/avoir-document?idavoir=AV-TEST")&&f.creerLienDocumentArchive(l[1].document).href.endsWith("/facture-document?orderid=CMD-TEST"),"Route d’archive incorrecte");});
+  test("Documents test identifiés",()=>{const l=fonctions().construireLignesDocuments({documents:[{...avoir,etat:"test",numeroDocument:null}]});exige(l[0].nature==="Avoir — Test"&&fonctions().creerLienDocumentArchive(l[0].document).textContent==="Document test","Test présenté comme émis");});
+  test("Document non archivé non ouvrable",()=>exige(fonctions().creerLienDocumentArchive({...avoir,documentDisponible:false}).textContent==="Non archivé","Document non archivé ouvrable"));
+  return tests;
+}
+function verifierJournalComptableAdmin(source) {
+  const tests=[];const test=(nom,fn)=>{try{fn();tests.push({nom:"Journal comptable : "+nom,ok:true});}catch(e){tests.push({nom:"Journal comptable : "+nom,ok:false,erreur:String(e.message||e)});}};
+  const exige=(v,m)=>{if(!v)throw Error(m);};
+  const a=source.indexOf("  const colonnesDeclaratif ="),b=source.indexOf("  async function chargerDeclaratif(",a);
+  const fn=()=>{exige(a>=0&&b>a,"Tableau comptable introuvable");return new Function(source.slice(a,b)+"\nreturn lignesDeclaratif;")();};
+  const l={mois:"2026-11-01",taux:10,ca_facture_ht:163.64,ca_annule_ht:354.55,tva_facturee:16.36,tva_deduite_avoir:35.45,ca_net_ht:-190.91,tva_nette:-19.09,total_net_ttc:-210};
+  test("CA et TVA séparés, signes préservés",()=>{const x=fn()([l])[0];exige(x.join("|")==="2026-11|10|163.64|354.55|16.36|35.45|-190.91|-19.09|-210","Montants incorrects");});
+  test("Absence de documents émis",()=>exige(fn()([]).length===0,"Écriture inventée"));
+  test("Montant manquant refusé",()=>{let bloque=false;try{fn()([{...l,tva_facturee:null}]);}catch(e){bloque=true;}exige(bloque,"Montant non vérifié");});
+  return tests;
+}
 const regressions = depot === "LCDP_membre"
-  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8")), ...await verifierRetractationPaiement(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...verifierAvoirComptable(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8"))]
-  : [];
+  ? [...await verifierRegressionsMembre(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...await verifierAbonnementCompte(readFileSync(join(racine,"ESPACE-MEMBRE","mes-informations.js"),"utf8")), ...await verifierRetractationPaiement(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...verifierAvoirComptable(nom => readFileSync(join(racine,"ESPACE-MEMBRE",nom),"utf8")), ...verifierJournalDocuments(readFileSync(join(racine,"ESPACE-MEMBRE","mes-factures-membre.js"),"utf8"))]
+  : depot === "LCDP_admin" ? verifierJournalComptableAdmin(readFileSync(join(racine,"ESPACE-ADMIN","C_MEMBRES","VentesAbo.js"),"utf8")) : [];
 compteurs.regressionsMetier = regressions.length;
 for (const test of regressions) {
   console.log((test.ok ? "OK " : "ECHEC ") + test.nom + (test.ok ? "" : " : " + test.erreur));
