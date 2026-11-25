@@ -6,7 +6,7 @@
   const $=id=>document.getElementById("remb-"+id);
   const euro=new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"});
   const date=v=>v?new Date(v.length===10?v+"T12:00:00Z":v).toLocaleDateString("fr-FR",{timeZone:"Europe/Paris"}):"—";
-  let selection=null, occupe=false;
+  let occupe=false;
   function cellule(tag,v){const el=document.createElement(tag);el.textContent=String(v??"—");return el;}
   function etat(id,v,erreur=false){$(id).textContent=v;$(id).setAttribute("role",erreur?"alert":"status");}
   async function api(query="",options={}){
@@ -26,99 +26,76 @@
     }
     throw Error("Liste trop importante.");
   }
-  function montantDu(r){const v=Number(r.montant_ttc);if(r.montant_ttc==null||!Number.isFinite(v)||v<=0)throw Error("Montant de remboursement invalide.");return v;}
-  function estConfirmable(r){return r.statutremboursement==="a_payer"&&r.environnement==="direct"&&["stripe","virement"].includes(r.mode_initial);}
-  function fermer(){selection=null;$("detail").replaceChildren();}
-  function rendre(rows){
-    $("table-slot").replaceChildren($("table-template").content.cloneNode(true));
+  function selectionRembourse(r){
+    const select=document.createElement("select");
+    select.className="lcdp-table-lecture-admin__filter-input";
+    select.setAttribute("aria-label","Remboursé : "+[r.nommembre,r.prenommembre].filter(Boolean).join(" "));
+    for(const [valeur,libelle] of [["non","Non"],["oui","Oui"]]){
+      const option=document.createElement("option");
+      option.value=valeur;option.textContent=libelle;select.appendChild(option);
+    }
+    select.value="non";
+    select.dataset.indisponible=String(r.idavoir==null);
+    select.disabled=r.idavoir==null;
+    select.addEventListener("change",()=>{if(select.value==="oui")void confirmer(r,select);});
+    return select;
+  }
+  function rendre(rows,liste){
+    $("lignes").replaceChildren();
     for(const r of rows){
       const tr=document.createElement("tr");
       const nom=[r.nommembre,r.prenommembre].filter(Boolean).join(" ");
-      const historique=r.statutremboursement==="paye";
-      const mention=r.environnement==="direct"?"":r.environnement==="test"?" — Test":" — À vérifier";
-      const membre=cellule("td",(nom||"—")+mention);
-      const ref=cellule("small",r.numero_avoir||r.avoirid||"");
-      if(ref.textContent)membre.append(document.createElement("br"),ref);
+      const historique=liste==="paye";
       const montant=Number(r.montant_ttc);
+      const membre=cellule("td",nom||"—");
+      const mention=r.environnement==="direct"?"":r.environnement==="test"?"Test":"À vérifier";
+      const detail=[r.numero_avoir||r.avoirid,mention].filter(Boolean).join(" · ");
+      if(detail)membre.append(document.createElement("br"),cellule("small",detail));
       tr.append(membre,cellule("td",r.iban||"—"),
-        cellule("td",r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0?euro.format(montant):"—"),
+        cellule("td",r.montant_ttc!=null&&Number.isFinite(montant)?euro.format(montant):"—"),
         cellule("td",date(r.date_limite)));
-      const statut=cellule("td",historique?"Oui":"Non");
-      const action=document.createElement("td");
-      if(estConfirmable(r)&&r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0){
-        const bouton=document.createElement("button");
-        bouton.type="button";
-        bouton.className="lcdp-table-lecture-admin__cell-action";
-        bouton.textContent="Enregistrer";
-        bouton.setAttribute("aria-label","Enregistrer le remboursement de "+(nom||"ce membre"));
-        bouton.addEventListener("click",()=>ouvrir(r));
-        action.appendChild(bouton);
-        if(r.mode_initial==="virement"&&r.iban&&r.titulaire){
-          const virement=document.createElement("button");
-          virement.type="button";
-          virement.className="lcdp-table-lecture-admin__cell-action";
-          virement.textContent="Déclencher un virement";
-          virement.disabled=true;
-          virement.title="Service bancaire non raccordé";
-          action.append(document.createElement("br"),virement,document.createElement("br"),cellule("small","Non raccordé"));
-        }
-      }else action.textContent=historique?"—":"À vérifier";
-      tr.append(statut,cellule("td",historique?date(r.paiement):"—"),action);
+      const statut=cellule("td",historique?"Oui":"");
+      if(!historique)statut.appendChild(selectionRembourse(r));
+      tr.append(statut,cellule("td",historique?date(r.paiement):"—"));
       $("lignes").appendChild(tr);
     }
-    etat("statut",rows.length?rows.length+" remboursement(s).":"Aucun remboursement enregistré.");
+    etat("statut",rows.length?rows.length+" remboursement(s).":liste==="paye"?"Aucun remboursement enregistré.":"Aucun remboursement à effectuer.");
+  }
+  function verrouiller(actif){
+    occupe=actif;
+    $("actualiser").disabled=actif;
+    $("filtre").disabled=actif;
+    $("lignes").querySelectorAll("select").forEach(el=>{el.disabled=actif||el.dataset.indisponible==="true";});
   }
   async function charger(){
     if(occupe)return;
-    occupe=true;fermer();$("actualiser").disabled=true;
-    $("table-slot").replaceChildren();etat("statut","Chargement…");
+    verrouiller(true);
+    $("lignes").replaceChildren();etat("statut","Chargement…");
     try{
-      const [attente,historique]=await Promise.all([chargerToutes("a_payer"),chargerToutes("paye")]);
-      const dejaVus=new Set();
-      const rows=[...historique.map(r=>({...r,statutremboursement:"paye"})),...attente]
-        .filter(r=>{if(r.idavoir==null)return true;const id=String(r.idavoir);if(dejaVus.has(id))return false;dejaVus.add(id);return true;})
-        .sort((a,b)=>Number(a.statutremboursement==="paye")-Number(b.statutremboursement==="paye")||
-          String(a.date_limite||"9999").localeCompare(String(b.date_limite||"9999")));
-      rendre(rows);
+      const liste=$("filtre").value;
+      const rows=await chargerToutes(liste);
+      rows.sort((a,b)=>String(a.date_limite||"9999").localeCompare(String(b.date_limite||"9999")));
+      rendre(rows,liste);
     }catch(e){etat("statut",e.message,true);}
-    finally{occupe=false;$("actualiser").disabled=false;}
+    finally{verrouiller(false);}
   }
-  function modeChange(){
-    const autre=selection&&$("mode").value!==selection.mode_initial;
-    $("accord-slot").replaceChildren();
-    if(autre)$("accord-slot").appendChild($("accord-template").content.cloneNode(true));
-  }
-  function ouvrir(r){
-    if(!estConfirmable(r)||occupe)return;
-    fermer();selection=r;
-    $("detail").appendChild($("form-template").content.cloneNode(true));
-    $("selection").textContent=[r.prenommembre,r.nommembre,r.numero_avoir||r.avoirid,euro.format(montantDu(r))].filter(Boolean).join(" — ");
-    $("montant").value=String(montantDu(r));$("mode").value=r.mode_initial;
-    const maintenant=new Date();
-    $("date").value=new Date(maintenant.getTime()-maintenant.getTimezoneOffset()*60000).toISOString().slice(0,16);
-    $("mode").addEventListener("change",modeChange);$("fermer").addEventListener("click",fermer);$("form").addEventListener("submit",confirmer);
-    modeChange();$("detail").scrollIntoView({block:"nearest"});$("reference").focus();
-  }
-  function construireConfirmation(r,form){
-    if(!estConfirmable(r)||form.confirmation!==true)throw Error("Remboursement non confirmable.");
-    const montant=Number(form.montant),d=new Date(form.date);
-    if(!Number.isFinite(montant)||Math.abs(montant*100-Math.round(montant*100))>0.000001||Math.round(montant*100)!==Math.round(montantDu(r)*100))throw Error("Le montant doit correspondre exactement à l’avoir.");
-    if(!Number.isFinite(d.getTime())||d.getTime()>Date.now()||d.getTime()<Date.parse(r.datedemande))throw Error("Date réelle invalide.");
-    const reference=String(form.reference||"").trim(),accord=String(form.accord||"").trim(),mode=form.mode;
-    if(!["stripe","virement","autre"].includes(mode)||reference.length<3||reference.length>200)throw Error("Référence ou mode invalide.");
-    if(mode!==r.mode_initial&&!accord)throw Error("Accord exprès requis.");
-    if(mode==="stripe"&&!/^re_[A-Za-z0-9]+$/.test(reference))throw Error("Référence de remboursement Stripe requise.");
-    if(mode==="virement"&&(!r.iban||!r.titulaire))throw Error("IBAN et titulaire requis.");
-    return {idavoir:r.idavoir,montant,mode,reference,date:d.toISOString(),accord:accord||null,confirmation:true};
-  }
-  async function confirmer(event){
-    event.preventDefault();if(!selection||occupe)return;
+  async function confirmer(r,select){
+    if(occupe||r.idavoir==null){select.value="non";return;}
+    if(!window.confirm("Confirmer que le remboursement a déjà été effectué ?")){select.value="non";return;}
+    verrouiller(true);
     try{
-      const payload=construireConfirmation(selection,{montant:$("montant").value,mode:$("mode").value,reference:$("reference").value,date:$("date").value,accord:$("accord")?.value||"",confirmation:true});
-      occupe=true;$("valider").disabled=true;$("actualiser").disabled=true;
-      await api("",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      fermer();occupe=false;await charger();etat("statut","Remboursement enregistré. "+$("statut").textContent);
-    }catch(e){if($("message"))etat("message",e.message,true);else etat("statut",e.message,true);}finally{occupe=false;if($("valider"))$("valider").disabled=false;$("actualiser").disabled=false;}
+      // Contrat à implémenter dans w-admin-data : identité administrateur vérifiée,
+      // transition a_payer -> paye atomique, date de paiement générée côté serveur.
+      await api("",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"confirmer_remboursement",idavoir:r.idavoir,confirmation:true})});
+    }catch(e){
+      select.value="non";
+      etat("statut","Remboursement non enregistré : "+e.message,true);
+      verrouiller(false);
+      return;
+    }
+    verrouiller(false);
+    await charger();
   }
   async function initialiser(){
     const garde=window.LCDP_GUARD_ADMIN;
@@ -130,7 +107,7 @@
     slot.querySelectorAll("[data-site-href]").forEach(el=>{el.href=el.dataset.space==="admin"?window.LCDP_urlAdmin(el.dataset.siteHref):window.LCDP_urlPublic(el.dataset.siteHref);});
     slot.querySelectorAll("[data-site-src]").forEach(el=>{el.src=window.LCDP_urlObjet(String(el.dataset.siteSrc||"").replace(/^\/?OBJET\/?/,"/"));});
     await window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:"lcdp-menu-gauche-admin-slot",categorieActive:"membres"});
-    $("actualiser").addEventListener("click",charger);await charger();
+    $("actualiser").addEventListener("click",charger);$("filtre").addEventListener("change",charger);await charger();
   }
   initialiser().catch(e=>etat("statut",e.message,true));
 })();
