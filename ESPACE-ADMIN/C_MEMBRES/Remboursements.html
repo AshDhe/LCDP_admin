@@ -18,7 +18,7 @@
       window.LCDP_urlAdmin = p => typeof c.adminUrl === "function" ? c.adminUrl(p) : join(admin,p);
       window.LCDP_urlPublic = p => typeof c.publicUrl === "function" ? c.publicUrl(p) : join(publicBase,p);
       window.LCDP_urlObjet = p => typeof c.objetUrl === "function" ? c.objetUrl(p) : join(objet,p);
-      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css"].forEach(p => {
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css","/CSSBASE/lcdp-navigation-onglets.css"].forEach(p => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(p) + '">');
       });
       [
@@ -46,9 +46,10 @@
                 <h1>Remboursements des membres</h1>
                 <button id="remb-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
               </header>
-              <div class="lcdp-ventesabo__vues" role="tablist" aria-label="Remboursements">
-                <a id="remb-tab-faire" href="#a-faire" role="tab" aria-controls="remb-faire" aria-selected="true" aria-current="page">À faire</a>
-                <a id="remb-tab-stripe" href="#suivi-stripe" role="tab" aria-controls="remb-stripe" aria-selected="false" tabindex="-1">Suivi Stripe</a>
+              <div class="lcdp-wraper-onglets lcdp-wraper-onglets--2 lcdp-stack">
+              <div class="lcdp-navigation-onglets lcdp-wraper-onglets__navigation" role="tablist" aria-label="Remboursements">
+                <button type="button" class="lcdp-navigation-onglets__onglet" id="remb-tab-faire" role="tab" aria-controls="remb-faire" aria-selected="true" aria-pressed="true">À faire</button>
+                <button type="button" class="lcdp-navigation-onglets__onglet" id="remb-tab-stripe" role="tab" aria-controls="remb-stripe" aria-selected="false" aria-pressed="false" tabindex="-1">Suivi Stripe</button>
               </div>
               <p id="remb-statut" role="status" aria-live="polite"></p>
               <section id="remb-faire" role="tabpanel" aria-labelledby="remb-tab-faire">
@@ -89,12 +90,13 @@
                   </div>
                 </div>
               </section>
+              </div>
             </div>
           </div>
         </div>
       </section>
     </main>
   </div>
-  <script src="./Remboursements.js?v=20261125-suivi-stripe-v2"></script>
+  <script src="./Remboursements.js?v=20261125-onglets-communs"></script>
 </body>
 </html>
