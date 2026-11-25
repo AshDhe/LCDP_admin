@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remboursements — Administration La Clé du Parc</title>
+  <meta name="description" content="Suivi administratif des remboursements des membres.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = v => String(v || "").replace(/\/+$/, "");
+      const join = (b,p) => base(b) + "/" + String(p || "").replace(/^\/+/, "");
+      const admin = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
+      const publicBase = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
+      const objet = base(c.objetBaseUrl || c.OBJET_BASE || join(publicBase,"/OBJET"));
+      window.LCDP_urlAdmin = p => typeof c.adminUrl === "function" ? c.adminUrl(p) : join(admin,p);
+      window.LCDP_urlPublic = p => typeof c.publicUrl === "function" ? c.publicUrl(p) : join(publicBase,p);
+      window.LCDP_urlObjet = p => typeof c.objetUrl === "function" ? c.objetUrl(p) : join(objet,p);
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css"].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(p) + '">');
+      });
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css"
+      ].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-ventesabo">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Remboursements des membres">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content">
+              <header class="lcdp-ventesabo__entete">
+                <div><h1>Remboursements des membres</h1><p>À traiter et historique des remboursements confirmés.</p></div>
+                <button id="remb-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
+              </header>
+              <div class="lcdp-actualite-actions">
+                <label for="remb-liste">Afficher
+                  <select id="remb-liste" class="lcdp-table-lecture-admin__filter-input">
+                    <option value="a_payer">À rembourser</option><option value="paye">Remboursements effectués</option>
+                  </select>
+                </label>
+              </div>
+              <p id="remb-statut" role="status" aria-live="polite"></p>
+              <p id="remb-synthese" class="lcdp-text-strong-lead"></p>
+              <p>Le remboursement utilise le moyen de paiement initial, sauf accord exprès du membre. Les dossiers test ou non vérifiés sont signalés et ne peuvent pas être confirmés.</p>
+              <div class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
+                <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
+                  <table class="lcdp-table-lecture-admin__table">
+                    <caption>Remboursements TTC — les échéances les plus anciennes en premier</caption>
+                    <thead><tr id="remb-entetes"></tr></thead><tbody id="remb-lignes"></tbody>
+                  </table>
+                </div>
+              </div>
+              <section id="remb-detail" class="lcdp-stack-large" hidden>
+                <h2>Confirmer un remboursement déjà exécuté</h2>
+                <p id="remb-selection"></p>
+                <form id="remb-form" class="lcdp-stack-large">
+                  <label>Mode réellement utilisé
+                    <select id="remb-mode" required><option value="stripe">Stripe — moyen initial</option><option value="virement">Virement bancaire</option><option value="autre">Autre moyen</option></select>
+                  </label>
+                  <label>Montant réellement remboursé TTC (€)
+                    <input id="remb-montant" type="number" step="0.01" min="0.01" required>
+                  </label>
+                  <label>Date et heure réelles du remboursement (heure locale de votre appareil)
+                    <input id="remb-date" type="datetime-local" required>
+                  </label>
+                  <label>Référence de l'opération exécutée (Stripe re_… ou référence bancaire)
+                    <input id="remb-reference" type="text" maxlength="200" minlength="3" required autocomplete="off">
+                  </label>
+                  <label id="remb-accord-label" hidden>Référence de l'accord exprès du membre pour le changement de moyen de paiement
+                    <input id="remb-accord" type="text" maxlength="500" autocomplete="off">
+                  </label>
+                  <label><input id="remb-confirme" type="checkbox" required> Je confirme que le remboursement a été effectivement exécuté et vérifié, pour le montant indiqué.</label>
+                  <div class="lcdp-actualite-actions">
+                    <button id="remb-valider" type="submit" class="lcdp-button lcdp-button-primary">Enregistrer le remboursement effectué</button>
+                    <button id="remb-fermer" type="button" class="lcdp-button lcdp-button-secondary">Fermer</button>
+                  </div>
+                  <p id="remb-message" role="status" aria-live="polite"></p>
+                </form>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./Remboursements.js"></script>
+</body>
+</html>
