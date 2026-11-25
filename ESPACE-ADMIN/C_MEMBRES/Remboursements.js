@@ -29,45 +29,49 @@
   function montantDu(r){const v=Number(r.montant_ttc);if(r.montant_ttc==null||!Number.isFinite(v)||v<=0)throw Error("Montant de remboursement invalide.");return v;}
   function estConfirmable(r){return r.statutremboursement==="a_payer"&&r.environnement==="direct"&&["stripe","virement"].includes(r.mode_initial);}
   function fermer(){selection=null;$("detail").replaceChildren();}
-  function rendre(rows,liste){
-    const historique=liste==="paye";
-    $("table-slot").replaceChildren();
-    if(!rows.length){$("synthese").textContent="";etat("statut",historique?"Aucun remboursement enregistré.":"Aucun remboursement à effectuer.");return;}
-    $("table-slot").appendChild($("table-template").content.cloneNode(true));
-    const cols=historique?["Membre / avoir","Montant TTC","Remboursé le","Référence"]:["Membre / avoir","À rembourser TTC","Date limite","Coordonnées / mode","Action"];
-    $("entetes").replaceChildren(...cols.map(c=>cellule("th",c)));
-    let total=0,retards=0,verifier=0;
+  function rendre(rows){
+    $("table-slot").replaceChildren($("table-template").content.cloneNode(true));
     for(const r of rows){
-      const montant=montantDu(r), tr=document.createElement("tr"),nom=[r.prenommembre,r.nommembre].filter(Boolean).join(" ");
-      const direct=r.environnement==="direct";
-      if(direct)total+=Math.round(montant*100);else verifier++;
-      if(direct&&r.en_retard)retards++;
-      const m=cellule("td",(nom||"—")+(direct?"":r.environnement==="test"?" — Test":" — À vérifier")),ref=cellule("small",r.numero_avoir||r.avoirid||"—");m.append(document.createElement("br"),ref);
-      tr.append(m,cellule("td",euro.format(montant)));
-      if(historique){
-        tr.append(cellule("td",date(r.paiement)),cellule("td",[r.mode_remboursement,r.reference_remboursement].filter(Boolean).join(" / ")||"Référence absente"));
-      }else{
-        tr.append(cellule("td",date(r.date_limite)+(r.en_retard&&direct?" — En retard":"")));
-        const banque=cellule("td",r.mode_initial==="stripe"?"Stripe":r.mode_initial==="virement"?"Virement":"Mode à vérifier");
-        for(const v of [r.titulaire,r.iban,r.swift].filter(Boolean))banque.append(document.createElement("br"),document.createTextNode(v));
-        if(!r.iban)banque.append(document.createElement("br"),document.createTextNode("IBAN non renseigné"));
-        tr.appendChild(banque);
-        const td=document.createElement("td");
-        if(estConfirmable(r)){
-          const b=document.createElement("button");b.type="button";b.className="lcdp-button lcdp-button-secondary";b.textContent="Remboursé";b.addEventListener("click",()=>ouvrir(r));td.appendChild(b);
-        }else td.textContent=r.environnement==="test"?"Test — ne pas payer":"À vérifier";
-        tr.appendChild(td);
+      const tr=document.createElement("tr");
+      const nom=[r.nommembre,r.prenommembre].filter(Boolean).join(" ");
+      const historique=r.statutremboursement==="paye";
+      const mention=r.environnement==="direct"?"":r.environnement==="test"?" — Test":" — À vérifier";
+      const membre=cellule("td",(nom||"—")+mention);
+      const ref=cellule("small",r.numero_avoir||r.avoirid||"");
+      if(ref.textContent)membre.append(document.createElement("br"),ref);
+      const montant=Number(r.montant_ttc);
+      tr.append(membre,cellule("td",r.iban||"—"),
+        cellule("td",r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0?euro.format(montant):"—"),
+        cellule("td",date(r.date_limite)));
+      const statut=cellule("td",historique?"Oui":"Non");
+      if(estConfirmable(r)&&r.montant_ttc!=null&&Number.isFinite(montant)&&montant>0){
+        const bouton=document.createElement("button");
+        bouton.type="button";
+        bouton.className="lcdp-table-lecture-admin__cell-action";
+        bouton.textContent="Non — Enregistrer";
+        bouton.setAttribute("aria-label","Enregistrer le remboursement de "+(nom||"ce membre"));
+        bouton.addEventListener("click",()=>ouvrir(r));
+        statut.replaceChildren(bouton);
       }
+      tr.append(statut,cellule("td",historique?date(r.paiement):"—"));
       $("lignes").appendChild(tr);
     }
-    $("synthese").textContent=(historique?"Total remboursé : ":"Total à rembourser : ")+euro.format(total/100)+(verifier?" · "+verifier+" dossier(s) à vérifier ou test":"")+(!historique&&retards?" · "+retards+" en retard":"");
-    etat("statut",rows.length+" dossier(s).");
+    etat("statut",rows.length?rows.length+" remboursement(s).":"Aucun remboursement enregistré.");
   }
   async function charger(){
-    if(occupe)return;occupe=true;fermer();$("actualiser").disabled=true;$("liste").disabled=true;
-    $("table-slot").replaceChildren();$("synthese").textContent="";etat("statut","Chargement…");
-    try{const liste=$("liste").value;rendre(await chargerToutes(liste),liste);}
-    catch(e){etat("statut",e.message,true);}finally{occupe=false;$("actualiser").disabled=false;$("liste").disabled=false;}
+    if(occupe)return;
+    occupe=true;fermer();$("actualiser").disabled=true;
+    $("table-slot").replaceChildren();etat("statut","Chargement…");
+    try{
+      const [attente,historique]=await Promise.all([chargerToutes("a_payer"),chargerToutes("paye")]);
+      const dejaVus=new Set();
+      const rows=[...historique.map(r=>({...r,statutremboursement:"paye"})),...attente]
+        .filter(r=>{if(r.idavoir==null)return true;const id=String(r.idavoir);if(dejaVus.has(id))return false;dejaVus.add(id);return true;})
+        .sort((a,b)=>Number(a.statutremboursement==="paye")-Number(b.statutremboursement==="paye")||
+          String(a.date_limite||"9999").localeCompare(String(b.date_limite||"9999")));
+      rendre(rows);
+    }catch(e){etat("statut",e.message,true);}
+    finally{occupe=false;$("actualiser").disabled=false;}
   }
   function modeChange(){
     const autre=selection&&$("mode").value!==selection.mode_initial;
@@ -80,8 +84,10 @@
     $("detail").appendChild($("form-template").content.cloneNode(true));
     $("selection").textContent=[r.prenommembre,r.nommembre,r.numero_avoir||r.avoirid,euro.format(montantDu(r))].filter(Boolean).join(" — ");
     $("montant").value=String(montantDu(r));$("mode").value=r.mode_initial;
+    const maintenant=new Date();
+    $("date").value=new Date(maintenant.getTime()-maintenant.getTimezoneOffset()*60000).toISOString().slice(0,16);
     $("mode").addEventListener("change",modeChange);$("fermer").addEventListener("click",fermer);$("form").addEventListener("submit",confirmer);
-    modeChange();$("reference").focus();
+    modeChange();$("detail").scrollIntoView({block:"nearest"});$("reference").focus();
   }
   function construireConfirmation(r,form){
     if(!estConfirmable(r)||form.confirmation!==true)throw Error("Remboursement non confirmable.");
@@ -99,11 +105,10 @@
     event.preventDefault();if(!selection||occupe)return;
     try{
       const payload=construireConfirmation(selection,{montant:$("montant").value,mode:$("mode").value,reference:$("reference").value,date:$("date").value,accord:$("accord")?.value||"",confirmation:true});
-      if(!window.confirm("Enregistrer l’opération déjà exécutée de "+euro.format(payload.montant)+" ? Aucun paiement n’est envoyé."))return;
-      occupe=true;$("valider").disabled=true;$("actualiser").disabled=true;$("liste").disabled=true;
+      occupe=true;$("valider").disabled=true;$("actualiser").disabled=true;
       await api("",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       fermer();occupe=false;await charger();etat("statut","Remboursement enregistré. "+$("statut").textContent);
-    }catch(e){if($("message"))etat("message",e.message,true);else etat("statut",e.message,true);}finally{occupe=false;if($("valider"))$("valider").disabled=false;$("actualiser").disabled=false;$("liste").disabled=false;}
+    }catch(e){if($("message"))etat("message",e.message,true);else etat("statut",e.message,true);}finally{occupe=false;if($("valider"))$("valider").disabled=false;$("actualiser").disabled=false;}
   }
   async function initialiser(){
     const garde=window.LCDP_GUARD_ADMIN;
@@ -115,7 +120,7 @@
     slot.querySelectorAll("[data-site-href]").forEach(el=>{el.href=el.dataset.space==="admin"?window.LCDP_urlAdmin(el.dataset.siteHref):window.LCDP_urlPublic(el.dataset.siteHref);});
     slot.querySelectorAll("[data-site-src]").forEach(el=>{el.src=window.LCDP_urlObjet(String(el.dataset.siteSrc||"").replace(/^\/?OBJET\/?/,"/"));});
     await window.LCDP_MENU_GAUCHE_ADMIN.initialiser({slotId:"lcdp-menu-gauche-admin-slot",categorieActive:"membres"});
-    $("actualiser").addEventListener("click",charger);$("liste").addEventListener("change",charger);await charger();
+    $("actualiser").addEventListener("click",charger);await charger();
   }
   initialiser().catch(e=>etat("statut",e.message,true));
 })();
