@@ -14,3 +14,12 @@
 .lcdp-page-prixabo .lcdp-prixabo-position-label{display:flex;align-items:center;gap:5px;font-size:.75rem;font-weight:400;cursor:pointer}
 .lcdp-page-prixabo select.lcdp-prixabo-column-position{display:inline-block!important;visibility:visible!important;opacity:1!important;appearance:auto!important;width:50px;min-width:50px;min-height:26px;padding:2px 3px;border:1px solid currentColor;border-radius:4px;font-size:.8rem;background:var(--lcdp-color-background,#f4f5f1);color:inherit}
 .lcdp-page-prixabo .lcdp-prixabo-order-hint{margin:0;font-size:.82rem;color:inherit}
+
+/* Toutes les colonnes ont le même gabarit, indépendant du contenu. */
+.lcdp-page-prixabo .lcdp-prixabo-table{--lcdp-prixabo-column-width:136px;table-layout:fixed;width:calc(var(--lcdp-prixabo-column-count,29) * var(--lcdp-prixabo-column-width));min-width:0;max-width:none}
+.lcdp-page-prixabo .lcdp-prixabo-table col{width:var(--lcdp-prixabo-column-width)}
+.lcdp-page-prixabo .lcdp-prixabo-table th,.lcdp-page-prixabo .lcdp-prixabo-table td{box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;word-break:normal;vertical-align:top;text-align:left}
+.lcdp-page-prixabo .lcdp-prixabo-column-heading{white-space:normal;min-width:0;width:100%}
+.lcdp-page-prixabo .lcdp-prixabo-sort,.lcdp-page-prixabo .lcdp-prixabo-link{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.lcdp-page-prixabo .lcdp-prixabo-sort{box-sizing:border-box;min-height:2.6em;line-height:1.2;align-content:start}
+.lcdp-page-prixabo .lcdp-prixabo-table thead input[type=search]{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
