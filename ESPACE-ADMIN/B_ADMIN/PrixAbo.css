@@ -23,3 +23,12 @@
 .lcdp-page-prixabo .lcdp-prixabo-sort,.lcdp-page-prixabo .lcdp-prixabo-link{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
 .lcdp-page-prixabo .lcdp-prixabo-sort{box-sizing:border-box;min-height:2.6em;line-height:1.2;align-content:start}
 .lcdp-page-prixabo .lcdp-prixabo-table thead input[type=search]{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+
+/* Centrage intégral du tableau, horizontal et vertical, sans modifier le gabarit des colonnes. */
+.lcdp-page-prixabo .lcdp-prixabo-table th,.lcdp-page-prixabo .lcdp-prixabo-table td{text-align:center;vertical-align:middle}
+.lcdp-page-prixabo .lcdp-prixabo-column-heading{align-items:center;justify-content:center;text-align:center}
+.lcdp-page-prixabo .lcdp-prixabo-position-label{justify-content:center;text-align:center}
+.lcdp-page-prixabo .lcdp-prixabo-sort,.lcdp-page-prixabo .lcdp-prixabo-link{display:inline-block;text-align:center;align-content:center}
+.lcdp-page-prixabo .lcdp-prixabo-table thead input[type=search],.lcdp-page-prixabo select.lcdp-prixabo-column-position{text-align:center;text-align-last:center}
+.lcdp-page-prixabo .lcdp-prixabo-table td input[type=checkbox]{margin-inline:auto;vertical-align:middle}
+.lcdp-page-prixabo .lcdp-prixabo-active,.lcdp-page-prixabo .lcdp-prixabo-lock{text-align:center}
