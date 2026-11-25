@@ -28,8 +28,9 @@
   async function chargerToutes(liste){
     const rows=[];
     for(let offset=0;offset<1000000;offset+=100){
-      const d=await api("?liste="+encodeURIComponent(liste)+"&offset="+offset,{},liste==="stripe"?"/v2":"");
-      if(liste==="stripe"&&(d.version!==2||d.liste!=="stripe"))throw Error("Suivi Stripe non disponible.");
+      const v2=liste==="stripe"||capacites.manuel||capacites.stripe||capacites.suiviStripe;
+      const d=await api("?liste="+encodeURIComponent(liste)+"&offset="+offset,{},v2?"/v2":"");
+      if(v2&&(d.version!==2||d.liste!==liste))throw Error("Réponse du service de remboursements non conforme.");
       if(!Array.isArray(d.rows))throw Error("Liste invalide.");
       rows.push(...d.rows);if(d.rows.length<100)return rows;
     }
