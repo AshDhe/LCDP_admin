@@ -131,7 +131,7 @@
     for(const cle of ["faire","stripe"]){
       const tab=$("tab-"+cle),actif=cle===id;
       tab.setAttribute("aria-selected",String(actif));tab.tabIndex=actif?0:-1;
-      if(actif)tab.setAttribute("aria-current","page");else tab.removeAttribute("aria-current");
+      tab.setAttribute("aria-pressed",String(actif));
       $(cle).hidden=!actif;
     }
     void charger();
