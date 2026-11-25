@@ -8,3 +8,9 @@
 .lcdp-prixabo-column-heading{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .lcdp-prixabo-column-position{flex:0 0 auto;width:auto;min-width:40px;max-width:60px;padding:2px 4px;border:1px solid #bfc5b9;border-radius:4px;background:var(--lcdp-color-background,#f4f5f1);color:inherit;font:inherit;font-size:.75rem;cursor:pointer}
 .lcdp-prixabo-column-position:focus-visible{outline:2px solid var(--lcdp-color-primary,#365b36);outline-offset:2px}
+
+/* Sélecteur explicite : une ligne distincte, visible même avec les styles communs. */
+.lcdp-page-prixabo .lcdp-prixabo-column-heading{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.lcdp-page-prixabo .lcdp-prixabo-position-label{display:flex;align-items:center;gap:5px;font-size:.75rem;font-weight:400;cursor:pointer}
+.lcdp-page-prixabo select.lcdp-prixabo-column-position{display:inline-block!important;visibility:visible!important;opacity:1!important;appearance:auto!important;width:50px;min-width:50px;min-height:26px;padding:2px 3px;border:1px solid currentColor;border-radius:4px;font-size:.8rem;background:var(--lcdp-color-background,#f4f5f1);color:inherit}
+.lcdp-page-prixabo .lcdp-prixabo-order-hint{margin:0;font-size:.82rem;color:inherit}
