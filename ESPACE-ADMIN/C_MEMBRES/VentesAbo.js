@@ -74,13 +74,13 @@
     });
   }
 
-  async function obtenirVentes() {
+  async function obtenirVentes(resource = "membres-ventes-abo") {
     if (!BASE) throw new Error("Service de données administratives non configuré.");
     const lignes = [];
     let offset = 0;
     for (let page = 0; page < 30; page += 1) {
       const url = new URL(BASE + "/read");
-      url.searchParams.set("resource", "membres-ventes-abo");
+      url.searchParams.set("resource", resource);
       url.searchParams.set("limit", "100");
       url.searchParams.set("offset", String(offset));
       const response = await fetch(url.toString(), {
@@ -112,6 +112,7 @@
       ? "Ventes mensuelles, montants TTC nets des remises."
       : "Nombre d'abonnements vendus chaque mois.";
     $("actualiser").addEventListener("click", charger);
+    if (euros) preparerDeclaratif();
   }
 
   function rendre(lignes) {
@@ -190,11 +191,64 @@
     chargement = true;
     $("actualiser").disabled = true;
     etat("Actualisation des ventes…");
-    try { rendre(await obtenirVentes()); }
+    try { await Promise.all([obtenirVentes().then(rendre), vue === "euros" ? chargerDeclaratif() : Promise.resolve()]); }
     catch (err) { etat(err.message || "Impossible d'afficher les ventes.", true); }
     finally { chargement = false; $("actualiser").disabled = false; }
   }
 
+
+  const colonnesDeclaratif = [
+    ["mois","Mois"],["taux","TVA"],["ca_facture_ht","CA facturé HT"],
+    ["ca_annule_ht","CA annulé HT"],["tva_facturee","TVA facturée"],
+    ["tva_deduite_avoir","TVA déduite sur avoir"],["ca_net_ht","CA net HT"],
+    ["tva_nette","TVA nette facturée"],["total_net_ttc","Net TTC"]
+  ];
+  function preparerDeclaratif() {
+    const section=document.createElement("section");
+    section.id="lcdp-ventesabo-declaratif";
+    const h=document.createElement("h2");
+    h.textContent="Journal comptable — chiffre d’affaires et TVA";
+    const info=document.createElement("p");
+    info.textContent="Documents émis, hors tests, par mois et taux. L’annulation et la facturation des accès consommés sont distinctes. Les remboursements ne sont pas des écritures de chiffre d’affaires. Ces montants facturés ne constituent pas à eux seuls une déclaration de TVA exigible.";
+    const status=document.createElement("p");
+    status.id="lcdp-ventesabo-declaratif-statut";status.setAttribute("role","status");
+    const wrap=document.createElement("div");wrap.className="lcdp-table-lecture-admin lcdp-ventesabo__tableau";
+    const scroll=document.createElement("div");scroll.className="lcdp-table-lecture-admin__scroll";scroll.tabIndex=0;
+    const table=document.createElement("table");table.className="lcdp-table-lecture-admin__table";
+    const caption=document.createElement("caption");caption.textContent="Écritures par mois d’émission et taux de TVA";
+    const thead=document.createElement("thead"),tr=document.createElement("tr"),tbody=document.createElement("tbody");
+    tbody.id="lcdp-ventesabo-declaratif-lignes";
+    for (const [,libelle] of colonnesDeclaratif) tr.appendChild(cellule("th",libelle));
+    thead.appendChild(tr);table.append(caption,thead,tbody);scroll.appendChild(table);wrap.appendChild(scroll);
+    section.append(h,info,status,wrap);$("note").after(section);
+  }
+  function lignesDeclaratif(lignes) {
+    return lignes.map(l=>{
+      if (!/^\d{4}-\d{2}-01$/.test(String(l.mois)) || ![0,5.5,10,20].includes(Number(l.taux))) throw Error("Période ou taux comptable invalide.");
+      const champs=colonnesDeclaratif.slice(2).map(([k])=>{
+        if(l[k]===null||l[k]===""||!Number.isFinite(Number(l[k])))throw Error("Montant comptable manquant : "+k);
+        return Number(l[k]);
+      });
+      return [String(l.mois).slice(0,7),Number(l.taux),...champs];
+    }).sort((a,b)=>b[0].localeCompare(a[0])||a[1]-b[1]);
+  }
+  async function chargerDeclaratif() {
+    const status=$("declaratif-statut"), corps=$("declaratif-lignes");
+    status.textContent="Chargement du journal comptable…";corps.replaceChildren();
+    try {
+      const lignes=lignesDeclaratif(await obtenirVentes("membres-declaratif-factures"));
+      for (const l of lignes) {
+        const tr=document.createElement("tr");
+        tr.append(cellule("th",l[0]),cellule("td",l[1].toLocaleString("fr-FR")+" %"));
+        l.slice(2).forEach(v=>tr.appendChild(cellule("td",devise.format(v))));
+        corps.appendChild(tr);
+      }
+      status.textContent=lignes.length?lignes.length+" ligne(s) comptable(s).":"Aucun document fiscal émis.";
+      status.setAttribute("role","status");
+    } catch(err) {
+      status.setAttribute("role","alert");status.textContent=err.message||"Journal comptable indisponible.";
+    }
+  }
   async function initialiser() {
     const garde = window.LCDP_GUARD_ADMIN;
     if (!garde || !await garde.verifierAccesPageAdmin({path: CHEMIN})) return;
