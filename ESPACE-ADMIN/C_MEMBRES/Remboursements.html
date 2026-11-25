@@ -43,7 +43,7 @@
             <div id="lcdp-menu-gauche-admin-slot"></div>
             <div class="lcdp-admin-page-content">
               <header class="lcdp-ventesabo__entete">
-                <div><h1>Remboursements des membres</h1><p>À traiter et historique des remboursements confirmés.</p></div>
+                <div><h1>Remboursements des membres</h1><p>Liste des remboursements à effectuer.</p></div>
                 <button id="remb-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
               </header>
               <div class="lcdp-actualite-actions">
@@ -55,48 +55,52 @@
               </div>
               <p id="remb-statut" role="status" aria-live="polite"></p>
               <p id="remb-synthese" class="lcdp-text-strong-lead"></p>
-              <p>Le remboursement utilise le moyen de paiement initial, sauf accord exprès du membre. Les dossiers test ou non vérifiés sont signalés et ne peuvent pas être confirmés.</p>
-              <div class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
-                <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
-                  <table class="lcdp-table-lecture-admin__table">
-                    <caption>Remboursements TTC — les échéances les plus anciennes en premier</caption>
-                    <thead><tr id="remb-entetes"></tr></thead><tbody id="remb-lignes"></tbody>
-                  </table>
-                </div>
-              </div>
-              <section id="remb-detail" class="lcdp-stack-large" hidden>
-                <h2>Confirmer un remboursement déjà exécuté</h2>
-                <p id="remb-selection"></p>
-                <form id="remb-form" class="lcdp-stack-large">
-                  <label>Mode réellement utilisé
-                    <select id="remb-mode" required><option value="stripe">Stripe — moyen initial</option><option value="virement">Virement bancaire</option><option value="autre">Autre moyen</option></select>
-                  </label>
-                  <label>Montant réellement remboursé TTC (€)
-                    <input id="remb-montant" type="number" step="0.01" min="0.01" required>
-                  </label>
-                  <label>Date et heure réelles du remboursement (heure locale de votre appareil)
-                    <input id="remb-date" type="datetime-local" required>
-                  </label>
-                  <label>Référence de l'opération exécutée (Stripe re_… ou référence bancaire)
-                    <input id="remb-reference" type="text" maxlength="200" minlength="3" required autocomplete="off">
-                  </label>
-                  <label id="remb-accord-label" hidden>Référence de l'accord exprès du membre pour le changement de moyen de paiement
-                    <input id="remb-accord" type="text" maxlength="500" autocomplete="off">
-                  </label>
-                  <label><input id="remb-confirme" type="checkbox" required> Je confirme que le remboursement a été effectivement exécuté et vérifié, pour le montant indiqué.</label>
-                  <div class="lcdp-actualite-actions">
-                    <button id="remb-valider" type="submit" class="lcdp-button lcdp-button-primary">Enregistrer le remboursement effectué</button>
-                    <button id="remb-fermer" type="button" class="lcdp-button lcdp-button-secondary">Fermer</button>
+              <div id="remb-table-slot"></div>
+              <template id="remb-table-template">
+                <div class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
+                  <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
+                    <table class="lcdp-table-lecture-admin__table">
+                      <thead><tr id="remb-entetes"></tr></thead><tbody id="remb-lignes"></tbody>
+                    </table>
                   </div>
-                  <p id="remb-message" role="status" aria-live="polite"></p>
-                </form>
-              </section>
+                </div>
+              </template>
+              <div id="remb-detail"></div>
+              <template id="remb-form-template">
+                <section class="lcdp-stack-large">
+                  <h2>Remboursement effectué</h2>
+                  <p id="remb-selection"></p>
+                  <form id="remb-form" class="lcdp-stack-large">
+                    <label>Mode utilisé
+                      <select id="remb-mode" class="lcdp-table-lecture-admin__filter-input" required><option value="stripe">Stripe</option><option value="virement">Virement bancaire</option><option value="autre">Autre moyen</option></select>
+                    </label>
+                    <label>Montant TTC (€)
+                      <input id="remb-montant" class="lcdp-table-lecture-admin__filter-input" type="number" step="0.01" min="0.01" readonly required>
+                    </label>
+                    <label>Date et heure du remboursement
+                      <input id="remb-date" class="lcdp-table-lecture-admin__filter-input" type="datetime-local" required>
+                    </label>
+                    <label>Référence bancaire ou Stripe
+                      <input id="remb-reference" class="lcdp-table-lecture-admin__filter-input" type="text" maxlength="200" minlength="3" required autocomplete="off">
+                    </label>
+                    <div id="remb-accord-slot"></div>
+                    <template id="remb-accord-template"><label>Référence de l’accord du membre pour le changement de moyen de paiement
+                      <input id="remb-accord" class="lcdp-table-lecture-admin__filter-input" type="text" maxlength="500" required autocomplete="off">
+                    </label></template>
+                    <div class="lcdp-actualite-actions">
+                      <button id="remb-valider" type="submit" class="lcdp-button lcdp-button-primary">Enregistrer</button>
+                      <button id="remb-fermer" type="button" class="lcdp-button lcdp-button-secondary">Annuler</button>
+                    </div>
+                    <p id="remb-message" role="status" aria-live="polite"></p>
+                  </form>
+                </section>
+              </template>
             </div>
           </div>
         </div>
       </section>
     </main>
   </div>
-  <script src="./Remboursements.js"></script>
+  <script src="./Remboursements.js?v=20261125-2"></script>
 </body>
 </html>
