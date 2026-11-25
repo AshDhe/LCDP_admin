@@ -21,7 +21,7 @@
   async function lireCapacites(){
     try{
       const d=await api("",{},"/v2/capabilities");
-      if(d.version===2)return {manuel:d.manuel===true,stripe:d.stripe===true,suiviStripe:d.suiviStripe===true};
+      if(d.version===2)return {manuel:d.manuel===true,stripe:d.stripe===true,suiviStripe:d.suiviStripe===true,environnementStripe:d.environnementStripe||null};
     }catch{}
     return {manuel:false,stripe:false,suiviStripe:false};
   }
@@ -36,8 +36,9 @@
     }
     throw Error("Liste trop importante.");
   }
-  function valide(r){
-    return !!r.idavoir&&r.environnement==="direct"&&r.montant_ttc!=null&&Number.isFinite(Number(r.montant_ttc))&&Number(r.montant_ttc)>0;
+  function valide(r,mode="manuel"){
+    const environnement=mode==="stripe"?capacites.environnementStripe:"direct";
+    return !!r.idavoir&&!!environnement&&r.environnement===environnement&&r.montant_ttc!=null&&Number.isFinite(Number(r.montant_ttc))&&Number(r.montant_ttc)>0;
   }
   function selectionManuelle(r,incident){
     const select=document.createElement("select");
@@ -54,7 +55,7 @@
   }
   function boutonStripe(r){
     const b=document.createElement("button");b.type="button";b.className="lcdp-button lcdp-button-secondary";b.textContent="Rembourser";
-    b.disabled=!(capacites.stripe&&valide(r)&&r.stripe_autorise===true);
+    b.disabled=!(capacites.stripe&&valide(r,"stripe")&&r.stripe_autorise===true);
     b.dataset.indisponible=String(b.disabled);
     b.addEventListener("click",()=>void confirmer(r,"stripe"));
     return b;
@@ -77,7 +78,7 @@
       manuel.append(selectionManuelle(r,false));stripe.append(boutonStripe(r));
       tr.append(manuel,stripe,cellule("td",date(r.paiement)));$("lignes-faire").appendChild(tr);
     }
-    etat("statut",(!capacites.manuel||!capacites.stripe?"Actions non raccordées au Worker : consultation seule ou partielle. ":"")+(rows.length?rows.length+" remboursement(s) à faire.":"Aucun remboursement à effectuer."));
+    etat("statut",(capacites.environnementStripe==="test"?"Mode Stripe TEST — virements manuels désactivés. ":!capacites.manuel||!capacites.stripe?"Actions non raccordées au Worker : consultation seule ou partielle. ":"")+(rows.length?rows.length+" remboursement(s) à faire.":"Aucun remboursement à effectuer."));
   }
   function rendreSuivi(){
     const filtre=$("filtre-stripe").value;
@@ -90,7 +91,7 @@
       tr.append(cellule("td",libellesStripe[r.statut_stripe]||"Statut non confirmé"),cellule("td",date(r.date_declenchement_stripe)),manuel,cellule("td",date(r.paiement)));
       $("lignes-stripe").appendChild(tr);
     }
-    etat("statut",rows.length?rows.length+" dossier(s) Stripe.":"Aucun dossier Stripe pour ce filtre.");
+    etat("statut",(capacites.environnementStripe==="test"?"Mode Stripe TEST. ":"")+(rows.length?rows.length+" dossier(s) Stripe.":"Aucun dossier Stripe pour ce filtre."));
   }
   function verrouiller(actif){
     occupe=actif;$("actualiser").disabled=actif;$("filtre-stripe").disabled=actif;
@@ -113,8 +114,8 @@
     finally{verrouiller(false);}
   }
   async function confirmer(r,mode,select){
-    if(occupe||!valide(r)){if(select)select.value="non";return;}
-    const texte=mode==="stripe"?"Déclencher le remboursement Stripe de "+euro.format(Number(r.montant_ttc))+" ?":"Confirmer le virement bancaire déjà effectué de "+euro.format(Number(r.montant_ttc))+" ?"+(r.mode_initial==="stripe"?" Confirmer également que le changement de moyen de remboursement est autorisé par le membre.":"");
+    if(occupe||!valide(r,mode)||(mode==="stripe"?(!capacites.stripe||r.stripe_autorise!==true):(!capacites.manuel||r.manuel_autorise!==true))){if(select)select.value="non";return;}
+    const texte=mode==="stripe"?"Déclencher le remboursement Stripe"+(r.environnement==="test"?" (TEST, aucun mouvement réel)":"")+" de "+euro.format(Number(r.montant_ttc))+" ?":"Confirmer le virement bancaire déjà effectué de "+euro.format(Number(r.montant_ttc))+" ?"+(r.mode_initial==="stripe"?" Confirmer également que le changement de moyen de remboursement est autorisé par le membre.":"");
     if(!window.confirm(texte)){if(select)select.value="non";return;}
     verrouiller(true);
     try{
