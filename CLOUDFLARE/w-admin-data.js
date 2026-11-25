@@ -84,6 +84,10 @@ export default {
         return gererSuspensionsMembres(request, env, url);
       }
 
+      if ((request.method === "GET" || request.method === "POST") && path === "/membres/remboursements") {
+        return await gererRemboursementsMembres(request, env, url);
+      }
+
       if (request.method === "GET" && path === "/menu") {
         return gererMenu(request, env);
       }
@@ -4499,4 +4503,48 @@ async function gererFixCodes(request,env,url) {
     }
     return rep({success:false,message:"Action inconnue."},400);
   }catch{return rep({success:false,message:"Le service FIX CODA CODR est indisponible."},503);}
+}
+
+
+const ROUTE_REMBOURSEMENTS_MEMBRES = "/ESPACE-ADMIN/C_MEMBRES/Remboursements.html";
+const PERMISSION_REMBOURSEMENTS_MEMBRES = "membres.remboursements";
+const UUID_REMBOURSEMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function gererRemboursementsMembres(request, env, url) {
+  const auth = await autoriserRoute(request, env, ROUTE_REMBOURSEMENTS_MEMBRES);
+  const rep = (payload,status=200) => reponseJson(request,env,payload,status,auth.cookie);
+  if (!auth.success) return rep(auth.payload,auth.status);
+  if (auth.permission!==PERMISSION_REMBOURSEMENTS_MEMBRES || auth.admin?.type!=="root" || !UUID_REMBOURSEMENT.test(String(auth.admin?.id||""))) {
+    return rep({success:false,message:"Accès réservé aux administrateurs root."},403);
+  }
+  try {
+    if (request.method==="GET") {
+      const offset=Number(url.searchParams.get("offset")||0);
+      if (!Number.isSafeInteger(offset)||offset<0||offset>1000000) return rep({success:false,message:"Pagination invalide."},400);
+      const liste=url.searchParams.get("liste")==="paye"?"paye":"a_payer";
+      const champs=["idavoir","avoirid","orderid","idmembre","nommembre","prenommembre","datedemande","dateeffet","date_limite","montant_ttc","statutremboursement","paiement","numero_avoir","etat_avoir","environnement","mode_initial","stripe_intent","mode_remboursement","reference_remboursement","en_retard"];
+      if(liste==="a_payer") champs.push("iban","swift","titulaire");
+      const params=new URLSearchParams({select:champs.join(","),statutremboursement:"eq."+liste,order:"date_limite.asc,idavoir.asc",limit:"100",offset:String(offset)});
+      const lignes=await requeteSupabase(env,"admin_remboursements_membres?"+params.toString(),{method:"GET"});
+      if(!Array.isArray(lignes)) throw Error("Lecture indisponible");
+      return rep({success:true,rows:lignes});
+    }
+    const origin=request.headers.get("Origin");
+    if(!origin||!listeOriginesAutorisees(env).includes(origin))return rep({success:false,message:"Origine administrateur requise."},403);
+    if(!/^application\/json(?:\s*;|\s*$)/i.test(request.headers.get("Content-Type")||""))return rep({success:false,message:"Format JSON requis."},415);
+    let b;try{b=await request.json();}catch{return rep({success:false,message:"JSON invalide."},400);}
+    if(!b||typeof b!=="object"||Array.isArray(b)||!UUID_REMBOURSEMENT.test(String(b.idavoir||""))||b.confirmation!==true||
+       typeof b.montant!=="number"||!Number.isSafeInteger(Math.round(b.montant*100))||b.montant<=0||Math.abs(b.montant*100-Math.round(b.montant*100))>0.000001||
+       !["stripe","virement","autre"].includes(b.mode)||typeof b.reference!=="string"||b.reference.trim().length<3||b.reference.length>200||
+       typeof b.date!=="string"||!Number.isFinite(Date.parse(b.date))||
+       (b.accord!=null&&(typeof b.accord!=="string"||b.accord.length>500)))return rep({success:false,message:"Données de confirmation incomplètes ou invalides."},400);
+    const resultat=await requeteSupabase(env,"rpc/lcdp_admin_confirmer_remboursement",{method:"POST",body:{
+      p_idavoir:b.idavoir,p_admin:auth.admin.id,p_montant:b.montant,p_mode:b.mode,p_reference:b.reference.trim(),p_date:b.date,p_accord:b.accord||null
+    }});
+    if(resultat?.success!==true)throw Error("Confirmation non reçue");
+    return rep({success:true,idavoir:resultat.idavoir});
+  } catch(e) {
+    // Aucun IBAN ni justificatif dans les logs ou dans les messages d'erreur.
+    return rep({success:false,message:"Opération non confirmée. Vérifiez l’état, le montant, le mode et le justificatif puis actualisez la liste."},409);
+  }
 }
