@@ -42,7 +42,7 @@
       const direct=r.environnement==="direct";
       if(direct)total+=Math.round(montant*100);else verifier++;
       if(direct&&r.en_retard)retards++;
-      const m=cellule("td",nom||"—"),ref=cellule("small",r.numero_avoir||r.avoirid||"—");m.append(document.createElement("br"),ref);
+      const m=cellule("td",(nom||"—")+(direct?"":r.environnement==="test"?" — Test":" — À vérifier")),ref=cellule("small",r.numero_avoir||r.avoirid||"—");m.append(document.createElement("br"),ref);
       tr.append(m,cellule("td",euro.format(montant)));
       if(historique){
         tr.append(cellule("td",date(r.paiement)),cellule("td",[r.mode_remboursement,r.reference_remboursement].filter(Boolean).join(" / ")||"Référence absente"));
