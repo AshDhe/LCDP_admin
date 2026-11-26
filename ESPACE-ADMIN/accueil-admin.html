@@ -744,9 +744,7 @@
               ? null
               : boutonsConfigures.find((bouton) => (
                   bouton.cat === categorie.cat &&
-                  Number(bouton.position) === positionSource &&
-                  !(categorie.id === "membres" && position !== 41 &&
-                    /\/C_MEMBRES\/Boutique\.html(?:[?#]|$)/i.test(String(bouton.href || "")))
+                  Number(bouton.position) === positionSource
                 ))
           );
 
@@ -788,14 +786,6 @@
             configurerBoutonAjustDuo(lien);
           } else if (estSlotPrivatisation(categorie, position)) {
             configurerBoutonPrivatisation(lien);
-          } else if (categorie.id === "membres" && position === 41) {
-            const boutique = boutonsConfigures.find(bouton => bouton.cat === "Membres" &&
-              /\/C_MEMBRES\/Boutique\.html(?:[?#]|$)/i.test(String(bouton.href || "")));
-            lien.textContent = "Boutique";
-            lien.href = urlAdmin("/ESPACE-ADMIN/C_MEMBRES/Boutique.html");
-            if (boutique?.permission_code) lien.dataset.permissionCode = boutique.permission_code;
-            lien.removeAttribute("aria-disabled");
-            lien.setAttribute("aria-label", "Ouvrir Boutique");
           } else if (categorie.id === "membres" && position === 4) {
             // Même vert que les slots actifs ; accès toujours inactif tant qu'aucune page n'est définie.
             lien.textContent = "Invité et invitant";
