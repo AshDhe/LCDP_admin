@@ -32,3 +32,7 @@
 .lcdp-page-prixabo .lcdp-prixabo-table thead input[type=search],.lcdp-page-prixabo select.lcdp-prixabo-column-position{text-align:center;text-align-last:center}
 .lcdp-page-prixabo .lcdp-prixabo-table td input[type=checkbox]{margin-inline:auto;vertical-align:middle}
 .lcdp-page-prixabo .lcdp-prixabo-active,.lcdp-page-prixabo .lcdp-prixabo-lock{text-align:center}
+
+/* Liens d'édition clairement reconnaissables dans Nom, NOM et Variables. */
+.lcdp-page-prixabo .lcdp-prixabo-table td .lcdp-prixabo-link{pointer-events:auto;cursor:pointer;text-decoration:underline;text-underline-offset:2px;white-space:normal;overflow-wrap:anywhere;max-width:100%;color:inherit}
+.lcdp-page-prixabo .lcdp-prixabo-table td .lcdp-prixabo-link:hover,.lcdp-page-prixabo .lcdp-prixabo-table td .lcdp-prixabo-link:focus-visible{outline:1px solid currentColor;outline-offset:2px;border-radius:3px}
