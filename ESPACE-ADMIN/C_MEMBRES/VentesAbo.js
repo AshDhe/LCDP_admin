@@ -209,17 +209,21 @@
   }
 
   function selectionPivots() {
-    if(!filtresPivots.has(ongletActif))filtresPivots.set(ongletActif,new Set());
+    if(!filtresPivots.has(ongletActif))filtresPivots.set(ongletActif,new Map());
     return filtresPivots.get(ongletActif);
   }
 
+  function referencesSelectionnees() {
+    return new Set([...selectionPivots().values()].flatMap(x=>x.ids));
+  }
+
   function pivotsFiltres() {
-    const selection=selectionPivots();
+    const selection=referencesSelectionnees();
     return selection.size && selection.size<lignesActives.length ? [...selection] : undefined;
   }
 
   function actualiserTableauFiltre() {
-    const selection=selectionPivots();
+    const selection=referencesSelectionnees();
     const lignes=lignesActives.filter(l=>!selection.size||selection.has(refPivot(l)));
     reinitialiserDetail();
     if(ongletActif==="abo")rendre(lignes);else rendreExtensions(lignes,ongletActif);
@@ -227,10 +231,7 @@
 
   function preparerFiltrePivots() {
     const slot=$("filtre-slot"), selection=selectionPivots();
-    const refs=new Set(lignesActives.map(refPivot));
-    for(const id of selection)if(!refs.has(id))selection.delete(id);
     slot.replaceChildren();$("filtres").hidden=!lignesActives.length;
-    if(!lignesActives.length)return;
     const groupes=new Map();
     for(const l of lignesActives){
       const k=famillePivot(l);
@@ -238,51 +239,80 @@
       groupes.get(k).push(l);
     }
     const trier=(a,b)=>a.localeCompare(b,"fr",{numeric:true,sensitivity:"base"});
-    const cont=document.createElement("details");cont.className="lcdp-table-lecture-admin__multi";
-    const resume=cellule("summary","Tous les pivots","lcdp-table-lecture-admin__multi-resume");
-    const panneau=document.createElement("div");panneau.className="lcdp-table-lecture-admin__multi-panel";
+    const options=[];
+    for(const [famille,lignes] of groupes){
+      if(lignes.length>1)options.push({key:"fam:"+famille,label:famille+" — tous les pivots",ids:lignes.map(refPivot),recherche:famille});
+      for(const l of lignes)options.push({key:"pivot:"+refPivot(l),label:libellePivot(l),ids:[refPivot(l)],recherche:[famille,libellePivot(l),l.groupeabo,l.typeabo].filter(Boolean).join(" ")});
+    }
+    options.sort((a,b)=>trier(a.label,b.label));
+    const index=new Map(options.map(x=>[x.key,x]));
+    for(const key of selection.keys()){
+      if(index.has(key))selection.set(key,index.get(key));else selection.delete(key);
+    }
+    if(!lignesActives.length)return;
+    const cont=document.createElement("div");cont.className="lcdp-ventesabo__recherche-pivots";
     const chercher=document.createElement("input");chercher.type="search";
     chercher.className="lcdp-table-lecture-admin__filter-input";chercher.placeholder="Rechercher un pivot";
+    chercher.autocomplete="off";
     chercher.setAttribute("aria-label","Rechercher une famille ou un pivot");
-    const liste=document.createElement("div");liste.className="lcdp-table-lecture-admin__multi-options";
-    const effacer=cellule("button","Tout effacer","lcdp-table-lecture-admin__multi-clear");effacer.type="button";
-    const controles=[];
-    const actualiser=()=>{
-      for(const {caseCocher,ids} of controles){
-        const n=ids.filter(id=>selection.has(id)).length;
-        caseCocher.checked=n===ids.length;
-        caseCocher.indeterminate=n>0&&n<ids.length;
+    chercher.setAttribute("role","combobox");chercher.setAttribute("aria-autocomplete","list");
+    chercher.setAttribute("aria-controls","lcdp-ventesabo-suggestions");chercher.setAttribute("aria-expanded","false");
+    const liste=document.createElement("div");liste.id="lcdp-ventesabo-suggestions";
+    liste.className="lcdp-ventesabo__suggestions";liste.setAttribute("role","listbox");liste.hidden=true;
+    const tags=document.createElement("div");tags.className="lcdp-ventesabo__filtres-actifs";
+    tags.setAttribute("aria-label","Filtres sélectionnés");
+    let suggestions=[], actif=-1;
+    const normaliser=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
+    function fermer(){
+      liste.hidden=true;liste.replaceChildren();suggestions=[];actif=-1;
+      chercher.setAttribute("aria-expanded","false");chercher.removeAttribute("aria-activedescendant");
+    }
+    function afficherTags(){
+      tags.replaceChildren();
+      for(const [key,option] of selection){
+        const retirer=cellule("button",option.label+" ×","lcdp-table-lecture-admin__pagination-button");
+        retirer.type="button";retirer.setAttribute("aria-label","Retirer le filtre "+option.label);
+        retirer.addEventListener("click",()=>{selection.delete(key);afficherTags();actualiserTableauFiltre();afficher();});
+        tags.appendChild(retirer);
       }
-      resume.textContent=selection.size?selection.size+" pivot"+(selection.size>1?"s":"")+" sélectionné"+(selection.size>1?"s":""):"Tous les pivots";
-      effacer.disabled=!selection.size;
-    };
-    const choix=(label,ids,classe="")=>{
-      const ligne=document.createElement("label");
-      ligne.className="lcdp-table-lecture-admin__multi-choice"+(classe?" "+classe:"");
-      const caseCocher=document.createElement("input");caseCocher.type="checkbox";
-      caseCocher.addEventListener("change",()=>{
-        for(const id of ids){if(caseCocher.checked)selection.add(id);else selection.delete(id);}
-        actualiser();actualiserTableauFiltre();
+    }
+    function ajouter(option){
+      if(!option||selection.has(option.key))return;
+      selection.set(option.key,option);chercher.value="";fermer();
+      afficherTags();actualiserTableauFiltre();chercher.focus();
+    }
+    function choisirActif(i){
+      if(!suggestions.length)return;
+      actif=(i+suggestions.length)%suggestions.length;
+      for(let j=0;j<liste.children.length;j++)liste.children[j].setAttribute("aria-selected",String(j===actif));
+      chercher.setAttribute("aria-activedescendant","lcdp-ventesabo-suggestion-"+actif);
+      liste.children[actif].scrollIntoView?.({block:"nearest"});
+    }
+    function afficher(){
+      fermer();
+      const mots=normaliser(chercher.value).trim().split(/\s+/).filter(Boolean);
+      if(!mots.length)return;
+      suggestions=options.filter(x=>!selection.has(x.key)&&mots.every(m=>normaliser(x.label+" "+x.recherche).includes(m))).slice(0,8);
+      if(!suggestions.length)return;
+      suggestions.forEach((option,i)=>{
+        const b=cellule("div",option.label,"lcdp-ventesabo__suggestion");
+        b.id="lcdp-ventesabo-suggestion-"+i;b.setAttribute("role","option");b.setAttribute("aria-selected","false");
+        b.addEventListener("mousedown",e=>e.preventDefault());b.addEventListener("click",()=>ajouter(option));
+        liste.appendChild(b);
       });
-      ligne.append(caseCocher,cellule("span",label));controles.push({caseCocher,ids});return ligne;
-    };
-    const afficher=()=>{
-      liste.replaceChildren();controles.length=0;
-      const recherche=chercher.value.trim().toLocaleLowerCase("fr");
-      for(const [famille,lignes] of [...groupes].sort((a,b)=>trier(a[0],b[0]))){
-        const trouveFamille=famille.toLocaleLowerCase("fr").includes(recherche);
-        const visibles=lignes.filter(l=>trouveFamille||libellePivot(l).toLocaleLowerCase("fr").includes(recherche));
-        if(!visibles.length)continue;
-        if(lignes.length>1)liste.appendChild(choix(famille+" — tous les pivots",lignes.map(refPivot),"lcdp-ventesabo__filtre-famille"));
-        for(const l of visibles.sort((a,b)=>trier(nomPivot(a),nomPivot(b))||String(a.debut_pivot||"").localeCompare(String(b.debut_pivot||"")))){
-          liste.appendChild(choix(libellePivot(l),[refPivot(l)],lignes.length>1?"lcdp-ventesabo__filtre-pivot":""));
-        }
-      }
-      actualiser();
-    };
+      liste.hidden=false;chercher.setAttribute("aria-expanded","true");
+    }
     chercher.addEventListener("input",afficher);
-    effacer.addEventListener("click",()=>{selection.clear();actualiser();actualiserTableauFiltre();});
-    panneau.append(chercher,liste,effacer);cont.append(resume,panneau);slot.appendChild(cont);afficher();
+    chercher.addEventListener("focus",afficher);
+    chercher.addEventListener("blur",fermer);
+    chercher.addEventListener("keydown",ev=>{
+      if(ev.key==="Escape"){fermer();return;}
+      if(!suggestions.length)return;
+      if(ev.key==="ArrowDown"){ev.preventDefault();choisirActif(actif+1);}
+      else if(ev.key==="ArrowUp"){ev.preventDefault();choisirActif(actif<0?suggestions.length-1:actif-1);}
+      else if(ev.key==="Enter"){ev.preventDefault();ajouter(suggestions[actif<0?0:actif]);}
+    });
+    cont.append(chercher,liste,tags);slot.appendChild(cont);afficherTags();
   }
 
   function rendre(lignes) {
