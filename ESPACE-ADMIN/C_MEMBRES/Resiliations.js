@@ -49,6 +49,8 @@
       const membre=cellule(nom||"—");if(r.emailmembre)membre.append(document.createElement("br"),cellule(r.emailmembre,"small"));
       const abo=cellule(r.typabo||"—");abo.append(document.createElement("br"),cellule(date(r.debut)+" – "+date(r.fin),"small"));
       if(r.orderid)abo.append(document.createElement("br"),cellule(r.orderid,"small"));
+      if(r.netnettc!=null)abo.append(document.createElement("br"),cellule("Contrat : "+montant(r.netnettc),"small"));
+      if(r.statutabo)abo.append(document.createElement("br"),cellule("Statut : "+({paye:"Payé",impaye:"Impayé",cancd:"Annulé",attente:"En attente",cree:"Créé"}[r.statutabo]||r.statutabo),"small"));
       tr.append(membre,abo,cellule(date(r.resiliation_demandee_le)));
       const d=cellule(labels[r.resiliation_decision]||"—"),effet=cellule(date(r.resiliation_effet)),remb=cellule(montant(r.resiliation_remboursement_ttc)),action=cellule("—");
       if(r.resiliation_decision==="en_attente"&&capacites){
