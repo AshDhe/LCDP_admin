@@ -50,7 +50,8 @@
                   <button type="button" class="lcdp-button lcdp-button-primary" data-boutique-ajouter>Créer un article</button>
                 </div>
                 <div class="lcdp-editeur-contenu__blocs" data-boutique-liste></div>
-                <form class="lcdp-editeur-contenu__bloc" data-boutique-form hidden>
+                <div data-boutique-form-slot hidden>
+                <form class="lcdp-editeur-contenu__bloc" data-boutique-form>
                   <h2 data-boutique-form-titre>Créer un article</h2>
                   <label class="lcdp-editeur-contenu__titre-zone">
                     <span class="lcdp-editeur-contenu__label">Nom de l’article</span>
@@ -68,7 +69,9 @@
                     <span class="lcdp-editeur-contenu__label">Photo</span>
                     <input class="lcdp-editeur-contenu__titre" name="photo" type="file" accept="image/webp,image/jpeg,image/png">
                   </label>
-                  <img class="lcdp-box-card-parc__image" data-boutique-apercu alt="Aperçu de l’article" hidden>
+                  <div data-boutique-apercu-slot hidden>
+                    <img class="lcdp-box-card-parc__image" data-boutique-apercu alt="Aperçu de l’article">
+                  </div>
                   <label class="lcdp-editeur-contenu__titre-zone">
                     <span class="lcdp-editeur-contenu__label">Présentation en boutique</span>
                     <select class="lcdp-editeur-contenu__titre" name="publie">
@@ -81,6 +84,7 @@
                     <button class="lcdp-button lcdp-button-orange" type="submit">Enregistrer</button>
                   </div>
                 </form>
+                </div>
               </div>
             </template>
           </div>
@@ -89,6 +93,6 @@
     </section>
   </main>
 </div>
-<script src="./Boutique.js?v=20261126-admin-boutique" defer></script>
+<script src="./Boutique.js?v=20261126-admin-boutique-v2" defer></script>
 </body>
 </html>
