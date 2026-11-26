@@ -203,7 +203,36 @@ async function verifierAbonnementCompte(compte){
       results.push({nom:"Abonnement : "+c.nom,ok:true});
     }catch(e){results.push({nom:"Abonnement : "+c.nom,ok:false,erreur:String(e.message||e)});}
   }
-  results.push({nom:"Services : typographie commune et alerte vide",ok:compte.includes('texte.className="lcdp-compte-alertes-vide lcdp-compte-placeholder-da";')&&compte.includes('afficherSlotService(liste,"Aucune alerte planifiée");')});
+  const testService=async(nom,fn)=>{try{await fn();results.push({nom:"Services : "+nom,ok:true});}catch(e){results.push({nom:"Services : "+nom,ok:false,erreur:String(e.message||e)});}};
+  function serviceTest(options={}) {
+    const noeud=tag=>({tag,children:[],listeners:{},disabled:false,append(...n){this.children.push(...n);},replaceChildren(...n){this.children=n;},addEventListener(k,f){this.listeners[k]=f;}});
+    const liste=noeud("div"), journal={actions:0,erreurs:[],routes:[]};
+    const document={createElement:noeud,getElementById:id=>id==="lcdp-compte-alertes-liste"?liste:null};
+    const extrait=(debut,fin)=>{const a=compte.indexOf(debut),b=compte.indexOf(fin,a+debut.length);if(a<0||b<=a)throw Error("Fonction service absente : "+debut);return compte.slice(a,b);};
+    const code=extrait("  function afficherSlotService(","  async function creerAlerteDepuisCompte(")+extrait("  async function chargerAlertesCompte(","  // Duo Actif :");
+    const fn=new Function("document","apiAlertesCompte","creerAlerteDepuisCompte","afficherAlerte",code+"\nreturn {afficherSlotService,chargerAlertesCompte};")(
+      document,async route=>{journal.routes.push(route);return {alertes:[]};},
+      async()=>{journal.actions++;if(options.echec)throw Error("Échec simulé");},
+      async msg=>journal.erreurs.push(msg));
+    return {liste,journal,...fn};
+  }
+  await testService("typographie commune du statut",()=>{
+    const t=serviceTest();t.afficherSlotService(t.liste,"Chargement…");
+    const n=t.liste.children[0];
+    if(n?.className!=="lcdp-compte-placeholder-da"||n.textContent!=="Chargement…")throw Error("Mention commune absente.");
+  });
+  await testService("alerte vide et action Créer une alerte",async()=>{
+    const t=serviceTest();await t.chargerAlertesCompte();
+    const [mention,bouton]=t.liste.children[0]?.children||[];
+    if(t.journal.routes.join()!=="/alertes"||mention?.className!=="lcdp-compte-placeholder-da"||mention.textContent!=="Aucune alerte planifiée"||bouton?.textContent!=="Créer une alerte"||!bouton.className.includes("lcdp-ui-badge--action"))throw Error("État vide ou action incorrecte.");
+    await bouton.listeners.click();
+    if(t.journal.actions!==1||bouton.disabled)throw Error("Action non exécutée ou bouton bloqué.");
+  });
+  await testService("échec de création et déverrouillage",async()=>{
+    const t=serviceTest({echec:true});await t.chargerAlertesCompte();const bouton=t.liste.children[0].children[1];
+    await bouton.listeners.click();
+    if(t.journal.erreurs[0]!=="Échec simulé"||bouton.disabled)throw Error("Erreur non affichée ou bouton bloqué.");
+  });
   return results;
 }
 
@@ -314,21 +343,77 @@ async function verifierRemboursementsAdmin(lire) {
   const exige=(v,m)=>{if(!v)throw Error(m);};
   const js=lire("ESPACE-ADMIN/C_MEMBRES/Remboursements.js");
   const partie=(source,a,b)=>{const x=source.indexOf(a),y=b?source.indexOf(b,x+a.length):source.length;exige(x>=0&&y>x,"Fonction absente : "+a);return source.slice(x,y);};
-  const front=new Function(partie(js,"  function montantDu(","  function fermer(")+partie(js,"  function construireConfirmation(","  async function confirmer(")+"return {estConfirmable,construireConfirmation};")();
-  const row={idavoir:"00000000-0000-4000-8000-000000000002",statutremboursement:"a_payer",environnement:"direct",mode_initial:"stripe",montant_ttc:20,datedemande:"2020-01-01",iban:"FICTIF",titulaire:"TEST"};
-  const valid={montant:20,date:"2020-01-02",mode:"stripe",reference:"re_TEST",confirmation:true};
-  await test("Confirmation du montant exact",()=>exige(front.construireConfirmation(row,valid).montant===20,"Montant incorrect"));
-  for(const [nom,r,v] of [["Test non confirmable",{...row,environnement:"test"},valid],["Montant incorrect",row,{...valid,montant:21}],["Changement de moyen sans accord",row,{...valid,mode:"virement"}],["Référence Stripe invalide",row,{...valid,reference:"xxx"}],["Absence de confirmation",row,{...valid,confirmation:false}]]) await test(nom,()=>{let bloque=false;try{front.construireConfirmation(r,v);}catch{bloque=true;}exige(bloque,"Opération acceptée");});
-  await test("Liste vide : aucun tableau ni formulaire",()=>{
-    const zones={"table-slot":{replaceChildren(){this.vide=true;}},"synthese":{textContent:"ancien"}};
-    let statut="";
-    const rendre=new Function("$","etat",partie(js,"  function rendre(","  async function charger(")+"return rendre;")(id=>{exige(zones[id],"Élément créé en l’absence de dossier");return zones[id];},(_id,v)=>statut=v);
-    rendre([],"a_payer");
-    exige(zones["table-slot"].vide&&zones.synthese.textContent===""&&statut==="Aucun remboursement à effectuer.","Liste vide incorrecte");
+  const row={idavoir:"00000000-0000-4000-8000-000000000002",statutremboursement:"a_payer",environnement:"direct",mode_initial:"stripe",montant_ttc:20,manuel_autorise:true,stripe_autorise:true};
+  function front(options={}) {
+    const journal={posts:[],confirmations:[],statuts:[],verrous:[],recharges:0};
+    const zones=new Map();
+    const noeud=tag=>({tag,children:[],dataset:{},listeners:{},disabled:false,append(...n){this.children.push(...n);},appendChild(n){this.children.push(n);},replaceChildren(...n){this.children=n;},setAttribute(){},addEventListener(k,f){this.listeners[k]=f;}});
+    const $=id=>{if(!zones.has(id))zones.set(id,noeud("div"));return zones.get(id);};
+    const env={
+      document:{createElement:noeud},$,euro:new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}),
+      date:v=>String(v||"—"),statutFinalEchec:s=>s==="failed"||s==="canceled",
+      libellesStripe:{pending:"En cours",failed:"Échec définitif",canceled:"Annulé"},
+      cellule:(tag,v)=>Object.assign(noeud(tag),{textContent:String(v??"—")}),
+      etat:(id,v,erreur)=>journal.statuts.push({id,v,erreur}),
+      api:async(query,opts,route)=>{journal.posts.push({query,route,method:opts.method,body:JSON.parse(opts.body)});if(options.echec)throw Error("Refus simulé");},
+      verrouiller:actif=>journal.verrous.push(actif),
+      charger:async()=>{journal.recharges++;},
+      window:{confirm:msg=>{journal.confirmations.push(msg);return options.confirme!==false;}},
+      capacites:{manuel:true,stripe:true,suiviStripe:true,environnementStripe:"direct",...options.capacites},
+      occupe:!!options.occupe,suivi:options.suivi||[]
+    };
+    const source=partie(js,"  function valide(","  function verrouiller(")+partie(js,"  async function confirmer(","  function activer(");
+    const f=new Function(...Object.keys(env),source+"\nreturn {valide,selectionManuelle,boutonStripe,rendreFaire,rendreSuivi,confirmer};")(...Object.values(env));
+    return {...f,journal,$};
+  }
+  await test("Remboursement manuel : montant exact affiché, confirmation et accord",async()=>{
+    const f=front();await f.confirmer(row,"manuel");
+    const p=f.journal.posts[0];
+    exige(f.journal.confirmations[0]?.includes("20,00")&&f.journal.confirmations[0]?.includes("changement de moyen"),"Montant ou accord non présenté");
+    exige(f.journal.posts.length===1&&p.route==="/v2"&&p.method==="POST"&&p.body.idavoir===row.idavoir&&p.body.action==="confirmer_manuel"&&p.body.confirmation===true&&p.body.accord_confirme===true&&!Object.hasOwn(p.body,"montant"),"Commande manuelle incorrecte : le montant doit rester côté serveur");
+    exige(f.journal.recharges===1,"Liste non actualisée");
   });
-  await test("Formulaire uniquement sur sélection",()=>{
+  await test("Stripe : déclenchement distinct du virement",async()=>{
+    const f=front();await f.confirmer(row,"stripe");const p=f.journal.posts[0];
+    exige(f.journal.posts.length===1&&p.body.action==="declencher_stripe"&&p.body.accord_confirme===false&&p.body.confirmation===true&&p.body.idavoir===row.idavoir,"Déclenchement Stripe incorrect");
+  });
+  for(const [nom,r,mode,options] of [
+    ["Test interdit en manuel",{...row,environnement:"test"},"manuel",{}],
+    ["Stripe test interdit en production",{...row,environnement:"test"},"stripe",{}],
+    ["Stripe réel interdit en environnement test",row,"stripe",{capacites:{environnementStripe:"test"}}],
+    ["Montant absent",{...row,montant_ttc:null},"manuel",{}],
+    ["Montant nul",{...row,montant_ttc:0},"stripe",{}],
+    ["Montant négatif",{...row,montant_ttc:-20},"manuel",{}],
+    ["Identifiant absent",{...row,idavoir:null},"stripe",{}],
+    ["Manuel non autorisé",{...row,manuel_autorise:false},"manuel",{}],
+    ["Stripe non autorisé",{...row,stripe_autorise:false},"stripe",{}],
+    ["Worker manuel non raccordé",row,"manuel",{capacites:{manuel:false}}],
+    ["Worker Stripe non raccordé",row,"stripe",{capacites:{stripe:false}}],
+    ["Annulation de la confirmation",row,"manuel",{confirme:false}],
+    ["Opération déjà en cours",row,"stripe",{occupe:true}]
+  ])await test(nom,async()=>{const f=front(options);const select={value:"oui"};await f.confirmer(r,mode,select);exige(f.journal.posts.length===0&&select.value==="non","Opération indûment envoyée");});
+  await test("Stripe TEST explicite et limité",async()=>{
+    const f=front({capacites:{environnementStripe:"test"}});await f.confirmer({...row,environnement:"test"},"stripe");
+    exige(f.journal.posts.length===1&&f.journal.confirmations[0]?.includes("TEST, aucun mouvement réel"),"Mode TEST non identifié");
+  });
+  await test("Refus du Worker : pas de faux succès",async()=>{
+    const f=front({echec:true});const select={value:"oui"};await f.confirmer(row,"manuel",select);
+    exige(f.journal.posts.length===1&&f.journal.recharges===0&&select.value==="non"&&f.journal.statuts.some(s=>s.erreur&&s.v.includes("Refus simulé"))&&f.journal.verrous.at(-1)===false,"Erreur non traitée");
+  });
+  await test("Suivi Stripe : manuel uniquement après échec définitif",()=>{
+    const f=front();for(const statut of ["pending","requires_action","inconnu"])exige(f.selectionManuelle({...row,statut_stripe:statut},true).textContent==="Bloqué","Virement autorisé pendant un remboursement Stripe");
+    for(const statut of ["failed","canceled"])exige(f.selectionManuelle({...row,statut_stripe:statut},true).tag==="select","Virement de secours indisponible");
+  });
+  await test("Liste vide : aucune ligne de remboursement",()=>{
+    const f=front();f.rendreFaire([]);exige(f.$("lignes-faire").children.length===0&&f.journal.statuts.at(-1)?.v==="Aucun remboursement à effectuer.","État vide incorrect");
+  });
+  await test("Suivi Stripe : exclure les remboursements payés",()=>{
+    const f=front({suivi:[{...row,statut_stripe:"succeeded"},{...row,statutremboursement:"paye",statut_stripe:"pending"},{...row,statut_stripe:"pending"}]});
+    f.$("filtre-stripe").value="tous";f.rendreSuivi();exige(f.$("lignes-stripe").children.length===1,"Dossier remboursé encore présent");
+  });
+  await test("Interface actuelle : onglets et garde root",()=>{
     const html=lire("ESPACE-ADMIN/C_MEMBRES/Remboursements.html");
-    exige(/<template id="remb-form-template">[\s\S]*?<form id="remb-form"/.test(html)&&js.includes('$("detail").appendChild($("form-template").content.cloneNode(true))')&&js.includes('$("detail").replaceChildren()'),"Formulaire affiché en permanence");
+    exige(html.includes('id="remb-tab-faire"')&&html.includes('id="remb-tab-stripe"')&&html.includes('id="remb-lignes-faire"')&&html.includes('id="remb-lignes-stripe"')&&js.includes('window.LCDP_ADMIN_AUTORISATION?.admin?.type!=="root"'),"Onglets ou restriction root absents");
   });
   // Les workers sont conservés hors GitHub et testés séparément avant livraison.
   const ventes=lire("ESPACE-ADMIN/C_MEMBRES/VentesAbo.js");
