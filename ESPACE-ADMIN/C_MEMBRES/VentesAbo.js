@@ -31,6 +31,9 @@
   const filtresPivots = new Map();
   let lignesActives = [];
   const refPivot = l => String(l.idprixabo || l.reference_pivot || "");
+  const prefixRessource = categorie => categorie==="abo" || !categorie
+    ? "membres-ventes-abo-" : categorie==="frecdp"
+    ? "membres-ventes-fqduoplus-" : "membres-ventes-extensions-";
   const famillePivot = l => String(l.typeabo || l.formule || "");
   const datePivot = l => {
     const d = String(l.debut_pivot || "");
@@ -355,7 +358,7 @@
     if(!Number.isInteger(annee)||lignes.some(l=>Number(l.annee)!==annee||(extension&&l.categorie!==categorie)))throw Error("Données de vente incohérentes.");
     $("titre").textContent=(euro?"VT Abo — Montants en euros":"VT Abo — Quantités vendues")+" · "+annee;
     $("legende").textContent=(euro?"Ventes nettes TTC ("+libelleUnite()+")":"Quantités vendues")+" — "+label+" — "+annee;
-    const entetes=$("entetes");entetes.replaceChildren(cellule("th",extension?"Variante":"Abonnement"));
+    const entetes=$("entetes");entetes.replaceChildren(cellule("th",categorie==="frecdp"?"Fréquence":extension?"Variante":"Abonnement"));
     mois.forEach(n=>entetes.appendChild(cellule("th",n)));
     entetes.appendChild(cellule("th","Total","lcdp-ventesabo__cumul"));
     const corps=$("lignes");corps.replaceChildren();
@@ -385,7 +388,7 @@
       if(euro&&(!Number.isSafeInteger(mt)||m.some(x=>!Number.isSafeInteger(x))||m.reduce((a,b)=>a+b,0)!==mt||!Number.isSafeInteger(nb)||manque.some((x,i)=>!Number.isSafeInteger(x)||x<0||x>quantites[i])||manque.reduce((a,b)=>a+b,0)!==nb))throw Error("Montants de vente incohérents.");
       const pivot=refPivot(l);if(!pivot)throw Error("Référence de vente absente.");
       const tr=document.createElement("tr");if(l.ancienne)tr.classList.add("lcdp-ventesabo__ancienne");
-      const th=document.createElement("th");th.scope="row";th.title="Référence pivot : "+pivot;
+      const th=document.createElement("th");th.scope="row";th.title=categorie==="frecdp"?"Fréquence mensuelle Duo+":"Référence pivot : "+pivot;
       th.appendChild(cellule("strong",nomPivot(l)));
       const date=datePivot(l);if(date)th.appendChild(cellule("small",date));
       tr.appendChild(th);
@@ -401,7 +404,7 @@
     const pivots=pivotsFiltres(),titreTotal=(extension?label:"Toutes les formules")+(pivots?" — Pivots sélectionnés":"");
     totaux.forEach((n,i)=>pied.appendChild(celluleQuantite(n,{annee,...champCategorie,pivots,mois:i+1,montantAttendu:montants[i],manquantsAttendus:manquants[i],libelle:titreTotal+" — "+mois[i]+" "+annee})));
     pied.appendChild(celluleQuantite(total,{annee,...champCategorie,pivots,montantAttendu:totalMontant,manquantsAttendus:totalManquants,libelle:titreTotal+" — année "+annee},"lcdp-ventesabo__cumul"));
-    $("sous-titre").textContent=(euro?label+" — Ventes nettes TTC ("+libelleUnite()+"), avant avoirs":extension?label+" — extensions souscrites par variante et par mois":"Abonnements principaux vendus par pivot et par mois")+(tests?" · Tests inclus":"");
+    $("sous-titre").textContent=(categorie==="frecdp"?(euro?"Ventes Duo+ ventilées par fréquence mensuelle ("+libelleUnite()+"), non additionnelles":"Ventes Duo+ par fréquence mensuelle"):euro?label+" — Ventes nettes TTC ("+libelleUnite()+"), avant avoirs":extension?label+" — extensions souscrites par variante et par mois":"Abonnements principaux vendus par pivot et par mois")+(tests?" · Tests inclus":"");
     etat(totalManquants?"* "+entier.format(totalManquants)+" vente(s) sans montant enregistré : sous-totaux incomplets.":lignes.length?"":"Aucun pivot ni vente enregistré.",totalManquants>0);
   }
 
@@ -412,7 +415,7 @@
     chargement=true;$("actualiser").disabled=true;
     etat("Actualisation des ventes…");
     try{
-      const resource=(categorie==="abo"?"membres-ventes-abo-":"membres-ventes-extensions-")+(euro?"montants":"quantites");
+      const resource=prefixRessource(categorie)+(euro?"montants":"quantites");
       const lignes=await obtenirVentes(resource,categorie==="abo"?{}:{categorie},controle.signal);
       if(controle.signal.aborted||chargementSynthese!==controle)return;
       lignesActives=lignes;preparerFiltrePivots();actualiserTableauFiltre();
@@ -504,7 +507,7 @@
     if (!Number.isInteger(selection.annee) ||
         (selection.categorie && selection.categorie!==ongletActif) ||
         (selection.pivot !== undefined && !(selection.categorie
-          ? /^[0-9a-f-]{36}$|^sans-ref-[0-9a-f]{32}$/i.test(selection.pivot)
+          ? (selection.categorie==="frecdp" ? /^fq-[0-9]+:$/.test(selection.pivot) : /^[0-9a-f-]{36}$|^sans-ref-[0-9a-f]{32}$/i.test(selection.pivot))
           : /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(selection.pivot)))) {
       etat("Référence de vente invalide. Actualisez le tableau.",true);
       return;
@@ -533,7 +536,7 @@
     statut.setAttribute("role","status");statut.textContent="Chargement du détail…";
     try {
       const url=new URL(BASE+"/read");
-      url.searchParams.set("resource",(selection.categorie?"membres-ventes-extensions-":"membres-ventes-abo-")+(euro?"montants-detail":"detail"));
+      url.searchParams.set("resource",prefixRessource(selection.categorie)+(euro?"montants-detail":"detail"));
       if(selection.categorie)url.searchParams.set("filter_categorie",selection.categorie);
       if(selection.frequence)url.searchParams.set("filter_cle_frequence",selection.frequence);
       url.searchParams.set("limit",String(tailleDetail));
