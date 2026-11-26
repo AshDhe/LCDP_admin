@@ -299,19 +299,27 @@
           resource: RESOURCE_CODE,
           interactiveColumns: [
             "nom",
+            "decision",
             "daterefu",
             "dataccept"
           ],
           interactiveLabel: "Ouvrir",
           interactiveLabels: {
             nom: "Consulter la DA de",
+            decision: "Renseigner la décision",
             daterefu: "Renseigner la date de non-retenue",
             dataccept: "Renseigner la date de retenue"
           },
           initialFilters: {
-            statuda: "encours"
+            decision: "encours"
           },
           filterOptions: {
+            decision: [
+              { value: "", label: "Tous" },
+              { value: "encours", label: "En cours" },
+              { value: "oui", label: "Oui" },
+              { value: "non", label: "Non" }
+            ],
             statuda: [
               { value: "", label: "Tous" },
               { value: "encours", label: "En cours" },
@@ -333,7 +341,7 @@
           return;
         }
 
-        if (key === "daterefu" || key === "dataccept") {
+        if (key === "decision" || key === "daterefu" || key === "dataccept") {
           await ouvrirDialogueDateDecision(row, key);
         }
       }
@@ -512,16 +520,13 @@
       }
 
       async function ouvrirDialogueDateDecision(row, champ) {
-        const autreChamp = champ === "daterefu"
-          ? "dataccept"
-          : "daterefu";
-
-        if (row?.[autreChamp]) {
-          await afficherAlerte(
-            champ === "daterefu"
-              ? "Cette DA est déjà retenue."
-              : "Cette DA est déjà non retenue."
-          );
+        const decisionExistante = row?.decision ||
+          (row?.dataccept ? "oui" : row?.daterefu ? "non" : "");
+        const decisionDemandee = champ === "dataccept" ? "oui" :
+          champ === "daterefu" ? "non" : "";
+        if (decisionExistante && decisionDemandee &&
+            decisionExistante !== decisionDemandee) {
+          await afficherAlerte("Cette DA possède déjà une décision.");
           return;
         }
 
@@ -580,10 +585,8 @@
             throw new Error("Structure du dialogue date incomplète.");
           }
 
-          titre.textContent = champ === "daterefu"
-            ? "Date de non-retenue"
-            : "Date de retenue";
-          boutonAnnuler.hidden = true;
+          titre.textContent = "Décision de la DA";
+          boutonAnnuler.hidden = false;
 
           const champFragment = await chargerFragmentObjet(
             "/HTMLBASE/03-champ-formulaire.html"
@@ -599,6 +602,25 @@
             throw new Error("Structure du champ date incomplète.");
           }
 
+          const choixFragment = champFragment.cloneNode(true);
+          const choixLabel = document.createElement("label");
+          choixLabel.className = "lcdp-box-champ-formulaire__label";
+          choixLabel.htmlFor = "lcdp-suivida-choix-decision";
+          choixLabel.textContent = "Décision";
+          const choix = document.createElement("select");
+          choix.id = choixLabel.htmlFor;
+          choix.name = "decision";
+          choix.required = true;
+          for (const [value, text] of [["", "Choisir"], ["oui", "Oui — retenue"], ["non", "Non — non retenue"]]) {
+            const option = new Option(text, value);
+            option.disabled = !value || Boolean(decisionExistante && value !== decisionExistante);
+            choix.add(option);
+          }
+          choix.value = decisionExistante || decisionDemandee;
+          choixFragment.querySelector("[data-lcdp-champ-label-zone]").appendChild(choixLabel);
+          choixFragment.querySelector("[data-lcdp-champ-control]").appendChild(choix);
+          zoneContent.appendChild(choixFragment);
+
           const inputId = "lcdp-suivida-date-decision";
           const label = document.createElement("label");
           label.className = "lcdp-box-champ-formulaire__label";
@@ -610,7 +632,9 @@
           input.name = "date";
           input.type = "date";
           input.required = true;
-          input.value = dateAujourdhuiParis();
+          const dateExistante = row?.datedecision ||
+            (decisionExistante === "oui" ? row?.dataccept : row?.daterefu);
+          input.value = dateCivileParis(dateExistante) || dateAujourdhuiParis();
 
           zoneLabel.appendChild(label);
           zoneControle.appendChild(input);
@@ -621,6 +645,7 @@
           };
 
           boutonFermer.addEventListener("click", fermer);
+          boutonAnnuler.addEventListener("click", fermer);
           dialogue.addEventListener("click", (event) => {
             if (event.target === dialogue) {
               fermer();
@@ -631,6 +656,13 @@
             event.preventDefault();
 
             const date = String(input.value || "").trim();
+            const decision = choix.value;
+            if (!["oui", "non"].includes(decision)) {
+              erreur.textContent = "La décision est obligatoire.";
+              erreur.hidden = false;
+              choix.focus();
+              return;
+            }
 
             if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
               erreur.textContent = "La date est obligatoire.";
@@ -642,19 +674,25 @@
             erreur.hidden = true;
             erreur.textContent = "";
 
-            const confirme = await confirmerDateDecision(formaterDateFr(date));
+            boutonValider.disabled = true;
+            input.disabled = true;
+            choix.disabled = true;
+            const confirme = await confirmerDateDecision(formaterDateFr(date), decision);
 
             if (!confirme) {
+              boutonValider.disabled = false;
+              input.disabled = false;
+              choix.disabled = false;
               input.focus();
               return;
             }
 
-            boutonValider.disabled = true;
-            input.disabled = true;
-
             try {
-              await enregistrerDecision(idda, champ, date);
+              const resultat = await enregistrerDecision(idda, decision, date);
               fermer();
+              if (resultat.decisionEnregistree && !resultat.success) {
+                await afficherAlerte(resultat.message);
+              }
 
               const table = window.LCDP_TABLE_LECTURE_ADMIN;
 
@@ -664,6 +702,7 @@
             } catch (errorDecision) {
               boutonValider.disabled = false;
               input.disabled = false;
+              choix.disabled = false;
               await afficherAlerte(
                 String(
                   errorDecision?.message ||
@@ -684,7 +723,8 @@
         }
       }
 
-      async function enregistrerDecision(idda, champ, date) {
+      async function enregistrerDecision(idda, decision, date) {
+        const champ = decision === "oui" ? "dataccept" : "daterefu";
         const response = await fetch(
           endpointAdminData() + "/suivi-da/decision",
           {
@@ -695,7 +735,7 @@
               Accept: "application/json",
               "Content-Type": "application/json"
             },
-            body: JSON.stringify({ idda, champ, date })
+            body: JSON.stringify({ idda, decision, champ, date })
           }
         );
 
@@ -706,6 +746,7 @@
           throw new Error("Accès administrateur refusé.");
         }
 
+        if (data?.decisionEnregistree === true) return data;
         if (!response.ok || !data || data.success !== true) {
           throw new Error(
             data?.message ||
@@ -717,7 +758,7 @@
         return data;
       }
 
-      async function confirmerDateDecision(dateFr) {
+      async function confirmerDateDecision(dateFr, decision) {
         const conteneur = document.createElement("div");
         document.body.appendChild(conteneur);
         try {
@@ -744,7 +785,7 @@
           if (!dialogue || !titre || !message || !annuler || !confirmer)
             throw new Error("Structure CHOIX incomplète.");
           titre.textContent = "Confirmer la date de décision";
-          message.textContent = "Valider le " + dateFr + " ?";
+          message.textContent = (decision === "oui" ? "Retenir la DA" : "Ne pas retenir la DA") + " le " + dateFr + " ?";
           annuler.textContent = "Annuler";
           confirmer.textContent = "Valider";
           return await new Promise(resolve => {
@@ -831,6 +872,18 @@
             }
           });
         });
+      }
+
+      function dateCivileParis(value) {
+        if (!value) return "";
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return "";
+        const parts = new Intl.DateTimeFormat("fr-CA", {
+          timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(date);
+        const part = type => parts.find(p => p.type === type).value;
+        return part("year") + "-" + part("month") + "-" + part("day");
       }
 
       function dateAujourdhuiParis() {
