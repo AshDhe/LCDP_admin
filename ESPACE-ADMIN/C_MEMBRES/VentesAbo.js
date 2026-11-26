@@ -19,8 +19,8 @@
     ["6M", 5], ["10M", 6], ["11M", 7], ["1A", 8]
   ]);
   let chargement = false, chargementSynthese = null;
-  const onglets = [["abo","Abo"],["duoseul","Duo"],["duoplus","Duo Plus"],
-    ["frecdp","Fréq. Duo Plus"],["maxduo","Max Duo"],["fam","FAM"]];
+  const onglets = [["abo","Abo"],["duoseul","Duo"],["duoplus","Duo+"],
+    ["frecdp","FQ Duo+"],["maxduo","MaxDuo"],["fam","FAM"]];
   let ongletActif = "abo";
   const boutonsOnglets = new Map();
   let pageDetail = 0, selectionDetail = null, requeteDetail = null;
