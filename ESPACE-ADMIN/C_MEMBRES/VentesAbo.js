@@ -33,6 +33,7 @@
   function etat(message, erreur = false) {
     const zone = $("statut");
     zone.textContent = message;
+    zone.hidden = !message;
     zone.setAttribute("role", erreur ? "alert" : "status");
   }
 
@@ -125,9 +126,6 @@
   }
 
   function preparer() {
-    $("lien-quantites").href = urlAdmin(CHEMIN) + "?vue=quantites";
-    $("lien-euros").href = urlAdmin(CHEMIN) + "?vue=euros";
-    $("lien-" + vue).setAttribute("aria-current", "page");
     const euros = vue === "euros";
     $("titre").textContent = euros ? "VT Abo — Montants en euros" : "VT Abo — Quantités vendues";
     $("sous-titre").textContent = euros
@@ -136,7 +134,7 @@
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
     else {
-      $("note").textContent = "Cliquez sur une quantité ou un total pour afficher son détail dans le tableau ci-dessous. Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les anciennes références d’abonnements principaux effectivement vendues sont conservées sur des lignes distinctes, même sans indicateur pivot historique. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
+      $("note").hidden = true;
       preparerDetail();
     }
   }
@@ -155,7 +153,7 @@
     }
 
     const euro = vue === "euros";
-    $("periode").textContent = "Année " + annee + " · cumul à ce jour";
+    $("titre").textContent = (euro ? "VT Abo — Montants en euros" : "VT Abo — Quantités vendues") + " · " + annee;
     $("legende").textContent = (euro ? "Montants TTC" : "Quantités") +
       " d'abonnements vendus par mois en " + annee;
     const entetes = $("entetes");
@@ -224,9 +222,6 @@
     const annuel={annee,libelle:"Toutes les formules — année "+annee};
     pied.appendChild(euro ? cellule("td",devise.format(total / 100),"lcdp-ventesabo__cumul")
       : celluleQuantite(total,annuel,"lcdp-ventesabo__cumul"));
-    if (euro) $("total").textContent=devise.format(total / 100);
-    else $("total").replaceChildren(boutonQuantite(total,annuel,
-      entier.format(total) + " abonnement" + (total > 1 ? "s" : "")));
     const avertissement = montantsManquants
       ? " Attention : " + entier.format(montantsManquants) +
         " vente(s) sans montant net enregistré."
@@ -236,14 +231,9 @@
           tests + production + nonConfirmes !== total || factures > total) {
         throw Error("Volumes de vente incohérents.");
       }
-      $("coherence").textContent = "Production confirmée : " + entier.format(production) +
-        " · Tests : " + entier.format(tests) +
-        " · Mode non confirmé : " + entier.format(nonConfirmes) +
-        " · Abonnements avec facture émise : " + entier.format(factures) +
-        " / " + entier.format(total);
+      $("sous-titre").textContent = "Abonnements principaux vendus par pivot et par mois" + (tests ? " · Tests inclus" : "");
     }
-    etat(lignes.length + " formule(s) affichée(s)." + avertissement,
-      montantsManquants > 0 && euro);
+    etat(avertissement.trim(), montantsManquants > 0 && euro);
   }
 
   async function charger() {
@@ -265,10 +255,6 @@
 
 
   function preparerDetail() {
-    const coherence = document.createElement("p");
-    coherence.id = "lcdp-ventesabo-coherence";
-    coherence.className = "lcdp-ventesabo__note";
-    $("note").before(coherence);
     const section = document.createElement("section");
     section.id = "lcdp-ventesabo-detail";
     section.className = "lcdp-ventesabo__detail";
@@ -311,7 +297,9 @@
     }
     thead.appendChild(tr);table.append(caption,thead,tbody);scroll.appendChild(table);wrap.appendChild(scroll);
     const nav = document.createElement("nav");
+    nav.id = "lcdp-ventesabo-detail-pagination";
     nav.className = "lcdp-ventesabo__vues";
+    nav.hidden = true;
     nav.setAttribute("aria-label","Pagination du détail des ventes");
     for (const [id,label,delta] of [["precedent","Précédent",-1],["suivant","Suivant",1]]) {
       const bouton = document.createElement("button");
@@ -332,6 +320,7 @@
     const statut=$("detail-statut");
     statut.setAttribute("role","status");
     statut.textContent="Cliquez sur un chiffre du tableau supérieur.";
+    $("detail-pagination").hidden=true;
     $("detail-precedent").disabled=$("detail-suivant").disabled=$("detail-effacer").disabled=true;
   }
 
@@ -360,6 +349,7 @@
     const statut=$("detail-statut"), corps=$("detail-lignes");
     const precedent=$("detail-precedent"), suivant=$("detail-suivant");
     precedent.disabled=suivant.disabled=true;
+    $("detail-pagination").hidden=true;
     corps.replaceChildren();
     statut.setAttribute("role","status");statut.textContent="Chargement du détail…";
     try {
@@ -396,7 +386,10 @@
       corps.replaceChildren(fragment);
       const total=Number(data.total);
       pageDetail=page;
-      statut.textContent=total?entier.format(page*tailleDetail+1)+" à "+entier.format(page*tailleDetail+data.rows.length)+" sur "+entier.format(total)+" abonnement(s).":"Aucun abonnement vendu.";
+      statut.textContent=total>tailleDetail
+        ? entier.format(page*tailleDetail+1)+" à "+entier.format(page*tailleDetail+data.rows.length)+" sur "+entier.format(total)+" abonnements."
+        : total ? entier.format(total)+(total===1?" abonnement.":" abonnements.") : "Aucun abonnement vendu.";
+      $("detail-pagination").hidden=total<=tailleDetail;
       if(total!==selection.attendu) {
         statut.textContent+=" Les données ont changé depuis l’affichage du tableau ("+entier.format(selection.attendu)+"). Actualisez les ventes.";
       }
