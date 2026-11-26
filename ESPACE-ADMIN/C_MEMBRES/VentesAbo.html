@@ -24,7 +24,7 @@
       [
         "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
         "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
-        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css?v=4587109934b8"
+        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css?v=8ba2ab487564"
       ].forEach(p => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '">');
       });
@@ -55,10 +55,11 @@
               </section>
               <div id="lcdp-ventesabo-panel" class="lcdp-wraper-onglets__contenu" role="tabpanel">
               <p id="lcdp-ventesabo-statut" role="status" aria-live="polite">Chargement des ventes…</p>
-              <div class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
-                <div class="lcdp-table-lecture-admin__scroll" tabindex="0" aria-label="Tableau des ventes par mois, défilement horizontal">
+              <div id="lcdp-ventesabo-synthese" class="lcdp-table-lecture-admin lcdp-ventesabo__tableau">
+                <div class="lcdp-table-lecture-admin__scroll" aria-label="Tableau des ventes par mois">
                   <table class="lcdp-table-lecture-admin__table" id="lcdp-ventesabo-table">
                     <caption id="lcdp-ventesabo-legende">Ventes par formule, mois et total annuel en cours</caption>
+                    <colgroup><col><col span="13"></colgroup>
                     <thead>
                       <tr id="lcdp-ventesabo-filtres" hidden><th colspan="14"><div id="lcdp-ventesabo-filtre-slot"></div></th></tr>
                       <tr id="lcdp-ventesabo-entetes"></tr>
@@ -78,6 +79,6 @@
       </section>
     </main>
   </div>
-  <script src="./VentesAbo.js?v=90efb85cce55"></script>
+  <script src="./VentesAbo.js?v=9cff166807da"></script>
 </body>
 </html>
