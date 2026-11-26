@@ -188,32 +188,68 @@
   box-shadow:none;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__recherche-pivots {
-  max-width:100%;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
   color:var(--lcdp-color-text,#253c2d);
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__recherche-pivots > input {
-  width:min(100%,300px);
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue {
+  width:min(440px,calc(100vw - 32px));
+  max-width:calc(100vw - 32px);
+  max-height:80vh;
+  overflow:auto;
+  padding:16px;
+  border:1px solid var(--lcdp-color-border,#c7cec1);
+  border-radius:var(--lcdp-radius-small,6px);
+  background:var(--lcdp-color-surface,#fff);
+  color:var(--lcdp-color-text,#253c2d);
+  text-align:left;
+  white-space:normal;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue::backdrop {
+  background:rgba(0,0,0,.4);
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue h2 {
+  margin:0 0 12px;
+  font-size:1.1rem;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue > input {
+  width:100%;
   min-width:0;
+  box-sizing:border-box;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__suggestions {
-  width:min(100%,380px);
   margin-top:4px;
-  max-height:220px;
+  max-height:240px;
   overflow:auto;
   border:1px solid var(--lcdp-color-border,#c7cec1);
   border-radius:var(--lcdp-radius-small,4px);
-  background:var(--lcdp-color-surface,#fff);
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__suggestion {
-  padding:6px 9px;
-  font-size:.84rem;
-  font-weight:400;
-  cursor:pointer;
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue button.lcdp-ventesabo__suggestion {
+  display:block;
+  width:100%;
+  min-height:0;
+  padding:8px;
+  margin:0;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:transparent;
+  color:inherit;
+  text-align:left;
+  font:inherit;
+  font-size:.88rem;
   white-space:normal;
+  cursor:pointer;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__suggestion:hover,
-.lcdp-page-ventesabo .lcdp-ventesabo__suggestion[aria-selected="true"] {
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue button.lcdp-ventesabo__suggestion:hover,
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue button.lcdp-ventesabo__suggestion[aria-selected="true"] {
   background:#edf2e9;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-message {
+  margin:6px 0;
+  font-size:.84rem;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__filtres-actifs {
   display:flex;
@@ -221,15 +257,16 @@
   align-items:center;
   gap:4px;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__filtres-actifs:not(:empty) {
-  margin-top:6px;
-}
 .lcdp-page-ventesabo .lcdp-ventesabo__filtres-actifs button {
   width:auto;
   min-height:0;
   padding:4px 8px;
   white-space:normal;
   font-size:.82rem;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue > .lcdp-button {
+  margin-top:12px;
+  width:auto;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table thead th.lcdp-ventesabo__cumul {
   color:var(--lcdp-color-text,#253c2d);
