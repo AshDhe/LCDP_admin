@@ -15,8 +15,8 @@
   const mois = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin",
     "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
   const ordre = new Map([
-    ["1J", 1], ["1M", 2], ["3M", 3], ["5M", 4],
-    ["6M", 5], ["10M", 6], ["11M", 7], ["1A", 8]
+    ["1A", 1], ["12M", 1], ["11M", 2], ["10M", 3], ["6M", 4],
+    ["5M", 5], ["3M", 6], ["1M", 7], ["1J", 8]
   ]);
   let chargement = false, chargementSynthese = null;
   const onglets = [["abo","Abo"],["duoseul","Duo"],["duoplus","Duo+"],
@@ -341,7 +341,8 @@
       const ka = ordre.get(String(a.typeabo)) || 100;
       const kb = ordre.get(String(b.typeabo)) || 100;
       return ka-kb || String(a.typeabo).localeCompare(String(b.typeabo), "fr") ||
-        String(a.debut_pivot||"").localeCompare(String(b.debut_pivot||"")) ||
+        Number(!!a.ancienne)-Number(!!b.ancienne) ||
+        String(b.debut_pivot||"").localeCompare(String(a.debut_pivot||"")) ||
         String(a.idprixabo||"").localeCompare(String(b.idprixabo||""));
     });
 
