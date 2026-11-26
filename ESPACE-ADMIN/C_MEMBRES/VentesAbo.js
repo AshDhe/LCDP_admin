@@ -231,55 +231,64 @@
 
   function preparerFiltrePivots() {
     const slot=$("filtre-slot"), selection=selectionPivots();
-    slot.replaceChildren();$("filtres").hidden=!lignesActives.length;
+    slot.replaceChildren();$("filtres").hidden=false;
     const groupes=new Map();
     for(const l of lignesActives){
       const k=famillePivot(l);
       if(!groupes.has(k))groupes.set(k,[]);
       groupes.get(k).push(l);
     }
-    const trier=(a,b)=>a.localeCompare(b,"fr",{numeric:true,sensitivity:"base"});
     const options=[];
     for(const [famille,lignes] of groupes){
-      if(lignes.length>1)options.push({key:"fam:"+famille,label:famille+" — tous les pivots",ids:lignes.map(refPivot),recherche:famille});
-      for(const l of lignes)options.push({key:"pivot:"+refPivot(l),label:libellePivot(l),ids:[refPivot(l)],recherche:[famille,libellePivot(l),l.groupeabo,l.typeabo].filter(Boolean).join(" ")});
+      if(lignes.length>1)options.push({key:"fam:"+famille,label:famille+" — Tous",ids:lignes.map(refPivot),recherche:famille});
+      for(const l of lignes)options.push({key:"pivot:"+refPivot(l),label:libellePivot(l),ids:[refPivot(l)],recherche:[famille,libellePivot(l),l.groupeabo,l.typeabo,l.frequence,l.rythme,l.duoplus,l.maxduo,l.famille,l.debut_pivot].filter(Boolean).join(" ")});
     }
-    options.sort((a,b)=>trier(a.label,b.label));
+    options.sort((a,b)=>a.label.localeCompare(b.label,"fr",{numeric:true,sensitivity:"base"}));
     const index=new Map(options.map(x=>[x.key,x]));
     for(const key of selection.keys()){
       if(index.has(key))selection.set(key,index.get(key));else selection.delete(key);
     }
-    if(!lignesActives.length)return;
     const cont=document.createElement("div");cont.className="lcdp-ventesabo__recherche-pivots";
+    const ouvrir=cellule("button","Filtrer","lcdp-table-lecture-admin__pagination-button");
+    ouvrir.type="button";ouvrir.setAttribute("aria-haspopup","dialog");
+    const tags=document.createElement("div");tags.className="lcdp-ventesabo__filtres-actifs";
+    tags.setAttribute("aria-label","Filtres sélectionnés");
+    const dialogue=document.createElement("dialog");dialogue.className="lcdp-ventesabo__filtre-dialogue";
+    dialogue.setAttribute("aria-labelledby","lcdp-ventesabo-filtre-titre");
+    const titre=cellule("h2","Filtrer");titre.id="lcdp-ventesabo-filtre-titre";
     const chercher=document.createElement("input");chercher.type="search";
-    chercher.className="lcdp-table-lecture-admin__filter-input";chercher.placeholder="Rechercher un pivot";
-    chercher.autocomplete="off";
-    chercher.setAttribute("aria-label","Rechercher une famille ou un pivot");
+    chercher.className="lcdp-table-lecture-admin__filter-input";chercher.placeholder="Saisir un mot";
+    chercher.autocomplete="off";chercher.autofocus=true;
+    chercher.setAttribute("aria-label","Saisir un mot");
     chercher.setAttribute("role","combobox");chercher.setAttribute("aria-autocomplete","list");
     chercher.setAttribute("aria-controls","lcdp-ventesabo-suggestions");chercher.setAttribute("aria-expanded","false");
     const liste=document.createElement("div");liste.id="lcdp-ventesabo-suggestions";
     liste.className="lcdp-ventesabo__suggestions";liste.setAttribute("role","listbox");liste.hidden=true;
-    const tags=document.createElement("div");tags.className="lcdp-ventesabo__filtres-actifs";
-    tags.setAttribute("aria-label","Filtres sélectionnés");
+    const message=cellule("p","","lcdp-ventesabo__filtre-message");message.setAttribute("role","status");
+    const tagsDialogue=document.createElement("div");tagsDialogue.className="lcdp-ventesabo__filtres-actifs";
+    const fermerBouton=cellule("button","Fermer","lcdp-button lcdp-button-secondary");fermerBouton.type="button";
+    fermerBouton.addEventListener("click",()=>dialogue.close());
     let suggestions=[], actif=-1;
     const normaliser=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr");
-    function fermer(){
+    function effacerSuggestions(){
       liste.hidden=true;liste.replaceChildren();suggestions=[];actif=-1;
       chercher.setAttribute("aria-expanded","false");chercher.removeAttribute("aria-activedescendant");
     }
     function afficherTags(){
-      tags.replaceChildren();
-      for(const [key,option] of selection){
-        const retirer=cellule("button",option.label+" ×","lcdp-table-lecture-admin__pagination-button");
-        retirer.type="button";retirer.setAttribute("aria-label","Retirer le filtre "+option.label);
-        retirer.addEventListener("click",()=>{selection.delete(key);afficherTags();actualiserTableauFiltre();afficher();});
-        tags.appendChild(retirer);
+      for(const zone of [tags,tagsDialogue]){
+        zone.replaceChildren();
+        for(const [key,option] of selection){
+          const retirer=cellule("button",option.label+" ×","lcdp-table-lecture-admin__pagination-button");
+          retirer.type="button";retirer.setAttribute("aria-label","Retirer le filtre "+option.label);
+          retirer.addEventListener("click",()=>{selection.delete(key);afficherTags();actualiserTableauFiltre();afficher();});
+          zone.appendChild(retirer);
+        }
       }
     }
     function ajouter(option){
       if(!option||selection.has(option.key))return;
-      selection.set(option.key,option);chercher.value="";fermer();
-      afficherTags();actualiserTableauFiltre();chercher.focus();
+      selection.set(option.key,option);chercher.value="";
+      afficherTags();actualiserTableauFiltre();afficher();chercher.focus();
     }
     function choisirActif(i){
       if(!suggestions.length)return;
@@ -289,30 +298,34 @@
       liste.children[actif].scrollIntoView?.({block:"nearest"});
     }
     function afficher(){
-      fermer();
+      effacerSuggestions();
       const mots=normaliser(chercher.value).trim().split(/\s+/).filter(Boolean);
+      message.textContent=options.length?"":"Aucune valeur disponible.";
       if(!mots.length)return;
-      suggestions=options.filter(x=>!selection.has(x.key)&&mots.every(m=>normaliser(x.label+" "+x.recherche).includes(m))).slice(0,8);
-      if(!suggestions.length)return;
+      suggestions=options.filter(x=>!selection.has(x.key)&&mots.every(m=>normaliser(x.label+" "+x.recherche).includes(m)));
+      if(!suggestions.length){message.textContent="Aucun résultat.";return;}
       suggestions.forEach((option,i)=>{
-        const b=cellule("div",option.label,"lcdp-ventesabo__suggestion");
-        b.id="lcdp-ventesabo-suggestion-"+i;b.setAttribute("role","option");b.setAttribute("aria-selected","false");
-        b.addEventListener("mousedown",e=>e.preventDefault());b.addEventListener("click",()=>ajouter(option));
-        liste.appendChild(b);
+        const btn=cellule("button",option.label,"lcdp-ventesabo__suggestion");btn.type="button";btn.tabIndex=-1;
+        btn.id="lcdp-ventesabo-suggestion-"+i;btn.setAttribute("role","option");btn.setAttribute("aria-selected","false");
+        btn.addEventListener("click",()=>ajouter(option));
+        liste.appendChild(btn);
       });
       liste.hidden=false;chercher.setAttribute("aria-expanded","true");
     }
     chercher.addEventListener("input",afficher);
-    chercher.addEventListener("focus",afficher);
-    chercher.addEventListener("blur",fermer);
     chercher.addEventListener("keydown",ev=>{
-      if(ev.key==="Escape"){fermer();return;}
       if(!suggestions.length)return;
-      if(ev.key==="ArrowDown"){ev.preventDefault();choisirActif(actif+1);}
+      if(ev.key==="Escape"){ev.preventDefault();effacerSuggestions();}
+      else if(ev.key==="ArrowDown"){ev.preventDefault();choisirActif(actif+1);}
       else if(ev.key==="ArrowUp"){ev.preventDefault();choisirActif(actif<0?suggestions.length-1:actif-1);}
       else if(ev.key==="Enter"){ev.preventDefault();ajouter(suggestions[actif<0?0:actif]);}
     });
-    cont.append(chercher,liste,tags);slot.appendChild(cont);afficherTags();
+    ouvrir.addEventListener("click",()=>{
+      chercher.value="";afficher();dialogue.showModal();chercher.focus();
+    });
+    dialogue.addEventListener("close",()=>{effacerSuggestions();ouvrir.focus();});
+    dialogue.append(titre,chercher,liste,message,tagsDialogue,fermerBouton);
+    cont.append(ouvrir,tags,dialogue);slot.appendChild(cont);afficherTags();
   }
 
   function rendre(lignes) {
