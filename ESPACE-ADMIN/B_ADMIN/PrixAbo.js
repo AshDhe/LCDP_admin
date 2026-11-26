@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const tabs=['1J','1M','3M','5M','1A','11M','10M','COMMUN','ARCHIVES'];
-  const extensions=['DUO+','FZDUO+','DUO+hebdo','FZDUO+hebdo','MAXDUO','FAM+2','FAM3','FAM5','FAM7','FAM11','COACH9','COACH19'];
+  const extensions=['DUO+','FZDUO+','DUO+hebdo','FZDUO+hebdo','MAXDUO','FAM+2','FAM3','FAM5','FAM7','FAM11','COACH9','COACH19','BOUQUET'];
   const common=['+5 DUOMAX','+5 DUO+','+2 FAMILLE'];
   const fields=[['pivot','Pivot'],['code_tarif','Code tarif'],['typeabo','Type'],['nomabo','NOM'],['variables','Variables'],['datedebut','Début'],['datefin','Fin'],['prixabottc','Prix TTC'],['txtvafr','TVA (%)'],['rechercheia','Recherche IA'],['typmb','TypMb'],['maxduo','MaxDuo'],['duoplus','Duo+'],['freqduoplus','Fréq. Duo+'],['famille','Famille'],['coach','Coach'],['maxcoach','MaxCoach'],['remise','Remise'],['ech','Éch.'],['mois1','Mois 1'],['mois2','Mois 2'],['mois3','Mois 3'],['valvrmt','Virement'],['1xval','Remise 1×'],['datecreation','Création'],['nomworker','Code worker'],['aboactif','Période active'],['idprixabo','ID'],['action','Actions']];
   const payment=new Set(['ech','mois1','mois2','mois3','valvrmt','1xval']);
