@@ -20,7 +20,7 @@
   ]);
   let chargement = false, chargementSynthese = null;
   const onglets = [["abo","Abo"],["duoseul","Duo"],["duoplus","Duo+"],
-    ["frecdp","FQ Duo+"],["maxduo","MaxDuo"],["fam","FAM"]];
+    ["frecdp","FqDuo+"],["maxduo","MaxDuo"],["fam","FAM"]];
   let ongletActif = "abo";
   const boutonsOnglets = new Map();
   let pageDetail = 0, selectionDetail = null, requeteDetail = null;
