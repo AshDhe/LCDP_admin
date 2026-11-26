@@ -342,7 +342,7 @@
     const entetes = $("entetes");
     entetes.replaceChildren(cellule("th", "Abonnement"));
     mois.forEach(n => entetes.appendChild(cellule("th", n)));
-    entetes.appendChild(cellule("th", "Total annuel", "lcdp-ventesabo__cumul"));
+    entetes.appendChild(cellule("th", "Total", "lcdp-ventesabo__cumul"));
 
     const moisTotal = Array(12).fill(0);
     let total = 0;
@@ -428,7 +428,7 @@
     const colonnes=mois.map((label,i)=>({label,mois:i+1}));
     const entetes=$("entetes");entetes.replaceChildren(cellule("th","Variante"));
     for(const c of colonnes)entetes.appendChild(cellule("th",c.label));
-    entetes.appendChild(cellule("th","Total annuel","lcdp-ventesabo__cumul"));
+    entetes.appendChild(cellule("th","Total","lcdp-ventesabo__cumul"));
     $("titre").textContent="VT Abo — Quantités vendues · "+annee;
     $("legende").textContent=label+" — extensions souscrites en "+annee;
     const corps=$("lignes");corps.replaceChildren();
