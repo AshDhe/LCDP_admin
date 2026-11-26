@@ -547,21 +547,32 @@
     etat.textContent=!planificationDisponible
       ?"Planification des règlements indisponible : mise à jour du Worker editing-admin nécessaire. Les archives restent consultables."
       :data.versions.length?"Une version en vigueur et une version future au maximum.":"Aucune version officielle créée.";
+    if(!data.versions.length)return;
+    const tableWrap=elementCgv("div","lcdp-table-lecture-admin");
+    const scroll=elementCgv("div","lcdp-table-lecture-admin__scroll");
+    const tableau=elementCgv("table","lcdp-table-lecture-admin__table");
+    tableau.setAttribute("aria-label","Versions officielles du règlement");
+    const thead=elementCgv("thead"),entete=elementCgv("tr"),tbody=elementCgv("tbody");
+    for(const titre of ["Version","Création","Date de mise en application","En application","Actions"]){
+      const th=elementCgv("th","",titre);th.scope="col";entete.append(th);
+    }
+    thead.append(entete);tableau.append(thead,tbody);scroll.append(tableau);tableWrap.append(scroll);liste.append(tableWrap);
     for(const v of data.versions){
-      const card=elementCgv("article","lcdp-editeur-contenu__bloc");
+      const card=elementCgv("tr");
       const actif=applicables.has(v.id);
       const future=dateValide(v)&&v.dateapplication>aujourdhui;
       const statut=actif?(future?" — Version future":" — Version en vigueur"):"";
-      card.append(elementCgv("h2","lcdp-boxtext__title",v.nom),elementCgv("p","lcdp-editeur-contenu__aide",dateCgv(v.datecreation)+statut));
+      const creation=elementCgv("td","",dateCgv(v.datecreation));
       const dateLabel=elementCgv("label","lcdp-editeur-contenu__titre-zone");
-      dateLabel.append(elementCgv("span","lcdp-editeur-contenu__label","Date de mise en application"));
+      dateLabel.setAttribute("aria-label","Date de mise en application de "+v.nom);
       const dateInput=elementCgv("input","lcdp-editeur-contenu__titre");
       dateInput.type="date";dateInput.value=dateValide(v)?v.dateapplication:"";dateInput.readOnly=true;
       dateLabel.append(dateInput);
       const cocheLabel=elementCgv("label","lcdp-editeur-contenu__aide");
       const coche=elementCgv("input");coche.type="checkbox";coche.checked=actif;
-      coche.disabled=!planificationDisponible||!dateValide(v)||actif&&!future||!actif&&future&&futures.length>0||!actif&&!future&&enVigueur.length>0;
-      cocheLabel.append(coche,document.createTextNode(" En application"));
+      coche.disabled=!planificationDisponible||!dateValide(v)||actif&&!future||!actif&&v.dateapplication<aujourdhui||!actif&&future&&futures.length>0||!actif&&!future&&enVigueur.length>0;
+      coche.setAttribute("aria-label","En application : "+v.nom);
+      cocheLabel.append(coche);
       coche.addEventListener("change",()=>{
         const selection=coche.checked;coche.checked=actif;
         void operationCgv(async()=>{
@@ -574,7 +585,7 @@
         });
       });
       const label=elementCgv("label","lcdp-editeur-contenu__titre-zone");
-      label.append(elementCgv("span","lcdp-editeur-contenu__label","Nom de la version"));
+      label.setAttribute("aria-label","Nom de la version");
       const input=elementCgv("input","lcdp-editeur-contenu__titre");input.type="text";input.maxLength=160;input.value=v.nom;label.append(input);
       const actions=elementCgv("div","lcdp-editeur-contenu__ordre");
       actions.append(
@@ -582,7 +593,11 @@
         boutonCgv("Consulter",()=>operationCgv(()=>consulterVersionCgv(v.id))),
         boutonCgv("PDF",()=>operationCgv(()=>telechargerVersionCgv(v.id)))
       );
-      card.append(label,dateLabel,cocheLabel,actions);liste.append(card);
+      const nomCell=elementCgv("td"),dateCell=elementCgv("td"),cocheCell=elementCgv("td"),actionsCell=elementCgv("td");
+      nomCell.append(label);
+      if(statut)nomCell.append(elementCgv("p","lcdp-editeur-contenu__aide",statut.slice(3)));
+      dateCell.append(dateLabel);cocheCell.append(cocheLabel);actionsCell.append(actions);
+      card.append(nomCell,creation,dateCell,cocheCell,actionsCell);tbody.append(card);
     }
   }
   function actualiserVersionsCgv() {
