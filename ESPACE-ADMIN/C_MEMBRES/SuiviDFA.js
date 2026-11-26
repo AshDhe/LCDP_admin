@@ -52,9 +52,21 @@
     try{const r=await api({iddfa:id});for(const i of r.incidents){const tr=document.createElement("tr");[date(i.dateincident),i.code,i.occurrences,date(i.derniere_occurrence),date(i.resolution_le)].forEach(v=>td(tr,v));$("incidents-lignes").appendChild(tr);}if(!r.incidents.length)$("incidents-statut").textContent="Aucun incident enregistré.";}
     catch(e){$("incidents-statut").textContent=e.message;}
   }
+  async function controler(id,bouton){
+    if(busy||bouton.disabled)return;
+    bouton.disabled=true;bouton.textContent="Contrôle…";
+    try{
+      const r=await fetch(BASE+"/membres/dfa",{method:"POST",credentials:"include",cache:"no-store",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify({iddfa:id})});
+      const d=await r.json().catch(()=>null);
+      if(!r.ok||!d?.success)throw Error(d?.message||"Contrôle bancaire indisponible.");
+      await charger();
+      $("statut").textContent=d.aRevoir?"Contrôle effectué : un rapprochement ou un envoi reste à vérifier.":"Contrôle bancaire effectué.";
+    }catch(e){$("statut").textContent=e.message;$("statut").setAttribute("role","alert");}
+    finally{bouton.disabled=false;bouton.textContent="Contrôler";}
+  }
   async function charger(){
     if(busy)return;busy=true;$("actualiser").disabled=true;$("mode").disabled=true;$("filtre").disabled=true;$("precedent").disabled=true;$("suivant").disabled=true;$("statut").textContent="Chargement…";$("lignes").replaceChildren();$("incidents").hidden=true;
-    try{const r=await api({mode:$("mode").value,statut:$("filtre").value,limit:100,offset});for(const d of r.rows){const tr=document.createElement("tr");[d.nommembre,d.prenommembre,date(d.datecreation),date(d.date_limite),d.statut,d.mode_test?"TEST":"Réel",montant(d.montant_brut_centimes),montant(d.frais_stripe_centimes),montant(d.montant_net_centimes),date(d.datepaiement),d.numero_recu,date(d.email_demande_le),date(d.email_recu_le),d.diagnostic,d.iddfa].forEach(v=>td(tr,v));const c=td(tr,"");const b=document.createElement("button");b.type="button";b.className="lcdp-button lcdp-button-secondary";b.textContent="Voir";b.addEventListener("click",()=>incidents(d.iddfa));c.appendChild(b);$("lignes").appendChild(tr);}$("statut").textContent=r.total+" opération(s)";$("precedent").disabled=offset===0;$("suivant").disabled=offset+r.rows.length>=r.total;}
+    try{const r=await api({mode:$("mode").value,statut:$("filtre").value,limit:100,offset});for(const d of r.rows){const tr=document.createElement("tr");[d.nommembre,d.prenommembre,date(d.datecreation),date(d.date_limite),d.statut,d.mode_test?"TEST":"Réel",montant(d.montant_brut_centimes),montant(d.frais_stripe_centimes),montant(d.montant_net_centimes),date(d.datepaiement),d.numero_recu,date(d.email_demande_le),date(d.email_recu_le),d.diagnostic,d.iddfa].forEach(v=>td(tr,v));const c=td(tr,"");const b=document.createElement("button");b.type="button";b.className="lcdp-button lcdp-button-secondary";b.textContent="Voir";b.addEventListener("click",()=>incidents(d.iddfa));c.appendChild(b);const controle=document.createElement("button");controle.type="button";controle.className="lcdp-button lcdp-button-secondary";controle.textContent="Contrôler";controle.addEventListener("click",()=>controler(d.iddfa,controle));c.appendChild(controle);$("lignes").appendChild(tr);}$("statut").textContent=r.total+" opération(s)";$("precedent").disabled=offset===0;$("suivant").disabled=offset+r.rows.length>=r.total;}
     catch(e){$("statut").textContent=e.message;$("statut").setAttribute("role","alert");}
     finally{busy=false;$("actualiser").disabled=false;$("mode").disabled=false;$("filtre").disabled=false;}
   }
