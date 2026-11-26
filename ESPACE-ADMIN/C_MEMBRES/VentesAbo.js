@@ -20,6 +20,7 @@
   ]);
   let chargement = false;
   let pageDetail = 0, selectionDetail = null, requeteDetail = null;
+  let boutonDetailActif = null;
   const tailleDetail = 100;
 
   const urlAdmin = path => typeof window.LCDP_urlAdmin === "function"
@@ -48,8 +49,10 @@
     bouton.className = "lcdp-table-lecture-admin__cell-action lcdp-ventesabo__quantite";
     bouton.textContent = texte;
     bouton.setAttribute("aria-label", selection.libelle + " : " + n + " abonnement(s), afficher le détail");
+    bouton.setAttribute("aria-controls","lcdp-ventesabo-detail");
+    bouton.setAttribute("aria-pressed","false");
     bouton.title = "Afficher le détail — " + selection.libelle;
-    bouton.addEventListener("click", () => ouvrirDetail({...selection, attendu:n}));
+    bouton.addEventListener("click", () => ouvrirDetail({...selection, attendu:n}, bouton));
     return bouton;
   }
 
@@ -133,9 +136,15 @@
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
     else {
-      $("note").textContent = "Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les anciennes références d’abonnements principaux effectivement vendues sont conservées sur des lignes distinctes, même sans indicateur pivot historique. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
+      $("note").textContent = "Cliquez sur une quantité ou un total pour afficher son détail dans le tableau ci-dessous. Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les anciennes références d’abonnements principaux effectivement vendues sont conservées sur des lignes distinctes, même sans indicateur pivot historique. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
       preparerDetail();
     }
+  }
+
+  function libellePivot(ligne) {
+    return (ligne.formule || ligne.typeabo) + " (" + ligne.typeabo + ", " +
+      (ligne.debut_pivot ? "depuis le "+ligne.debut_pivot : "ancienne référence") +
+      (ligne.fin_pivot ? " au "+ligne.fin_pivot : "") + ")";
   }
 
   function rendre(lignes) {
@@ -189,7 +198,7 @@
         const centimes = euro ? Math.round(n * 100) : n;
         moisTotal[i] += centimes;
         const selection = {annee, mois:i+1, pivot:ligne.idprixabo,
-          libelle: (ligne.formule || ligne.typeabo) + " — " + mois[i] + " " + annee};
+          libelle: libellePivot(ligne) + " — " + mois[i] + " " + annee};
         tr.appendChild(euro ? cellule("td", devise.format(n)) : celluleQuantite(n, selection));
       });
       const valTotal = Number(euro ? ligne.total_montant : ligne.total_quantite);
@@ -204,7 +213,7 @@
       }
       tr.appendChild(euro ? cellule("td", devise.format(valTotal), "lcdp-ventesabo__cumul")
         : celluleQuantite(valTotal, {annee, pivot:ligne.idprixabo,
-          libelle:(ligne.formule || ligne.typeabo) + " — année " + annee}, "lcdp-ventesabo__cumul"));
+          libelle:libellePivot(ligne) + " — année " + annee}, "lcdp-ventesabo__cumul"));
       corps.appendChild(tr);
     });
 
@@ -244,7 +253,11 @@
     etat("Actualisation des ventes…");
     try {
       if (vue === "euros") await Promise.all([obtenirVentes().then(rendre), chargerDeclaratif()]);
-      else await obtenirVentes("membres-ventes-abo-quantites").then(rendre);
+      else {
+        const lignes = await obtenirVentes("membres-ventes-abo-quantites");
+        rendre(lignes);
+        reinitialiserDetail();
+      }
     }
     catch (err) { etat(err.message || "Impossible d'afficher les ventes.", true); }
     finally { chargement = false; $("actualiser").disabled = false; }
@@ -256,27 +269,31 @@
     coherence.id = "lcdp-ventesabo-coherence";
     coherence.className = "lcdp-ventesabo__note";
     $("note").before(coherence);
-    const section = document.createElement("dialog");
-    section.id = "lcdp-ventesabo-detail-dialogue";
-    section.className = "lcdp-ventesabo__dialogue";
+    const section = document.createElement("section");
+    section.id = "lcdp-ventesabo-detail";
+    section.className = "lcdp-ventesabo__detail";
     section.setAttribute("aria-labelledby","lcdp-ventesabo-detail-titre");
     const entete = document.createElement("header");
     entete.className = "lcdp-ventesabo__entete";
+    const titres = document.createElement("div");
     const titre = document.createElement("h2");
     titre.id = "lcdp-ventesabo-detail-titre";
     titre.textContent = "Détail des abonnements vendus";
-    const fermer = document.createElement("button");
-    fermer.type="button";fermer.className="lcdp-button lcdp-button-secondary";
-    fermer.textContent="Fermer";fermer.autofocus=true;
-    fermer.addEventListener("click",()=>section.close());
-    entete.append(titre,fermer);
-    section.addEventListener("close",()=>{
-      requeteDetail?.abort();requeteDetail=null;selectionDetail=null;
-      $("detail-lignes").replaceChildren();
-    });
+    const filtre = document.createElement("p");
+    filtre.id = "lcdp-ventesabo-detail-filtre";
+    filtre.textContent = "Filtre : aucun";
+    titres.append(titre,filtre);
+    const effacer = document.createElement("button");
+    effacer.type="button";effacer.className="lcdp-button lcdp-button-secondary";
+    effacer.id="lcdp-ventesabo-detail-effacer";
+    effacer.textContent="Effacer le filtre";effacer.disabled=true;
+    effacer.addEventListener("click",reinitialiserDetail);
+    entete.append(titres,effacer);
     const statut = document.createElement("p");
     statut.id = "lcdp-ventesabo-detail-statut";
     statut.setAttribute("role","status");
+    statut.setAttribute("aria-live","polite");
+    statut.textContent="Cliquez sur un chiffre du tableau supérieur.";
     const wrap = document.createElement("div");
     wrap.className = "lcdp-table-lecture-admin lcdp-ventesabo__tableau";
     const scroll = document.createElement("div");
@@ -307,7 +324,18 @@
     section.append(entete,statut,wrap,nav); $("note").after(section);
   }
 
-  function ouvrirDetail(selection) {
+  function reinitialiserDetail() {
+    requeteDetail?.abort();requeteDetail=null;selectionDetail=null;pageDetail=0;
+    boutonDetailActif?.setAttribute("aria-pressed","false");boutonDetailActif=null;
+    $("detail-lignes").replaceChildren();
+    $("detail-filtre").textContent="Filtre : aucun";
+    const statut=$("detail-statut");
+    statut.setAttribute("role","status");
+    statut.textContent="Cliquez sur un chiffre du tableau supérieur.";
+    $("detail-precedent").disabled=$("detail-suivant").disabled=$("detail-effacer").disabled=true;
+  }
+
+  function ouvrirDetail(selection, bouton) {
     if (!Number.isInteger(selection.annee) ||
         (selection.pivot !== undefined && !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(selection.pivot))) {
       etat("Référence de vente invalide. Actualisez le tableau.",true);
@@ -315,9 +343,11 @@
     }
     selectionDetail = selection;
     pageDetail=0;
-    $("detail-titre").textContent=selection.libelle;
-    const dialogue=$("detail-dialogue");
-    if (!dialogue.open) dialogue.showModal();
+    boutonDetailActif?.setAttribute("aria-pressed","false");
+    boutonDetailActif=bouton;
+    boutonDetailActif?.setAttribute("aria-pressed","true");
+    $("detail-filtre").textContent="Filtre : "+selection.libelle;
+    $("detail-effacer").disabled=false;
     chargerDetail(0);
   }
 
