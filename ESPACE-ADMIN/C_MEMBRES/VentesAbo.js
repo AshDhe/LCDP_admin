@@ -285,19 +285,16 @@
     const label=onglets.find(x=>x[0]===categorie)[1];
     const annee=lignes.length?Number(lignes[0].annee):Number(new Intl.DateTimeFormat("fr-FR",{year:"numeric",timeZone:"Europe/Paris"}).format(new Date()));
     if(!Number.isInteger(annee)||lignes.some(l=>Number(l.annee)!==annee||l.categorie!==categorie))throw Error("Données d’extension incohérentes.");
-    const frec=categorie==="frecdp";
-    const cleFrec=l=>l.rythme+":"+Number(l.frequence||0)+":";
-    const colonnes=frec
-      ? [...new Map(lignes.map(l=>[cleFrec(l),{frequence:cleFrec(l),label:(l.frequence?String(l.frequence):"Non renseignée")+(l.rythme==="hebdo"?" / sem.":" / mois"),ordre:(l.rythme==="hebdo"?1000000:0)+Number(l.frequence||0)}])).values()].sort((a,b)=>a.ordre-b.ordre)
-      : mois.map((label,i)=>({label,mois:i+1}));
-    const entetes=$("entetes");entetes.replaceChildren(cellule("th","Pivot"));
+    const colonnes=mois.map((label,i)=>({label,mois:i+1}));
+    const entetes=$("entetes");entetes.replaceChildren(cellule("th","Variante"));
     for(const c of colonnes)entetes.appendChild(cellule("th",c.label));
     entetes.appendChild(cellule("th","Total annuel","lcdp-ventesabo__cumul"));
     $("titre").textContent="VT Abo — Quantités vendues · "+annee;
     $("legende").textContent=label+" — extensions souscrites en "+annee;
     const corps=$("lignes");corps.replaceChildren();
     const totaux=colonnes.map(()=>0);let total=0,tests=0;
-    lignes.sort((a,b)=>String(a.groupeabo||"").localeCompare(String(b.groupeabo||""),"fr",{numeric:true})||
+    lignes.sort((a,b)=>(categorie==="frecdp" ? String(a.rythme||"").localeCompare(String(b.rythme||"")) || Number(a.frequence||0)-Number(b.frequence||0) : 0) ||
+      String(a.groupeabo||"").localeCompare(String(b.groupeabo||""),"fr",{numeric:true})||
       String(a.formule||"").localeCompare(String(b.formule||""),"fr",{numeric:true})||
       String(a.debut_pivot||"").localeCompare(String(b.debut_pivot||""))||
       String(a.reference_pivot||"").localeCompare(String(b.reference_pivot||"")));
@@ -310,23 +307,23 @@
       const nom=cellule("strong",l.formule||l.typeabo);
       const variables=[l.groupeabo==="COMMUN"?"Toutes formules":l.groupeabo,l.typeabo,
         l.duoplus>0?"Duo+ "+l.duoplus:null,l.maxduo>0?"Max Duo "+l.maxduo:null,
-        l.frequence>0?"Fréq. "+l.frequence+(l.rythme==="hebdo"?"/sem.":"/mois"):null,l.famille>0?"Fam "+l.famille:null,
+        l.frequence>0?"Fréq. "+l.frequence+(l.rythme==="hebdo"?"/sem.":l.groupeabo==="1J"?"/jour":"/mois"):null,l.famille>0?"Fam "+l.famille:null,
         (l.debut_pivot||"—")+" → "+(l.fin_pivot||"sans fin"),l.ancienne?"Ancienne référence":null].filter(Boolean).join(" · ");
       th.append(nom,cellule("small",variables));tr.appendChild(th);
       const base={annee,categorie,pivot:l.reference_pivot};
       const titre=String(l.formule||l.typeabo)+" — "+variables;
       colonnes.forEach((c,i)=>{
-        const v=frec?(cleFrec(l)===c.frequence?n:0):valeurs[i];
+        const v=valeurs[i];
         totaux[i]+=v;
-        tr.appendChild(celluleQuantite(v,{...base,mois:c.mois,frequence:c.frequence,libelle:titre+" — "+c.label+" "+annee}));
+        tr.appendChild(celluleQuantite(v,{...base,mois:c.mois,libelle:titre+" — "+c.label+" "+annee}));
       });
       tr.appendChild(celluleQuantite(n,{...base,libelle:titre+" — année "+annee},"lcdp-ventesabo__cumul"));
       total+=n;tests+=Number(l.tests)||0;corps.appendChild(tr);
     }
     const pied=$("totaux");pied.replaceChildren(cellule("th","TOTAL"));
-    colonnes.forEach((c,i)=>pied.appendChild(celluleQuantite(totaux[i],{annee,categorie,mois:c.mois,frequence:c.frequence,libelle:label+" — "+c.label+" "+annee})));
+    colonnes.forEach((c,i)=>pied.appendChild(celluleQuantite(totaux[i],{annee,categorie,mois:c.mois,libelle:label+" — "+c.label+" "+annee})));
     pied.appendChild(celluleQuantite(total,{annee,categorie,libelle:label+" — année "+annee},"lcdp-ventesabo__cumul"));
-    $("sous-titre").textContent=label+" — extensions souscrites "+(frec?"par fréquence":"par pivot et par mois")+(tests?" · Tests inclus":"");
+    $("sous-titre").textContent=label+" — extensions souscrites par variante et par mois"+(tests?" · Tests inclus":"");
     etat(lignes.length?"":"Aucun pivot ni vente enregistré pour cette extension.");
   }
 
