@@ -312,7 +312,7 @@
   position:static;
   min-width:0;
   box-shadow:none;
-  text-align:center;
+  text-align:left;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table tbody small {
   font-size:clamp(.6rem,1.15cqi,.74rem);
@@ -332,4 +332,7 @@
 .lcdp-page-ventesabo .lcdp-ventesabo__detail th,
 .lcdp-page-ventesabo .lcdp-ventesabo__detail td {
   text-align:center;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__detail tr > :first-child {
+  text-align:left;
 }
