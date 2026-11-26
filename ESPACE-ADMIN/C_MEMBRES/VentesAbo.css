@@ -94,21 +94,17 @@
   margin-top: 3px;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__tableau .lcdp-ventesabo__cumul {
-  background: #edf2e9;
   font-weight: 700;
-}
-.lcdp-page-ventesabo .lcdp-ventesabo__tableau .lcdp-ventesabo__ancienne th:first-child {
-  background: #fbf5ea;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__tableau tfoot th,
 .lcdp-page-ventesabo .lcdp-ventesabo__tableau tfoot td {
-  background: #dfe8d7;
+  background: var(--lcdp-color-surface);
   font-weight: 750;
-  color: #30482d;
-  border-top: 2px solid #a4b69a;
+  color: var(--lcdp-color-text);
+  border-top: 2px solid var(--lcdp-color-border);
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__tableau tfoot th:first-child {
-  background: #dfe8d7;
+  background: var(--lcdp-color-surface);
   z-index: 3;
 }
 .lcdp-page-ventesabo .lcdp-ventesabo__note {
@@ -267,9 +263,6 @@
 .lcdp-page-ventesabo .lcdp-ventesabo__filtre-dialogue > .lcdp-button {
   margin-top:12px;
   width:auto;
-}
-.lcdp-page-ventesabo #lcdp-ventesabo-table thead th.lcdp-ventesabo__cumul {
-  color:var(--lcdp-color-text,#253c2d);
 }
 
 /* Synthèse annuelle : quatorze colonnes dans la largeur disponible. */
