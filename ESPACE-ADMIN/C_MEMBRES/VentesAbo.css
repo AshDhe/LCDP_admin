@@ -177,3 +177,31 @@
   border-bottom:2px solid currentColor;
 }
 .lcdp-page-ventesabo .lcdp-wraper-onglets__contenu {min-width:0;}
+
+/* Filtre des lignes : reprend les contrôles multisélection du tableau admin. */
+.lcdp-page-ventesabo #lcdp-ventesabo-filtres th {
+  position:static;
+  background:var(--lcdp-color-surface,#fff);
+  color:var(--lcdp-color-text,#253c2d);
+  text-align:left;
+  padding:6px 9px;
+  box-shadow:none;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-filtre-slot {
+  max-width:320px;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-filtre-slot .lcdp-table-lecture-admin__multi-panel {
+  max-width:320px;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-filtre-slot .lcdp-table-lecture-admin__multi-choice {
+  white-space:normal;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-filtre-slot .lcdp-ventesabo__filtre-famille {
+  font-weight:600;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-filtre-slot .lcdp-ventesabo__filtre-pivot {
+  padding-left:16px;
+}
+.lcdp-page-ventesabo #lcdp-ventesabo-table thead th.lcdp-ventesabo__cumul {
+  color:var(--lcdp-color-text,#253c2d);
+}
