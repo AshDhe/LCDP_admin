@@ -114,6 +114,12 @@
       const label = String(btn.label || "").trim();
       if (label) parPosition.set(position, label);
     }
+    if (cat === "Membres") {
+      for (const [position, label] of parPosition) {
+        if (label.trim().toLowerCase() === "boutique") parPosition.delete(position);
+      }
+      parPosition.set(41, "Boutique");
+    }
     if (cat === "Parcs") {
       for (const item of PARCS_SLOTS_SPECIAUX) {
         parPosition.set(item.position, item.label);
