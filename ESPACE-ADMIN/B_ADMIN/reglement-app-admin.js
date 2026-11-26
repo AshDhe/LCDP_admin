@@ -13,6 +13,7 @@
   let revisionLocale = 0, sauvegardeEnCours = null, minuteurAuto = null;
   let conflitVersion = false, prochaineTentative = 0;
   let versionnementDisponible = false, chargementVersions = null;
+  let planificationDisponible = false;
 
   function annulerMinuteur() {
     if (minuteurAuto !== null) { clearTimeout(minuteurAuto); minuteurAuto = null; }
@@ -416,7 +417,7 @@
     const panneau = document.getElementById("lcdp-cgv-versions");
     if (panneau) panneau.inert = requeteEnCours;
     const creer = document.querySelector("[data-cgv-creer-version]");
-    if (creer) creer.disabled = requeteEnCours || !versionnementDisponible;
+    if (creer) creer.disabled = requeteEnCours || !versionnementDisponible || !planificationDisponible;
   }
 
   function sauvegarderUneFois() {
@@ -493,7 +494,7 @@
   function rendreDisponibiliteCgv(disponible, message="") {
     versionnementDisponible=disponible;
     const b=parCgv("[data-cgv-creer-version]");
-    if(b)b.disabled=!disponible||requeteEnCours;
+    if(b)b.disabled=!disponible||requeteEnCours||!planificationDisponible;
     const m=parCgv("[data-cgv-disponibilite]");
     if(m)m.textContent=message;
   }
@@ -532,11 +533,46 @@
     const liste=parCgv("[data-cgv-versions-liste]");
     liste.replaceChildren();
     const etat=parCgv("[data-cgv-versions-etat]");
-    etat.textContent=data.versions.length?(data.applicable?"Version applicable désignée.":"Aucune version applicable sélectionnée."):"Aucune version officielle créée.";
+    // Le Worker doit confirmer le nouveau contrat : jamais d’activation immédiate via une ancienne API.
+    planificationDisponible = data.planificationReglements === true && Array.isArray(data.applicables);
+    const applicables = new Set(planificationDisponible ? data.applicables : [data.applicable].filter(Boolean));
+    const aujourdhui = new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const dateValide = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v.dateapplication || ""));
+    const enVigueur = data.versions.filter(v=>applicables.has(v.id)&&dateValide(v)&&v.dateapplication<=aujourdhui);
+    const futures = data.versions.filter(v=>applicables.has(v.id)&&dateValide(v)&&v.dateapplication>aujourdhui);
+    if (planificationDisponible && (enVigueur.length>1 || futures.length>1 || applicables.size>2 ||
+        enVigueur.length+futures.length!==applicables.size)) {
+      planificationDisponible=false;
+    }
+    etat.textContent=!planificationDisponible
+      ?"Planification des règlements indisponible : mise à jour du Worker editing-admin nécessaire. Les archives restent consultables."
+      :data.versions.length?"Une version en vigueur et une version future au maximum.":"Aucune version officielle créée.";
     for(const v of data.versions){
       const card=elementCgv("article","lcdp-editeur-contenu__bloc");
-      const actif=v.id===data.applicable;
-      card.append(elementCgv("h2","lcdp-boxtext__title",v.nom),elementCgv("p","lcdp-editeur-contenu__aide",dateCgv(v.datecreation)+(actif?" — Version applicable":"")));
+      const actif=applicables.has(v.id);
+      const future=dateValide(v)&&v.dateapplication>aujourdhui;
+      const statut=actif?(future?" — Version future":" — Version en vigueur"):"";
+      card.append(elementCgv("h2","lcdp-boxtext__title",v.nom),elementCgv("p","lcdp-editeur-contenu__aide",dateCgv(v.datecreation)+statut));
+      const dateLabel=elementCgv("label","lcdp-editeur-contenu__titre-zone");
+      dateLabel.append(elementCgv("span","lcdp-editeur-contenu__label","Date de mise en application"));
+      const dateInput=elementCgv("input","lcdp-editeur-contenu__titre");
+      dateInput.type="date";dateInput.value=dateValide(v)?v.dateapplication:"";dateInput.readOnly=true;
+      dateLabel.append(dateInput);
+      const cocheLabel=elementCgv("label","lcdp-editeur-contenu__aide");
+      const coche=elementCgv("input");coche.type="checkbox";coche.checked=actif;
+      coche.disabled=!planificationDisponible||!dateValide(v)||actif&&!future||!actif&&future&&futures.length>0||!actif&&!future&&enVigueur.length>0;
+      cocheLabel.append(coche,document.createTextNode(" En application"));
+      coche.addEventListener("change",()=>{
+        const selection=coche.checked;coche.checked=actif;
+        void operationCgv(async()=>{
+          const titre=selection?"Mettre cette version en application ?":"Retirer la version future ?";
+          const message=selection?"La date de mise en application est le "+dateCgv(v.dateapplication+"T12:00:00Z")+". Les membres reçoivent une demande d’accord.":"Les demandes d’accord de cette version future ne sont plus exigibles.";
+          if(!await demanderConfirmationVersion(titre,message))return;
+          const resultat=await appelerJson(cgvBase+"/"+encodeURIComponent(v.id)+"/activer",{method:"POST",body:{applicable:selection,dateapplication:v.dateapplication}});
+          if(resultat.planificationReglements!==true)throw new Error("Planification non confirmée par le serveur.");
+          await actualiserVersionsCgv();
+        });
+      });
       const label=elementCgv("label","lcdp-editeur-contenu__titre-zone");
       label.append(elementCgv("span","lcdp-editeur-contenu__label","Nom de la version"));
       const input=elementCgv("input","lcdp-editeur-contenu__titre");input.type="text";input.maxLength=160;input.value=v.nom;label.append(input);
@@ -546,12 +582,7 @@
         boutonCgv("Consulter",()=>operationCgv(()=>consulterVersionCgv(v.id))),
         boutonCgv("PDF",()=>operationCgv(()=>telechargerVersionCgv(v.id)))
       );
-      if(!actif)actions.append(boutonCgv("Rendre applicable",()=>operationCgv(async()=>{
-        if(!await demanderConfirmationVersion("Rendre cette version applicable ?","Cette version devient celle consultable sur le site."))return;
-        await appelerJson(cgvBase+"/"+v.id+"/activer",{method:"POST",body:{}});
-        await actualiserVersionsCgv();
-      }),true));
-      card.append(label,actions);liste.append(card);
+      card.append(label,dateLabel,cocheLabel,actions);liste.append(card);
     }
   }
   function actualiserVersionsCgv() {
@@ -565,7 +596,7 @@
           data=await appelerJson(cgvBase);
         }
         if(!Array.isArray(data.versions))throw new Error("Inventaire des versions inexploitable.");
-        afficherListeCgv(data);rendreDisponibiliteCgv(true);
+        afficherListeCgv(data);rendreDisponibiliteCgv(true,planificationDisponible?"":"La date de mise en application nécessite le Worker actualisé.");
         return true;
       }catch(e){
         const msg=e?.status===404?"Versionnement indisponible : mise à jour du Worker editing-admin nécessaire.":String(e?.message||e);
@@ -579,13 +610,15 @@
     return chargementVersions;
   }
   async function creerVersionCgv() {
-    if(requeteEnCours||!documentCharge||!versionnementDisponible)return;
+    if(requeteEnCours||!documentCharge||!versionnementDisponible||!planificationDisponible)return;
     verrouillerActions(true);
     try{
       lireDocumentLocal();
-      if(!await demanderConfirmationVersion("Créer une version de ce document ?","Le contenu de la rédaction est archivé dans une version indépendante. Il ne devient pas automatiquement applicable."))return;
+      const dateapplication=await demanderConfirmationVersion("Créer une version de ce document ?","Choisissez la date de mise en application. La version ne devient pas automatiquement applicable.",{dateApplication:true});
+      if(!dateapplication)return;
       if(!await synchroniserBrouillon())return;
-      const d=await appelerJson(cgvBase,{method:"POST",body:{version:documentCharge.version}});
+      const d=await appelerJson(cgvBase,{method:"POST",body:{version:documentCharge.version,dateapplication}});
+      if(d.dateapplication!==dateapplication)throw new Error("Date de mise en application non confirmée par le serveur.");
       if(!d.id)throw new Error("Création de la version non confirmée.");
       await actualiserVersionsCgv();
       afficherStatus("Version officielle créée.","saved");
@@ -662,7 +695,7 @@
     });
   }
 
-  async function demanderConfirmationVersion(titre, message) {
+  async function demanderConfirmationVersion(titre, message, options = {}) {
     if (true) {
       const slotChoix = document.getElementById('lcdp-lightbox-slot');
       if (!slotChoix) return false;
@@ -692,7 +725,17 @@
         heading.textContent = titre;
         texte.textContent = message;
         non.textContent = 'Non';
-        oui.textContent = 'Oui';
+        oui.textContent = options.dateApplication ? 'Créer' : 'Oui';
+        let champDate=null;
+        if(options.dateApplication){
+          const label=elementCgv("label","lcdp-editeur-contenu__titre-zone");
+          label.append(elementCgv("span","lcdp-editeur-contenu__label","Date de mise en application"));
+          champDate=elementCgv("input","lcdp-editeur-contenu__titre");
+          champDate.type="date";champDate.required=true;
+          champDate.min=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+          label.append(champDate);texte.after(label);oui.disabled=true;
+          champDate.addEventListener("input",()=>{oui.disabled=!champDate.value||!champDate.validity.valid;});
+        }
         return await new Promise(resolve => {
           let termine = false;
           function fermer(valeur) {
@@ -705,9 +748,12 @@
           function onEscape(e) { if(e.key === 'Escape') {e.preventDefault(); fermer(false);} }
           document.addEventListener('keydown', onEscape);
           non.addEventListener('click', () => fermer(false), {once:true});
-          oui.addEventListener('click', () => fermer(true), {once:true});
+          oui.addEventListener('click', () => {
+            if(champDate && (!champDate.value || !champDate.reportValidity()))return;
+            fermer(champDate ? champDate.value : true);
+          });
           dialogue.addEventListener('click', e => {if(e.target===dialogue)fermer(false);});
-          non.focus();
+          (champDate || non).focus();
         });
       } catch (error) {
         slotChoix.replaceChildren();
