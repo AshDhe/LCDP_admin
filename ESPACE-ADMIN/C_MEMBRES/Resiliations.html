@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Résiliations — Administration La Clé du Parc</title>
+  <meta name="description" content="Suivi administratif des demandes de résiliation des membres.">
+  <script src="../../config.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const c = window.SITE_CONFIG || {};
+      const base = v => String(v || "").replace(/\/+$/, "");
+      const join = (b,p) => base(b) + "/" + String(p || "").replace(/^\/+/, "");
+      const admin = base(c.adminBaseUrl || c.ADMIN_BASE || c.siteBase || "");
+      const publicBase = base(c.publicBaseUrl || c.PUBLIC_BASE || "");
+      const objet = base(c.objetBaseUrl || c.OBJET_BASE || join(publicBase,"/OBJET"));
+      window.LCDP_urlAdmin = p => typeof c.adminUrl === "function" ? c.adminUrl(p) : join(admin,p);
+      window.LCDP_urlPublic = p => typeof c.publicUrl === "function" ? c.publicUrl(p) : join(publicBase,p);
+      window.LCDP_urlObjet = p => typeof c.objetUrl === "function" ? c.objetUrl(p) : join(objet,p);
+      ["/CSSBASE/cssbase.css","/CSSBASE/lcdp-central-mobile-first.css","/CSSBASE/lcdp-navigation-onglets.css"].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlObjet(p) + '">');
+      });
+      [
+        "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
+        "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
+        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css"
+      ].forEach(p => {
+        document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '">');
+      });
+    })();
+  </script>
+  <script src="../A_STRUCTURE/guard-admin.js"></script>
+  <script src="../A_STRUCTURE/menu-gauche-admin.js"></script>
+</head>
+<body class="lcdp-page-admin-interieure lcdp-page-ventesabo">
+  <div class="lcdp-site-page">
+    <div id="lcdp-bandeau-slot"></div>
+    <main class="lcdp-site-main" id="lcdp-main-admin" hidden>
+      <section class="lcdp-page-section" aria-label="Résiliations des abonnements">
+        <div class="lcdp-page-container">
+          <div class="lcdp-admin-page-layout">
+            <div id="lcdp-menu-gauche-admin-slot"></div>
+            <div class="lcdp-admin-page-content lcdp-stack">
+              <header class="lcdp-ventesabo__entete">
+                <h1>Résiliations des abonnements</h1>
+                <button id="resil-actualiser" class="lcdp-button lcdp-button-secondary" type="button">Actualiser</button>
+              </header>
+              <div class="lcdp-wraper-onglets lcdp-stack">
+                <label for="resil-filtre">Filtrer les demandes</label>
+                <select id="resil-filtre" class="lcdp-table-lecture-admin__filter-input">
+                  <option value="tous">Toutes</option>
+                  <option value="en_attente" selected>En attente</option>
+                  <option value="acceptee">Acceptées</option>
+                  <option value="refusee">Refusées</option>
+                  <option value="a_payer">À payer</option>
+                  <option value="cloturee">Clôturées</option>
+                </select>
+                <p id="resil-statut" role="status" aria-live="polite"></p>
+                <div class="lcdp-table-lecture-admin">
+                  <div class="lcdp-table-lecture-admin__scroll" tabindex="0">
+                    <table class="lcdp-table-lecture-admin__table">
+                      <thead><tr>
+                        <th scope="col">Membre</th><th scope="col">Abonnement</th><th scope="col">Demande</th>
+                        <th scope="col">Décision</th><th scope="col">Date de décision</th><th scope="col">Prise d’effet</th>
+                        <th scope="col">Échéances annulées TTC</th><th scope="col">Remboursement TTC</th>
+                        <th scope="col">Échéance de remboursement</th><th scope="col">Date de règlement</th>
+                        <th scope="col">Clôture</th><th scope="col">Action</th>
+                      </tr></thead>
+                      <tbody id="resil-lignes"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./Resiliations.js?v=20261126-v1"></script>
+</body>
+</html>
