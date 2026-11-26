@@ -112,11 +112,11 @@
     $("titre").textContent = euros ? "VT Abo — Montants en euros" : "VT Abo — Quantités vendues";
     $("sous-titre").textContent = euros
       ? "Factures émises par mois, montants TTC nets des remises, avant avoirs."
-      : "Nombre d’abonnements payants enregistrés par mois et détail des acheteurs.";
+      : "Abonnements principaux vendus par pivot tarifaire et par mois.";
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
     else {
-      $("note").textContent = "Volumes issus des abonnements et paiements enregistrés, indépendamment des factures. Les ventes initiales restent comptées après annulation. Date du paiement lorsqu’elle existe, sinon date de création de l’abonnement. Les tests sont identifiés ; les historiques sans preuve de mode de paiement sont signalés. Les abonnements gratuits et les dossiers non validés sont exclus.";
+      $("note").textContent = "Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les ventes antérieures sans pivot historique identifié ne sont pas incluses. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
       preparerDetail();
     }
   }
@@ -146,7 +146,9 @@
     lignes.sort((a,b) => {
       const ka = ordre.get(String(a.typeabo)) || 100;
       const kb = ordre.get(String(b.typeabo)) || 100;
-      return ka-kb || String(a.typeabo).localeCompare(String(b.typeabo), "fr");
+      return ka-kb || String(a.typeabo).localeCompare(String(b.typeabo), "fr") ||
+        String(a.debut_pivot||"").localeCompare(String(b.debut_pivot||"")) ||
+        String(a.idprixabo||"").localeCompare(String(b.idprixabo||""));
     });
 
     lignes.forEach(ligne => {
@@ -159,6 +161,11 @@
       fort.textContent = String(ligne.formule || ligne.typeabo);
       const type = document.createElement("small");
       type.textContent = String(ligne.typeabo);
+      if (!euro) {
+        const periode = [ligne.debut_pivot || "—", ligne.fin_pivot || "sans fin renseignée"].join(" → ");
+        type.textContent += " · " + periode + (ligne.ancienne ? " · Ancien pivot" : "");
+        nom.title = "Référence pivot : " + ligne.idprixabo;
+      }
       nom.append(fort, type);
       tr.appendChild(nom);
       valeurs.forEach((n,i) => {
@@ -247,7 +254,7 @@
     caption.textContent = "Liste nominative des abonnements vendus";
     const thead = document.createElement("thead"), tr = document.createElement("tr"), tbody = document.createElement("tbody");
     tbody.id = "lcdp-ventesabo-detail-lignes";
-    for (const nom of ["Nom","Prénom","Formule","Date","Origine date","Statut","Mode","Facture TVA"]) {
+    for (const nom of ["Nom","Prénom","Pivot","Début pivot","Date","Origine date","Statut","Mode","Facture TVA"]) {
       const th = cellule("th",nom); th.scope = "col"; tr.appendChild(th);
     }
     thead.appendChild(tr);table.append(caption,thead,tbody);scroll.appendChild(table);wrap.appendChild(scroll);
@@ -289,7 +296,7 @@
       for (const l of data.rows) {
         const tr=document.createElement("tr");
         const nom=cellule("th",l.nommembre||"—");nom.scope="row";tr.appendChild(nom);
-        for (const v of [l.prenommembre,l.typeabo,l.date_vente,l.source_date,
+        for (const v of [l.prenommembre,l.nom_pivot||l.typeabo,l.debut_pivot,l.date_vente,l.source_date,
           ({paye:"Payé",cancd:"Annulé après paiement",impaye:"Impayé",attente:"En attente"})[l.statut]||l.statut,l.mode,l.facture]) {
           tr.appendChild(cellule("td",v??"—"));
         }
