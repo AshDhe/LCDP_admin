@@ -336,3 +336,14 @@
 .lcdp-page-ventesabo .lcdp-ventesabo__detail tr > :first-child {
   text-align:left;
 }
+
+/* VT Abo Euro : unité d’affichage avant le filtre, sans agrandir la grille. */
+.lcdp-page-ventesabo .lcdp-ventesabo__unite {
+  width:auto;
+  min-width:62px;
+  max-width:80px;
+  min-height:28px;
+  padding:3px 6px;
+  font:inherit;
+  font-size:.82rem;
+}
