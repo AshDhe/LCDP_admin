@@ -19,6 +19,8 @@
     ["6M", 5], ["10M", 6], ["11M", 7], ["1A", 8]
   ]);
   let chargement = false;
+  let pageDetail = 0, detailEnCours = false;
+  const tailleDetail = 100;
 
   const urlAdmin = path => typeof window.LCDP_urlAdmin === "function"
     ? window.LCDP_urlAdmin(path) : path;
@@ -110,9 +112,13 @@
     $("titre").textContent = euros ? "VT Abo — Montants en euros" : "VT Abo — Quantités vendues";
     $("sous-titre").textContent = euros
       ? "Factures émises par mois, montants TTC nets des remises, avant avoirs."
-      : "Nombre de factures d’abonnements émises chaque mois.";
+      : "Nombre d’abonnements payants enregistrés par mois et détail des acheteurs.";
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
+    else {
+      $("note").textContent = "Volumes issus des abonnements et paiements enregistrés, indépendamment des factures. Les ventes initiales restent comptées après annulation. Date du paiement lorsqu’elle existe, sinon date de création de l’abonnement. Les tests sont identifiés ; les historiques sans preuve de mode de paiement sont signalés. Les abonnements gratuits et les dossiers non validés sont exclus.";
+      preparerDetail();
+    }
   }
 
   function rendre(lignes) {
@@ -129,11 +135,12 @@
     const entetes = $("entetes");
     entetes.replaceChildren(cellule("th", "Abonnement"));
     mois.forEach(n => entetes.appendChild(cellule("th", n)));
-    entetes.appendChild(cellule("th", "Total en cours", "lcdp-ventesabo__cumul"));
+    entetes.appendChild(cellule("th", "Total annuel", "lcdp-ventesabo__cumul"));
 
     const moisTotal = Array(12).fill(0);
     let total = 0;
     let montantsManquants = 0;
+    let tests = 0, production = 0, nonConfirmes = 0, factures = 0;
     const corps = $("lignes");
     corps.replaceChildren();
     lignes.sort((a,b) => {
@@ -163,6 +170,12 @@
       if (!Number.isFinite(valTotal)) throw new Error("Total de formule invalide.");
       total += euro ? Math.round(valTotal * 100) : valTotal;
       montantsManquants += Number(ligne.montants_manquants) || 0;
+      if (!euro) {
+        tests += Number(ligne.tests);
+        production += Number(ligne.production);
+        nonConfirmes += Number(ligne.non_confirmes);
+        factures += Number(ligne.factures);
+      }
       tr.appendChild(cellule("td",
         euro ? devise.format(valTotal) : entier.format(valTotal),
         "lcdp-ventesabo__cumul"));
@@ -182,6 +195,17 @@
       ? " Attention : " + entier.format(montantsManquants) +
         " vente(s) sans montant net enregistré."
       : "";
+    if (!euro) {
+      if (![tests,production,nonConfirmes,factures].every(Number.isSafeInteger) ||
+          tests + production + nonConfirmes !== total || factures > total) {
+        throw Error("Volumes de vente incohérents.");
+      }
+      $("coherence").textContent = "Production confirmée : " + entier.format(production) +
+        " · Tests : " + entier.format(tests) +
+        " · Mode non confirmé : " + entier.format(nonConfirmes) +
+        " · Abonnements avec facture émise : " + entier.format(factures) +
+        " / " + entier.format(total);
+    }
     etat(lignes.length + " formule(s) affichée(s)." + avertissement,
       montantsManquants > 0 && euro);
   }
@@ -191,11 +215,97 @@
     chargement = true;
     $("actualiser").disabled = true;
     etat("Actualisation des ventes…");
-    try { await Promise.all([obtenirVentes().then(rendre), vue === "euros" ? chargerDeclaratif() : Promise.resolve()]); }
+    try {
+      if (vue === "euros") await Promise.all([obtenirVentes().then(rendre), chargerDeclaratif()]);
+      else await Promise.all([obtenirVentes("membres-ventes-abo-quantites").then(rendre), chargerDetail(0)]);
+    }
     catch (err) { etat(err.message || "Impossible d'afficher les ventes.", true); }
     finally { chargement = false; $("actualiser").disabled = false; }
   }
 
+
+  function preparerDetail() {
+    const coherence = document.createElement("p");
+    coherence.id = "lcdp-ventesabo-coherence";
+    coherence.className = "lcdp-ventesabo__note";
+    $("note").before(coherence);
+    const section = document.createElement("section");
+    const titre = document.createElement("h2");
+    titre.textContent = "Détail des abonnements vendus";
+    const statut = document.createElement("p");
+    statut.id = "lcdp-ventesabo-detail-statut";
+    statut.setAttribute("role","status");
+    const wrap = document.createElement("div");
+    wrap.className = "lcdp-table-lecture-admin lcdp-ventesabo__tableau";
+    const scroll = document.createElement("div");
+    scroll.className = "lcdp-table-lecture-admin__scroll";
+    scroll.tabIndex = 0;
+    const table = document.createElement("table");
+    table.className = "lcdp-table-lecture-admin__table";
+    table.style.minWidth = "760px";
+    const caption = document.createElement("caption");
+    caption.textContent = "Liste nominative des abonnements vendus";
+    const thead = document.createElement("thead"), tr = document.createElement("tr"), tbody = document.createElement("tbody");
+    tbody.id = "lcdp-ventesabo-detail-lignes";
+    for (const nom of ["Nom","Prénom","Formule","Date","Origine date","Statut","Mode","Facture TVA"]) {
+      const th = cellule("th",nom); th.scope = "col"; tr.appendChild(th);
+    }
+    thead.appendChild(tr);table.append(caption,thead,tbody);scroll.appendChild(table);wrap.appendChild(scroll);
+    const nav = document.createElement("nav");
+    nav.className = "lcdp-ventesabo__vues";
+    nav.setAttribute("aria-label","Pagination du détail des ventes");
+    for (const [id,label,delta] of [["precedent","Précédent",-1],["suivant","Suivant",1]]) {
+      const bouton = document.createElement("button");
+      bouton.type="button"; bouton.id="lcdp-ventesabo-detail-"+id;
+      bouton.className="lcdp-button lcdp-button-secondary"; bouton.textContent=label;
+      bouton.disabled=true;
+      bouton.addEventListener("click",()=>chargerDetail(pageDetail+delta));
+      nav.appendChild(bouton);
+    }
+    section.append(titre,statut,wrap,nav); $("note").after(section);
+  }
+
+  async function chargerDetail(page) {
+    if (detailEnCours || page < 0) return;
+    detailEnCours = true;
+    const statut=$("detail-statut"), corps=$("detail-lignes");
+    const precedent=$("detail-precedent"), suivant=$("detail-suivant");
+    precedent.disabled=suivant.disabled=true;
+    statut.setAttribute("role","status");statut.textContent="Chargement du détail…";
+    try {
+      const url=new URL(BASE+"/read");
+      url.searchParams.set("resource","membres-ventes-abo-detail");
+      url.searchParams.set("limit",String(tailleDetail));
+      url.searchParams.set("offset",String(page*tailleDetail));
+      const response=await fetch(url.toString(),{credentials:"include",cache:"no-store",headers:{Accept:"application/json"}});
+      const data=await response.json().catch(()=>null);
+      if (response.status===401) {
+        window.location.replace(urlAdmin("/ESPACE-ADMIN/connexion-admin.html"));
+        throw Error("Session administrateur expirée.");
+      }
+      if (!response.ok || data?.success!==true || !Array.isArray(data.rows) ||
+          !Number.isSafeInteger(Number(data.total))) throw Error(data?.message||"Détail des ventes indisponible.");
+      const fragment=document.createDocumentFragment();
+      for (const l of data.rows) {
+        const tr=document.createElement("tr");
+        const nom=cellule("th",l.nommembre||"—");nom.scope="row";tr.appendChild(nom);
+        for (const v of [l.prenommembre,l.typeabo,l.date_vente,l.source_date,
+          ({paye:"Payé",cancd:"Annulé après paiement",impaye:"Impayé",attente:"En attente"})[l.statut]||l.statut,l.mode,l.facture]) {
+          tr.appendChild(cellule("td",v??"—"));
+        }
+        fragment.appendChild(tr);
+      }
+      corps.replaceChildren(fragment);
+      const total=Number(data.total);
+      pageDetail=page;
+      statut.textContent=total?entier.format(page*tailleDetail+1)+" à "+entier.format(page*tailleDetail+data.rows.length)+" sur "+entier.format(total)+" abonnement(s).":"Aucun abonnement vendu.";
+      precedent.disabled=page===0;suivant.disabled=(page+1)*tailleDetail>=total;
+    } catch(err) {
+      corps.replaceChildren();
+      statut.setAttribute("role","alert");statut.textContent=err.message||"Détail indisponible.";
+      precedent.disabled=pageDetail===0;suivant.disabled=true;
+    } finally {detailEnCours=false;}
+  }
 
   const colonnesDeclaratif = [
     ["mois","Mois"],["taux","TVA"],["ca_facture_ht","CA facturé HT"],
