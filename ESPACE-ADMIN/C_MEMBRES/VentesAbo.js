@@ -116,7 +116,7 @@
     $("actualiser").addEventListener("click", charger);
     if (euros) preparerDeclaratif();
     else {
-      $("note").textContent = "Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les ventes antérieures sans pivot historique identifié ne sont pas incluses. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
+      $("note").textContent = "Une ligne par référence pivot d’abonnement principal, y compris les anciens pivots identifiés. Options, extensions, abonnements gratuits et dossiers non validés exclus. Les ventes sont rattachées à leur référence tarifaire d’origine, sans réaffectation au pivot actuel. Les anciennes références d’abonnements principaux effectivement vendues sont conservées sur des lignes distinctes, même sans indicateur pivot historique. Date du paiement, sinon date de création. Les annulations après paiement et les tests identifiés restent visibles.";
       preparerDetail();
     }
   }
@@ -163,7 +163,7 @@
       type.textContent = String(ligne.typeabo);
       if (!euro) {
         const periode = [ligne.debut_pivot || "—", ligne.fin_pivot || "sans fin renseignée"].join(" → ");
-        type.textContent += " · " + periode + (ligne.ancienne ? " · Ancien pivot" : "");
+        type.textContent += " · " + periode + (ligne.ancienne ? " · Ancienne référence" : "");
         nom.title = "Référence pivot : " + ligne.idprixabo;
       }
       nom.append(fort, type);
