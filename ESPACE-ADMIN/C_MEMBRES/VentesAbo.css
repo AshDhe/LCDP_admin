@@ -154,3 +154,26 @@
 .lcdp-page-ventesabo [hidden] {
   display: none !important;
 }
+
+/* Barre d'onglets compacte : composant commun LCDP, sans boutons d'action. */
+.lcdp-page-ventesabo .lcdp-wraper-onglets__navigation {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
+  gap:4px;
+  margin-bottom:12px;
+}
+.lcdp-page-ventesabo .lcdp-wraper-onglets__tab {
+  flex:0 0 auto;
+  width:auto;
+  min-height:32px;
+  padding:5px 12px;
+  font-size:.86rem;
+  border-radius:5px 5px 0 0;
+  box-shadow:none;
+}
+.lcdp-page-ventesabo .lcdp-wraper-onglets__tab[aria-selected="true"] {
+  font-weight:700;
+  border-bottom:2px solid currentColor;
+}
+.lcdp-page-ventesabo .lcdp-wraper-onglets__contenu {min-width:0;}
