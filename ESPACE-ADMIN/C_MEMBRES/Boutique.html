@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-lcdp-css="c081 c085 c059">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,6 +22,8 @@
         document.write('<link rel="stylesheet" href="'+window.LCDP_urlObjet(x)+'">');
       });
       document.write('<link rel="stylesheet" href="'+window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/css-admin.css")+'">');
+      document.write('<link rel="stylesheet" href="'+window.LCDP_urlAdmin("/ESPACE-ADMIN/A_STRUCTURE/box-editeur-contenu.css")+'">');
+      document.write('<script defer src="'+window.LCDP_urlObjet("/JSBASE/05-wraper-onglets.js")+'"><\/script>');
     })();
   </script>
   <script src="../A_STRUCTURE/guard-admin.js"></script>
@@ -37,14 +39,56 @@
           <div id="lcdp-menu-gauche-admin-slot"></div>
           <div class="lcdp-admin-page-content">
             <h1>Boutique</h1>
-            <p id="lcdp-membres-page-statut" role="status">La rubrique Boutique est référencée dans le menu admin. Aucun catalogue ni traitement de commande n’est actuellement relié à cette page.</p>
-            
+            <p id="lcdp-boutique-admin-statut" role="status" aria-live="polite"></p>
+            <section id="lcdp-boutique-admin" class="lcdp-wraper-onglets" data-lcdp-wraper-onglets aria-label="Catalogue de la boutique" hidden>
+              <div class="lcdp-wraper-onglets__navigation" role="tablist" data-lcdp-wraper-onglets-navigation></div>
+              <div class="lcdp-wraper-onglets__contenu"></div>
+            </section>
+            <template id="lcdp-boutique-admin-liste">
+              <div class="lcdp-editeur-contenu">
+                <div class="lcdp-editeur-contenu__entete">
+                  <button type="button" class="lcdp-button lcdp-button-primary" data-boutique-ajouter>Créer un article</button>
+                </div>
+                <div class="lcdp-editeur-contenu__blocs" data-boutique-liste></div>
+                <form class="lcdp-editeur-contenu__bloc" data-boutique-form hidden>
+                  <h2 data-boutique-form-titre>Créer un article</h2>
+                  <label class="lcdp-editeur-contenu__titre-zone">
+                    <span class="lcdp-editeur-contenu__label">Nom de l’article</span>
+                    <input class="lcdp-editeur-contenu__titre" name="nom" required maxlength="120">
+                  </label>
+                  <label class="lcdp-editeur-contenu__titre-zone">
+                    <span class="lcdp-editeur-contenu__label">Description</span>
+                    <textarea class="lcdp-editeur-contenu__titre" name="description" rows="3" maxlength="500" required></textarea>
+                  </label>
+                  <label class="lcdp-editeur-contenu__titre-zone">
+                    <span class="lcdp-editeur-contenu__label">Prix TTC (€)</span>
+                    <input class="lcdp-editeur-contenu__titre" name="prix" type="number" min="0.01" max="99999.99" step="0.01" required>
+                  </label>
+                  <label class="lcdp-editeur-contenu__titre-zone">
+                    <span class="lcdp-editeur-contenu__label">Photo</span>
+                    <input class="lcdp-editeur-contenu__titre" name="photo" type="file" accept="image/webp,image/jpeg,image/png">
+                  </label>
+                  <img class="lcdp-box-card-parc__image" data-boutique-apercu alt="Aperçu de l’article" hidden>
+                  <label class="lcdp-editeur-contenu__titre-zone">
+                    <span class="lcdp-editeur-contenu__label">Présentation en boutique</span>
+                    <select class="lcdp-editeur-contenu__titre" name="publie">
+                      <option value="false">Non publié</option>
+                      <option value="true">En ligne</option>
+                    </select>
+                  </label>
+                  <div class="lcdp-editeur-contenu__ordre">
+                    <button class="lcdp-button lcdp-button-secondary" type="button" data-boutique-annuler>Annuler</button>
+                    <button class="lcdp-button lcdp-button-orange" type="submit">Enregistrer</button>
+                  </div>
+                </form>
+              </div>
+            </template>
           </div>
         </div>
       </div>
     </section>
   </main>
 </div>
-<script src="./RubriquesMembresAdmin.js"></script>
+<script src="./Boutique.js?v=20261126-admin-boutique" defer></script>
 </body>
 </html>
