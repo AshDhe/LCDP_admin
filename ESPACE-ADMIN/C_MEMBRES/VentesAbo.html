@@ -24,7 +24,7 @@
       [
         "/ESPACE-ADMIN/A_STRUCTURE/css-admin.css",
         "/ESPACE-ADMIN/A_STRUCTURE/table-lecture-admin.css",
-        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css?v=e4938f099c9f"
+        "/ESPACE-ADMIN/C_MEMBRES/VentesAbo.css?v=81da9a1e118b"
       ].forEach(p => {
         document.write('<link rel="stylesheet" href="' + window.LCDP_urlAdmin(p) + '">');
       });
@@ -59,7 +59,10 @@
                 <div class="lcdp-table-lecture-admin__scroll" tabindex="0" aria-label="Tableau des ventes par mois, défilement horizontal">
                   <table class="lcdp-table-lecture-admin__table" id="lcdp-ventesabo-table">
                     <caption id="lcdp-ventesabo-legende">Ventes par formule, mois et total annuel en cours</caption>
-                    <thead><tr id="lcdp-ventesabo-entetes"></tr></thead>
+                    <thead>
+                      <tr id="lcdp-ventesabo-filtres" hidden><th colspan="14"><div id="lcdp-ventesabo-filtre-slot"></div></th></tr>
+                      <tr id="lcdp-ventesabo-entetes"></tr>
+                    </thead>
                     <tbody id="lcdp-ventesabo-lignes"></tbody>
                     <tfoot><tr id="lcdp-ventesabo-totaux"></tr></tfoot>
                   </table>
@@ -75,6 +78,6 @@
       </section>
     </main>
   </div>
-  <script src="./VentesAbo.js?v=846868528f8e"></script>
+  <script src="./VentesAbo.js?v=b4bea2c9984b"></script>
 </body>
 </html>
