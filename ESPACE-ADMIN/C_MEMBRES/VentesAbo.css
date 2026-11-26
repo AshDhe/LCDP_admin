@@ -292,30 +292,34 @@
   table-layout:fixed;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table col:first-child {
-  width:22%;
+  width:14%;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table col:not(:first-child) {
-  width:6%;
+  width:calc(86% / 13);
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table th,
 .lcdp-page-ventesabo #lcdp-ventesabo-table td {
   box-sizing:border-box;
   min-width:0;
-  padding:7px 2px;
+  padding:5px 1px;
   text-align:center;
   vertical-align:middle;
   white-space:normal;
   overflow-wrap:anywhere;
-  font-size:clamp(.65rem,1.35cqi,.84rem);
+  font-size:clamp(.60rem,1.20cqi,.78rem);
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table th:first-child {
   position:static;
   min-width:0;
   box-shadow:none;
   text-align:left;
+  padding-inline:4px 2px;
+  font-size:clamp(.58rem,1.12cqi,.72rem);
+  line-height:1.2;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table tbody small {
-  font-size:clamp(.6rem,1.15cqi,.74rem);
+  font-size:clamp(.55rem,1.02cqi,.65rem);
+  margin-top:2px;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table button.lcdp-ventesabo__quantite {
   min-width:0;
@@ -324,6 +328,9 @@
   overflow-wrap:anywhere;
   text-align:center;
   font:inherit;
+  font-variant-numeric:tabular-nums;
+  padding:0;
+  border:0;
 }
 .lcdp-page-ventesabo #lcdp-ventesabo-table #lcdp-ventesabo-filtres th {
   text-align:left;
