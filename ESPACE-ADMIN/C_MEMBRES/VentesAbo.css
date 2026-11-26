@@ -179,28 +179,24 @@
   min-height: 0;
   box-shadow: none;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__dialogue {
-  width: min(1050px, calc(100% - 24px));
-  max-width: calc(100% - 24px);
-  max-height: 88vh;
-  overflow: auto;
-  padding: clamp(12px, 2vw, 24px);
-  border: 1px solid #cbd1c5;
-  border-radius: 12px;
-  background: #fff;
-  color: var(--lcdp-color-text, #253c2d);
+.lcdp-page-ventesabo .lcdp-ventesabo__quantite[aria-pressed="true"] {
+  font-weight: 750;
+  text-decoration-thickness: 2px;
+  outline: 2px solid var(--lcdp-color-primary, #526c42);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__dialogue::backdrop {
-  background: rgba(31,42,36,.46);
+.lcdp-page-ventesabo .lcdp-ventesabo__detail {
+  margin-top: 24px;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__dialogue h2 {
-  margin: 0;
+.lcdp-page-ventesabo .lcdp-ventesabo__detail h2 {
+  margin: 0 0 7px;
   font-size: 1.15rem;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__dialogue .lcdp-ventesabo__vues {
+.lcdp-page-ventesabo .lcdp-ventesabo__detail .lcdp-ventesabo__vues {
   justify-content: flex-end;
   margin: 12px 0 0;
 }
-.lcdp-page-ventesabo .lcdp-ventesabo__dialogue .lcdp-ventesabo__vues button {
+.lcdp-page-ventesabo .lcdp-ventesabo__detail .lcdp-ventesabo__vues button {
   width: auto;
 }
