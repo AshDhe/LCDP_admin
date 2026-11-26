@@ -22,9 +22,9 @@
     } catch { return ""; }
   }
   function fermer(vue) {
-    vue.form.reset(); vue.form.hidden = true; vue.id = null; vue.photo = null;
+    vue.form.reset(); vue.formSlot.hidden = true; vue.id = null; vue.photo = null;
     if (vue.url) URL.revokeObjectURL(vue.url);
-    vue.url = null; vue.apercu.removeAttribute("src"); vue.apercu.hidden = true;
+    vue.url = null; vue.apercu.removeAttribute("src"); vue.apercuSlot.hidden = true;
   }
   function ouvrir(vue, article) {
     fermer(vue);
@@ -35,8 +35,8 @@
     vue.form.elements.prix.value = article ? (article.prix_centimes / 100).toFixed(2) : "";
     vue.form.elements.publie.value = String(article?.publie === true);
     const photo = photoSure(article?.image);
-    if (photo) { vue.apercu.src = photo; vue.apercu.hidden = false; }
-    vue.form.hidden = false; vue.form.elements.nom.focus();
+    if (photo) { vue.apercu.src = photo; vue.apercuSlot.hidden = false; }
+    vue.formSlot.hidden = false; vue.form.elements.nom.focus();
   }
   function rendre(vue) {
     vue.liste.replaceChildren();
@@ -104,7 +104,7 @@
     for (const {key} of categories) {
       const zone=onglets.zones[key];
       zone.append(q("lcdp-boutique-admin-liste").content.cloneNode(true));
-      const vue={categorie:key,liste:zone.querySelector("[data-boutique-liste]"),form:zone.querySelector("[data-boutique-form]"),apercu:zone.querySelector("[data-boutique-apercu]")};
+      const vue={categorie:key,liste:zone.querySelector("[data-boutique-liste]"),form:zone.querySelector("[data-boutique-form]"),formSlot:zone.querySelector("[data-boutique-form-slot]"),apercu:zone.querySelector("[data-boutique-apercu]"),apercuSlot:zone.querySelector("[data-boutique-apercu-slot]")};
       vues[key]=vue;
       zone.querySelector("[data-boutique-ajouter]").addEventListener("click",()=>ouvrir(vue,null));
       zone.querySelector("[data-boutique-annuler]").addEventListener("click",()=>fermer(vue));
@@ -113,7 +113,7 @@
         if (!fichier) return;
         if (!["image/webp","image/jpeg","image/png"].includes(fichier.type)||fichier.size>5*1024*1024) {vue.form.elements.photo.value="";texte("Photo JPEG, PNG ou WebP, 5 Mo maximum.");return;}
         if(vue.url)URL.revokeObjectURL(vue.url);
-        vue.photo=fichier;vue.url=URL.createObjectURL(fichier);vue.apercu.src=vue.url;vue.apercu.hidden=false;
+        vue.photo=fichier;vue.url=URL.createObjectURL(fichier);vue.apercu.src=vue.url;vue.apercuSlot.hidden=false;
       });
       vue.form.addEventListener("submit",event=>{event.preventDefault();void enregistrer(vue);});
       rendre(vue);
