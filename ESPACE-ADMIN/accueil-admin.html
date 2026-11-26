@@ -744,7 +744,9 @@
               ? null
               : boutonsConfigures.find((bouton) => (
                   bouton.cat === categorie.cat &&
-                  Number(bouton.position) === positionSource
+                  Number(bouton.position) === positionSource &&
+                  !(categorie.id === "membres" && position !== 41 &&
+                    /\/C_MEMBRES\/Boutique\.html(?:[?#]|$)/i.test(String(bouton.href || "")))
                 ))
           );
 
@@ -786,6 +788,14 @@
             configurerBoutonAjustDuo(lien);
           } else if (estSlotPrivatisation(categorie, position)) {
             configurerBoutonPrivatisation(lien);
+          } else if (categorie.id === "membres" && position === 41) {
+            const boutique = boutonsConfigures.find(bouton => bouton.cat === "Membres" &&
+              /\/C_MEMBRES\/Boutique\.html(?:[?#]|$)/i.test(String(bouton.href || "")));
+            lien.textContent = "Boutique";
+            lien.href = urlAdmin("/ESPACE-ADMIN/C_MEMBRES/Boutique.html");
+            if (boutique?.permission_code) lien.dataset.permissionCode = boutique.permission_code;
+            lien.removeAttribute("aria-disabled");
+            lien.setAttribute("aria-label", "Ouvrir Boutique");
           } else if (categorie.id === "membres" && position === 4) {
             // Même vert que les slots actifs ; accès toujours inactif tant qu'aucune page n'est définie.
             lien.textContent = "Invité et invitant";
@@ -824,10 +834,7 @@
             lien.dataset.lcdpMembreGroupe = orange ? "orange" : "vert";
             lien.classList.remove("lcdp-button-primary", "lcdp-button-secondary", "lcdp-button-orange");
             lien.classList.add(orange ? "lcdp-button-orange" : "lcdp-button-primary");
-            // Slots 25 à 32 : vert plein même sans destination ; accès inchangé.
-            if (position >= 25 && position <= 32) {
-              lien.style.setProperty("opacity", "1", "important");
-            }
+            // Les emplacements libres conservent l’atténuation du gabarit commun.
           } else if (categorie.id === "coachs") {
             // Coachs : trois rangées vertes, suivies de trois rangées orange.
             // Les emplacements non attribués restent désactivés et atténués.
