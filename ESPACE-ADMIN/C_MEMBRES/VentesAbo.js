@@ -23,6 +23,14 @@
     ["frecdp","FqDuo+"],["maxduo","MaxDuo"],["fam","FAM"]];
   let ongletActif = "abo";
   const boutonsOnglets = new Map();
+  const filtresPivots = new Map();
+  let lignesActives = [];
+  const refPivot = l => String(l.idprixabo || l.reference_pivot || "");
+  const famillePivot = l => String(l.typeabo || l.formule || "");
+  const datePivot = l => {
+    const d = String(l.debut_pivot || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d.split("-").reverse().join("/") : "";
+  };
   let pageDetail = 0, selectionDetail = null, requeteDetail = null;
   let boutonDetailActif = null;
   const tailleDetail = 100;
@@ -180,14 +188,101 @@
     }
     $("panel").setAttribute("aria-labelledby","lcdp-ventesabo-tab-"+code);
     $("entetes").replaceChildren();$("lignes").replaceChildren();$("totaux").replaceChildren();
+    $("filtres").hidden=true;$("filtre-slot").replaceChildren();lignesActives=[];
     reinitialiserDetail();actualiserEntetesDetail(code!=="abo");
     void charger();
   }
 
+  function nomPivot(ligne) {
+    let nom=String(ligne.formule || ligne.nom_pivot || ligne.typeabo || "").trim();
+    if(ligne.categorie) return nom;
+    const duree=String(ligne.typeabo||"").trim();
+    if(!duree||nom.toUpperCase()===duree.toUpperCase())return nom;
+    const suffixe=new RegExp("\\s+"+duree.replace(/[^a-z0-9]/gi,"")+"$","i");
+    nom=nom.replace(suffixe,"").trim();
+    return nom+" ("+duree+")";
+  }
+
   function libellePivot(ligne) {
-    return (ligne.formule || ligne.typeabo) + " (" + ligne.typeabo + ", " +
-      (ligne.debut_pivot ? "depuis le "+ligne.debut_pivot : "ancienne référence") +
-      (ligne.fin_pivot ? " au "+ligne.fin_pivot : "") + ")";
+    const date=datePivot(ligne);
+    return nomPivot(ligne)+(date?" — "+date:"");
+  }
+
+  function selectionPivots() {
+    if(!filtresPivots.has(ongletActif))filtresPivots.set(ongletActif,new Set());
+    return filtresPivots.get(ongletActif);
+  }
+
+  function pivotsFiltres() {
+    const selection=selectionPivots();
+    return selection.size && selection.size<lignesActives.length ? [...selection] : undefined;
+  }
+
+  function actualiserTableauFiltre() {
+    const selection=selectionPivots();
+    const lignes=lignesActives.filter(l=>!selection.size||selection.has(refPivot(l)));
+    reinitialiserDetail();
+    if(ongletActif==="abo")rendre(lignes);else rendreExtensions(lignes,ongletActif);
+  }
+
+  function preparerFiltrePivots() {
+    const slot=$("filtre-slot"), selection=selectionPivots();
+    const refs=new Set(lignesActives.map(refPivot));
+    for(const id of selection)if(!refs.has(id))selection.delete(id);
+    slot.replaceChildren();$("filtres").hidden=!lignesActives.length;
+    if(!lignesActives.length)return;
+    const groupes=new Map();
+    for(const l of lignesActives){
+      const k=famillePivot(l);
+      if(!groupes.has(k))groupes.set(k,[]);
+      groupes.get(k).push(l);
+    }
+    const trier=(a,b)=>a.localeCompare(b,"fr",{numeric:true,sensitivity:"base"});
+    const cont=document.createElement("details");cont.className="lcdp-table-lecture-admin__multi";
+    const resume=cellule("summary","Tous les pivots","lcdp-table-lecture-admin__multi-resume");
+    const panneau=document.createElement("div");panneau.className="lcdp-table-lecture-admin__multi-panel";
+    const chercher=document.createElement("input");chercher.type="search";
+    chercher.className="lcdp-table-lecture-admin__filter-input";chercher.placeholder="Rechercher un pivot";
+    chercher.setAttribute("aria-label","Rechercher une famille ou un pivot");
+    const liste=document.createElement("div");liste.className="lcdp-table-lecture-admin__multi-options";
+    const effacer=cellule("button","Tout effacer","lcdp-table-lecture-admin__multi-clear");effacer.type="button";
+    const controles=[];
+    const actualiser=()=>{
+      for(const {caseCocher,ids} of controles){
+        const n=ids.filter(id=>selection.has(id)).length;
+        caseCocher.checked=n===ids.length;
+        caseCocher.indeterminate=n>0&&n<ids.length;
+      }
+      resume.textContent=selection.size?selection.size+" pivot"+(selection.size>1?"s":"")+" sélectionné"+(selection.size>1?"s":""):"Tous les pivots";
+      effacer.disabled=!selection.size;
+    };
+    const choix=(label,ids,classe="")=>{
+      const ligne=document.createElement("label");
+      ligne.className="lcdp-table-lecture-admin__multi-choice"+(classe?" "+classe:"");
+      const caseCocher=document.createElement("input");caseCocher.type="checkbox";
+      caseCocher.addEventListener("change",()=>{
+        for(const id of ids){if(caseCocher.checked)selection.add(id);else selection.delete(id);}
+        actualiser();actualiserTableauFiltre();
+      });
+      ligne.append(caseCocher,cellule("span",label));controles.push({caseCocher,ids});return ligne;
+    };
+    const afficher=()=>{
+      liste.replaceChildren();controles.length=0;
+      const recherche=chercher.value.trim().toLocaleLowerCase("fr");
+      for(const [famille,lignes] of [...groupes].sort((a,b)=>trier(a[0],b[0]))){
+        const trouveFamille=famille.toLocaleLowerCase("fr").includes(recherche);
+        const visibles=lignes.filter(l=>trouveFamille||libellePivot(l).toLocaleLowerCase("fr").includes(recherche));
+        if(!visibles.length)continue;
+        if(lignes.length>1)liste.appendChild(choix(famille+" — tous les pivots",lignes.map(refPivot),"lcdp-ventesabo__filtre-famille"));
+        for(const l of visibles.sort((a,b)=>trier(nomPivot(a),nomPivot(b))||String(a.debut_pivot||"").localeCompare(String(b.debut_pivot||"")))){
+          liste.appendChild(choix(libellePivot(l),[refPivot(l)],lignes.length>1?"lcdp-ventesabo__filtre-pivot":""));
+        }
+      }
+      actualiser();
+    };
+    chercher.addEventListener("input",afficher);
+    effacer.addEventListener("click",()=>{selection.clear();actualiser();actualiserTableauFiltre();});
+    panneau.append(chercher,liste,effacer);cont.append(resume,panneau);slot.appendChild(cont);afficher();
   }
 
   function rendre(lignes) {
@@ -227,15 +322,14 @@
       const nom = document.createElement("th");
       nom.scope = "row";
       const fort = document.createElement("strong");
-      fort.textContent = String(ligne.formule || ligne.typeabo);
-      const type = document.createElement("small");
-      type.textContent = String(ligne.typeabo);
-      if (!euro) {
-        const periode = [ligne.debut_pivot || "—", ligne.fin_pivot || "sans fin renseignée"].join(" → ");
-        type.textContent += " · " + periode + (ligne.ancienne ? " · Ancienne référence" : "");
-        nom.title = "Référence pivot : " + ligne.idprixabo;
+      fort.textContent = euro ? String(ligne.formule || ligne.typeabo) : nomPivot(ligne);
+      nom.appendChild(fort);
+      if(euro)nom.appendChild(cellule("small",ligne.typeabo));
+      else {
+        const date=datePivot(ligne);
+        if(date)nom.appendChild(cellule("small",date));
+        nom.title="Référence pivot : "+ligne.idprixabo;
       }
-      nom.append(fort, type);
       tr.appendChild(nom);
       valeurs.forEach((n,i) => {
         const centimes = euro ? Math.round(n * 100) : n;
@@ -262,9 +356,11 @@
 
     const pied = $("totaux");
     pied.replaceChildren(cellule("th", "TOTAL"));
+    const pivots=euro?undefined:pivotsFiltres();
+    const titreTotal=pivots?"Pivots sélectionnés":"Toutes les formules";
     moisTotal.forEach((n,i) => pied.appendChild(euro ? cellule("td",devise.format(n / 100))
-      : celluleQuantite(n,{annee,mois:i+1,libelle:"Toutes les formules — "+mois[i]+" "+annee})));
-    const annuel={annee,libelle:"Toutes les formules — année "+annee};
+      : celluleQuantite(n,{annee,mois:i+1,pivots,libelle:titreTotal+" — "+mois[i]+" "+annee})));
+    const annuel={annee,pivots,libelle:titreTotal+" — année "+annee};
     pied.appendChild(euro ? cellule("td",devise.format(total / 100),"lcdp-ventesabo__cumul")
       : celluleQuantite(total,annuel,"lcdp-ventesabo__cumul"));
     const avertissement = montantsManquants
@@ -304,14 +400,11 @@
       if(typeof l.reference_pivot!=="string"||!l.reference_pivot)throw Error("Référence d’extension absente.");
       const tr=document.createElement("tr");if(l.ancienne)tr.classList.add("lcdp-ventesabo__ancienne");
       const th=document.createElement("th");th.scope="row";th.title="Référence pivot : "+l.reference_pivot;
-      const nom=cellule("strong",l.formule||l.typeabo);
-      const variables=[l.groupeabo==="COMMUN"?"Toutes formules":l.groupeabo,l.typeabo,
-        l.duoplus>0?"Duo+ "+l.duoplus:null,l.maxduo>0?"Max Duo "+l.maxduo:null,
-        l.frequence>0?"Fréq. "+l.frequence+(l.rythme==="hebdo"?"/sem.":l.groupeabo==="1J"?"/jour":"/mois"):null,l.famille>0?"Fam "+l.famille:null,
-        (l.debut_pivot||"—")+" → "+(l.fin_pivot||"sans fin"),l.ancienne?"Ancienne référence":null].filter(Boolean).join(" · ");
-      th.append(nom,cellule("small",variables));tr.appendChild(th);
+      th.appendChild(cellule("strong",nomPivot(l)));
+      const date=datePivot(l);if(date)th.appendChild(cellule("small",date));
+      tr.appendChild(th);
       const base={annee,categorie,pivot:l.reference_pivot};
-      const titre=String(l.formule||l.typeabo)+" — "+variables;
+      const titre=libellePivot(l);
       colonnes.forEach((c,i)=>{
         const v=valeurs[i];
         totaux[i]+=v;
@@ -321,8 +414,9 @@
       total+=n;tests+=Number(l.tests)||0;corps.appendChild(tr);
     }
     const pied=$("totaux");pied.replaceChildren(cellule("th","TOTAL"));
-    colonnes.forEach((c,i)=>pied.appendChild(celluleQuantite(totaux[i],{annee,categorie,mois:c.mois,libelle:label+" — "+c.label+" "+annee})));
-    pied.appendChild(celluleQuantite(total,{annee,categorie,libelle:label+" — année "+annee},"lcdp-ventesabo__cumul"));
+    const pivots=pivotsFiltres(),titreTotal=label+(pivots?" — Pivots sélectionnés":"");
+    colonnes.forEach((c,i)=>pied.appendChild(celluleQuantite(totaux[i],{annee,categorie,pivots,mois:c.mois,libelle:titreTotal+" — "+c.label+" "+annee})));
+    pied.appendChild(celluleQuantite(total,{annee,categorie,pivots,libelle:titreTotal+" — année "+annee},"lcdp-ventesabo__cumul"));
     $("sous-titre").textContent=label+" — extensions souscrites par variante et par mois"+(tests?" · Tests inclus":"");
     etat(lignes.length?"":"Aucun pivot ni vente enregistré pour cette extension.");
   }
@@ -342,8 +436,9 @@
           ? await obtenirVentes("membres-ventes-abo-quantites",{},controle.signal)
           : await obtenirVentes("membres-ventes-extensions-quantites",{categorie},controle.signal);
         if(controle.signal.aborted||chargementSynthese!==controle)return;
-        if(categorie==="abo")rendre(lignes);else rendreExtensions(lignes,categorie);
-        reinitialiserDetail();
+        lignesActives=lignes;
+        preparerFiltrePivots();
+        actualiserTableauFiltre();
       }
     }
     catch (err) { if(!controle.signal.aborted&&chargementSynthese===controle)etat(err.message || "Impossible d'afficher les ventes.", true); }
@@ -468,6 +563,7 @@
       const periode=String(selection.annee)+"-"+(selection.mois?String(selection.mois).padStart(2,"0"):"");
       url.searchParams.set("filter_periode_vente",periode);
       if (selection.pivot) url.searchParams.set("filter_reference_pivot",selection.pivot);
+      else if(selection.pivots?.length)url.searchParams.set("filter_reference_pivot",selection.pivots.join("|"));
       const response=await fetch(url.toString(),{signal:controle.signal,credentials:"include",cache:"no-store",headers:{Accept:"application/json"}});
       const data=await response.json().catch(()=>null);
       if (response.status===401) {
@@ -479,6 +575,7 @@
       if (controle.signal.aborted || requeteDetail!==controle) return;
       if (data.rows.some(l=>!String(l.periode_vente||"").startsWith(periode) ||
           (selection.pivot && l.reference_pivot!==selection.pivot) ||
+          (selection.pivots?.length && !selection.pivots.includes(l.reference_pivot)) ||
           (selection.categorie && l.categorie!==selection.categorie) ||
           (selection.frequence && l.cle_frequence!==selection.frequence))) {
         throw Error("Le détail reçu ne correspond pas à la sélection.");
