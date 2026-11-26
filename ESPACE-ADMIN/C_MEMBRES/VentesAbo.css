@@ -161,3 +161,46 @@
     width: 100%;
   }
 }
+
+/* VT Abo : consultation nominative à la demande. */
+.lcdp-page-ventesabo .lcdp-ventesabo__quantite {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: .16em;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__synthese button.lcdp-ventesabo__quantite {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  min-height: 0;
+  box-shadow: none;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__dialogue {
+  width: min(1050px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
+  max-height: 88vh;
+  overflow: auto;
+  padding: clamp(12px, 2vw, 24px);
+  border: 1px solid #cbd1c5;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--lcdp-color-text, #253c2d);
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__dialogue::backdrop {
+  background: rgba(31,42,36,.46);
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__dialogue h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__dialogue .lcdp-ventesabo__vues {
+  justify-content: flex-end;
+  margin: 12px 0 0;
+}
+.lcdp-page-ventesabo .lcdp-ventesabo__dialogue .lcdp-ventesabo__vues button {
+  width: auto;
+}
